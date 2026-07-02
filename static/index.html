@@ -1,0 +1,2647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymOS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── TEMAS ── */
+:root {
+  --bg:#0d0d0d; --bg1:#111; --bg2:#1a1a1a; --bg3:#222;
+  --border:#1e1e1e; --border2:#2a2a2a; --border3:#333;
+  --text1:#fff; --text2:#aaa; --text3:#666; --text4:#444;
+  --accent:#FF4500; --accent2:#cc3700; --accent-bg:#FF450015; --accent-bd:#FF450040;
+  --btn-glow:0 0 14px #FF450040; --btn-glow2:0 0 20px #FF450060; --cobro-glow:0 0 16px #FF450045;
+}
+body[data-theme="b"] {
+  --bg:#1f1f1f; --bg1:#272727; --bg2:#2e2e2e; --bg3:#383838;
+  --border:#333; --border2:#3a3a3a; --border3:#444;
+  --text1:#f0f0f0; --text2:#c0c0c0; --text3:#888; --text4:#555;
+  --accent:#E84A00; --accent2:#c03d00; --accent-bg:#E84A0018; --accent-bd:#E84A0035;
+  --btn-glow:0 0 14px #E84A0050; --btn-glow2:0 0 22px #E84A0070; --cobro-glow:0 0 16px #E84A0050;
+}
+body[data-theme="c"] {
+  --bg:#0f1923; --bg1:#152030; --bg2:#1a2f44; --bg3:#1e3048;
+  --border:#1e3048; --border2:#2d5a8e; --border3:#3a6a9e;
+  --text1:#e8f0fe; --text2:#7eb8f7; --text3:#4a6a8a; --text4:#2d5a8e;
+  --accent:#3b82f6; --accent2:#2563eb; --accent-bg:#1d3a5e; --accent-bd:#2d5a8e;
+  --btn-glow:0 0 14px #3b82f650; --btn-glow2:0 0 22px #3b82f670; --cobro-glow:0 0 16px #3b82f650;
+}
+
+body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text1); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: var(--bg1); border-bottom: 0.5px solid var(--border3); flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 8px; }
+.logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.logo-text { font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+.logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 2px; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.gym-badge { font-size: 11px; color: var(--accent); background: var(--accent-bg); border: 0.5px solid var(--accent-bd); border-radius: 12px; padding: 3px 12px; }
+.clock { font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; }
+
+/* BODY */
+.app-body { display: flex; flex: 1; overflow: hidden; }
+body.ficha-mode .topbar { display: none !important; }
+body.ficha-mode .sidebar { display: none !important; }
+body.ficha-mode .content { margin: 0 !important; }
+body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; background: #0a0a0a; display: flex !important; flex-direction: column; overflow: hidden; }
+
+/* LOGO */
+.topbar-logo { height: 64px; max-width: 240px; object-fit: contain; opacity: 0.9; }
+.login-logo { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; max-height: 70vh; object-fit: contain; opacity: 0.05; pointer-events: none; z-index: 0; }
+.login-overlay > *:not(.login-logo) { position: relative; z-index: 1; }
+
+/* SIDEBAR */
+.sidebar { width: 56px; background: var(--bg1); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 2px; }
+.nav-item { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text3); font-size: 20px; transition: all 0.15s; position: relative; }
+.nav-item:hover { background: var(--bg2); color: var(--text2); }
+.nav-item.active { background: var(--accent)20; color: var(--accent); }
+.nav-item .tip { position: absolute; left: 48px; background: var(--bg3); color: #ccc; font-size: 11px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; border: 0.5px solid var(--border3); }
+.nav-item:hover .tip { opacity: 1; }
+.nav-sep { width: 24px; height: 0.5px; background: var(--bg3); margin: 6px 0; }
+
+/* CONTENT */
+.content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.screen { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* PAGE HEADER */
+.page-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--bg1); border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.page-title { font-size: 14px; font-weight: 500; }
+.btn-primary { background: var(--accent); color: var(--text1); border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.btn-primary:hover { background: #e03d00; }
+.btn-sec { background: var(--bg2); border: 0.5px solid var(--border2); color: #777; border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+.btn-sec:hover { background: var(--bg3); color: #ccc; }
+
+/* ── INGRESO ── */
+.ingreso-body { display: flex; flex: 1; overflow: hidden; }
+.cam-area { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+#videoEl { width: 100%; height: 100%; object-fit: cover; display: none; }
+.cam-placeholder { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.scan-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 180px; height: 180px; pointer-events: none; }
+.sc { position: absolute; width: 22px; height: 22px; border-color: var(--accent); border-style: solid; }
+.sc.tl{top:0;left:0;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.sc.tr{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.sc.bl{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.sc.br{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.scan-line { position: absolute; left: 8px; right: 8px; height: 2px; background: var(--accent); opacity: 0.7; animation: scanAnim 2s ease-in-out infinite; }
+@keyframes scanAnim { 0%,100%{top:8px;opacity:0.3}50%{top:162px;opacity:0.9} }
+.status-pill { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--bg1); border: 0.5px solid var(--border3); border-radius: 20px; padding: 6px 16px; font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; flex-shrink: 0; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.cam-btn { position: absolute; bottom: 16px; right: 16px; background: var(--accent); border: none; color: var(--text1); border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+/* Panel derecho ingreso — nuevo con pestañas */
+.side-panel { width: 300px; background: var(--bg1); border-left: 0.5px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sp-tabs { display: flex; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.sp-tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 10px; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: 0.5px; text-transform: uppercase; transition: all 0.15s; }
+.sp-tab:hover { color: var(--text3); }
+.sp-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+.sp-pane { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.sp-pane.active { display: flex; }
+
+/* Pane Socio */
+.socio-card { padding: 14px 14px 12px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.srow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text4); border: 2px solid #2a2a2a; flex-shrink: 0; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar.ok { border-color: #00FF88; box-shadow: 0 0 10px #00FF8830; }
+.avatar.bad { border-color: #FF3333; box-shadow: 0 0 10px #FF333330; }
+.sname { font-size: 14px; font-weight: 500; }
+.splan { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+.badge.ok { background: #00FF8815; color: #00FF88; border: 0.5px solid #00FF8840; }
+.badge.bad { background: #FF333315; color: #FF3333; border: 0.5px solid #FF333340; }
+.badge.wait { background: #33333330; color: var(--text3); border: 0.5px solid var(--border3)33360; }
+.detalle { padding: 10px 14px; border-bottom: 0.5px solid var(--border); display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+.drow { display: flex; justify-content: space-between; }
+.dlabel { font-size: 11px; color: var(--text3); }
+.dval { font-size: 11px; color: var(--text3); }
+.dval.ok { color: #00FF88; }
+.dval.bad { color: #FF3333; }
+.socio-acciones { padding: 10px 14px; display: flex; gap: 6px; flex-shrink: 0; }
+.btn-registrar-pago { flex: 1; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--text1); border: none; border-radius: 8px; padding: 9px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: var(--btn-glow); transition: all 0.15s; }
+.btn-registrar-pago:hover { box-shadow: var(--btn-glow2); }
+.btn-ver-perfil { background: var(--bg2); border: 0.5px solid var(--border2); color: #777; border-radius: 8px; padding: 9px 10px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s; }
+.btn-ver-perfil:hover { border-color: var(--accent)40; color: var(--text2); }
+
+/* Pane Cobro */
+.cobro-pane { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.cobro-socio-info { background: var(--bg2); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+.cobro-socio-nombre { font-size: 13px; color: #ccc; font-weight: 500; }
+.cobro-socio-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.cobro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.cobro-btn { background: var(--bg2); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s; }
+.cobro-btn:hover { border-color: var(--accent)50; background: var(--border); }
+.cobro-btn.sel { border-color: var(--accent); background: var(--accent)12; box-shadow: 0 0 12px var(--accent-bg); }
+.cobro-btn i { color: var(--accent); font-size: 22px; }
+.cobro-btn .cb-label { color: var(--text2); font-size: 11px; }
+.cobro-btn .cb-price { color: var(--accent); font-size: 13px; font-weight: 600; }
+.cobro-btn.sel .cb-label { color: #ccc; }
+.cobro-metodo { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 8px; padding: 8px 10px; color: var(--text2); font-size: 12px; outline: none; width: 100%; }
+.cobro-total { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+.cobro-total-label { font-size: 11px; color: var(--text3); }
+.cobro-total-val { font-size: 20px; font-weight: 600; color: var(--accent); }
+.btn-confirmar-cobro { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--text1); border: none; border-radius: 8px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--cobro-glow); letter-spacing: 0.3px; transition: all 0.15s; }
+.btn-confirmar-cobro:hover { box-shadow: var(--btn-glow2); }
+.btn-comprobante { background: transparent; color: var(--text3); border: 0.5px solid var(--border2); border-radius: 8px; padding: 8px; font-size: 11px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s; }
+.btn-comprobante:hover { border-color: var(--accent)40; color: var(--text2); }
+
+/* Pane Buscar */
+.buscar-pane { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.buscar-input-wrap { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+.buscar-input-wrap i { color: var(--text3); font-size: 16px; }
+.buscar-input-wrap input { background: transparent; border: none; outline: none; color: #ccc; font-size: 12px; width: 100%; }
+.buscar-input-wrap input::placeholder { color: var(--text4); }
+.buscar-results { display: flex; flex-direction: column; gap: 5px; }
+.buscar-item { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.15s; }
+.buscar-item:hover { border-color: var(--accent)50; }
+.buscar-av { width: 32px; height: 32px; border-radius: 50%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0; overflow: hidden; border: 1.5px solid #333; }
+.buscar-av img { width: 100%; height: 100%; object-fit: cover; }
+.buscar-av.ok { border-color: #00FF8860; }
+.buscar-av.bad { border-color: #FF333360; }
+.buscar-nombre { font-size: 12px; color: #ddd; font-weight: 500; }
+.buscar-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.buscar-estado { font-size: 10px; margin-left: auto; }
+.buscar-estado.ok { color: #00FF88; }
+.buscar-estado.bad { color: #FF3333; }
+
+/* Pane Ingresos */
+.hist-area { flex: 1; overflow-y: auto; padding: 10px 14px; }
+.hist-title { font-size: 10px; color: var(--text3); letter-spacing: 2px; margin-bottom: 8px; text-transform: uppercase; }
+.hrow { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 0.5px solid var(--bg2); }
+.hdot { width: 7px; height: 7px; border-radius: 50%; background: #00FF88; margin-right: 8px; flex-shrink: 0; }
+.hdot.bad { background: #FF3333; }
+.hname { font-size: 12px; color: #777; }
+.htime { font-size: 11px; color: var(--text4); }
+
+/* ── SOCIOS ── */
+.search-box { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 8px; padding: 6px 12px; }
+.search-box input { background: none; border: none; outline: none; color: var(--text2); font-size: 12px; width: 180px; }
+.socios-list { flex: 1; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 6px; }
+.socio-item { display: flex; align-items: center; gap: 12px; background: var(--bg1); border: 0.5px solid var(--border); border-radius: 10px; padding: 10px 14px; cursor: pointer; transition: border-color 0.15s; }
+.socio-item:hover { border-color: var(--accent)50; }
+.av-sm { width: 38px; height: 38px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--text4); flex-shrink: 0; border: 1.5px solid #2a2a2a; overflow: hidden; }
+.av-sm img { width: 100%; height: 100%; object-fit: cover; }
+.av-sm.ok { border-color: #00FF8860; }
+.av-sm.bad { border-color: #FF333360; }
+.si-info { flex: 1; }
+.si-name { font-size: 13px; font-weight: 500; color: #ddd; }
+.si-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.si-estado { font-size: 11px; text-align: right; }
+.si-estado.ok { color: #00FF88; }
+.si-estado.bad { color: #FF3333; }
+.si-venc { font-size: 11px; color: var(--text4); text-align: right; margin-top: 2px; }
+
+/* ── NUEVO SOCIO ── */
+.form-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; gap: 20px; }
+.form-col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+.form-input { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 8px; padding: 9px 12px; color: #ddd; font-size: 13px; outline: none; width: 100%; }
+.form-input:focus { border-color: var(--accent)60; }
+.form-select { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 8px; padding: 9px 12px; color: #ddd; font-size: 13px; outline: none; width: 100%; }
+.photo-area { background: var(--bg1); border: 0.5px dashed #2a2a2a; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; min-height: 200px; }
+#photoPreview { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid var(--accent); }
+#videoCapture { width: 100%; max-width: 300px; border-radius: 8px; display: none; }
+.form-footer { padding: 14px 20px; border-top: 0.5px solid var(--border); background: var(--bg1); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+
+/* ── CUOTAS ── */
+.cuotas-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.stats-row { display: flex; gap: 10px; }
+.stat-card { flex: 1; background: var(--bg1); border: 0.5px solid var(--border); border-radius: 10px; padding: 14px; }
+.stat-val { font-size: 26px; font-weight: 500; }
+.stat-val.ok { color: #00FF88; }
+.stat-val.bad { color: #FF3333; }
+.stat-val.warn { color: #FFB800; }
+.stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; letter-spacing: 1px; text-transform: uppercase; }
+.sec-title { font-size: 10px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; }
+.cuota-item { display: flex; align-items: center; gap: 12px; background: var(--bg1); border: 0.5px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.ci-info { flex: 1; }
+.ci-name { font-size: 13px; color: #ddd; }
+.ci-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.ci-monto { font-size: 13px; font-weight: 500; color: var(--text2); margin-right: 8px; }
+.btn-pago { background: var(--accent-bg); border: 0.5px solid var(--accent-bd); color: var(--accent); border-radius: 6px; padding: 5px 12px; font-size: 11px; cursor: pointer; }
+.btn-pago:hover { background: var(--accent)30; }
+
+/* ── AGENDA ── */
+.agenda-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.dias-row { display: flex; gap: 6px; margin-bottom: 16px; }
+.dia-btn { flex: 1; padding: 8px 4px; background: var(--bg1); border: 0.5px solid var(--border); border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.dia-btn:hover { border-color: var(--accent)40; }
+.dia-btn.active { border-color: var(--accent)60; background: var(--accent-bg); }
+.dia-nombre { font-size: 10px; color: var(--text3); }
+.dia-num { font-size: 16px; font-weight: 500; color: var(--text3); }
+.dia-btn.active .dia-nombre,.dia-btn.active .dia-num { color: var(--accent); }
+.clase-item { display: flex; align-items: center; gap: 12px; background: var(--bg1); border: 0.5px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.clase-hora { font-size: 14px; font-weight: 500; color: var(--accent); min-width: 52px; }
+.clase-info { flex: 1; }
+.clase-nombre { font-size: 13px; color: #ddd; }
+.clase-prof { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.clase-cupos { font-size: 11px; color: var(--text3); background: var(--bg2); border-radius: 6px; padding: 3px 10px; }
+
+/* ── REPORTES ── */
+.reportes-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.rep-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.rep-kpi { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden; }
+.rep-kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0.5; }
+.rep-kpi.green::before { background: #00FF88; }
+.rep-kpi.red::before { background: #FF4444; }
+.rep-kpi.blue::before { background: #3b82f6; }
+.rep-kpi-icon { font-size: 18px; color: var(--accent); opacity: 0.7; }
+.rep-kpi.green .rep-kpi-icon { color: #00FF88; }
+.rep-kpi.red .rep-kpi-icon { color: #FF4444; }
+.rep-kpi.blue .rep-kpi-icon { color: #3b82f6; }
+.rep-kpi-val { font-size: 28px; font-weight: 600; color: var(--text1); line-height: 1; }
+.rep-kpi-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.rep-kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.rep-dinero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rep-dinero { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.rep-dinero-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.rep-dinero-val { font-size: 22px; font-weight: 600; color: var(--accent); }
+.rep-dinero-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.rep-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rep-panel { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.rep-panel-title { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+.rep-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.rep-bar-label { font-size: 11px; color: var(--text3); width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rep-bar-track { flex: 1; height: 6px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+.rep-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+.rep-bar-val { font-size: 11px; color: var(--text2); width: 70px; text-align: right; }
+.rep-sparkline { display: flex; align-items: flex-end; gap: 4px; height: 60px; margin-top: 8px; }
+.rep-spark-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rep-spark-bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--accent); opacity: 0.7; transition: height 0.5s; min-height: 2px; }
+.rep-spark-bar.today { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+.rep-spark-lbl { font-size: 9px; color: var(--text3); }
+.rep-metodo-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 0.5px solid var(--bg2); }
+.rep-metodo-item:last-child { border-bottom: none; }
+.rep-metodo-name { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+.rep-metodo-dot { width: 8px; height: 8px; border-radius: 50%; }
+.rep-metodo-monto { font-size: 12px; color: var(--accent); font-weight: 500; }
+
+/* ── CONFIG ── */
+.config-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.config-section { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 10px; padding: 16px; }
+.config-sec-title { font-size: 10px; color: var(--text3); letter-spacing: 2px; margin-bottom: 14px; text-transform: uppercase; }
+.config-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 0.5px solid var(--bg2); }
+.config-row:last-child { border-bottom: none; }
+.config-key { font-size: 13px; color: var(--text2); }
+.config-val { font-size: 12px; color: var(--text3); }
+.toggle { width: 36px; height: 20px; background: var(--accent); border-radius: 10px; position: relative; cursor: pointer; flex-shrink: 0; }
+.toggle-dot { width: 14px; height: 14px; background: #fff; border-radius: 50%; position: absolute; right: 3px; top: 3px; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg3); border: 0.5px solid var(--border3); border-radius: 10px; padding: 10px 18px; font-size: 13px; color: var(--text1); z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+.toast.show { opacity: 1; }
+.toast.ok { border-color: #00FF8860; }
+.toast.bad { border-color: #FF333360; }
+
+/* MODAL PERFIL */
+.modal-perfil-overlay { position: fixed; inset: 0; background: #000000bb; display: none; align-items: center; justify-content: center; z-index: 300; }
+/* ── FICHA MÉDICA ── */
+/* ── FICHA MÉDICA SCREEN ── */
+#screen-ficha.active { display: flex; }
+
+@media print {
+  body > * { display: none !important; }
+  #screen-ficha { display: block !important; position: static !important; background: white !important; color: black !important; }
+  .ficha-screen-head-print { display: block !important; }
+  .page-head { display: none !important; }
+  .ficha-section { border: 1px solid #ccc !important; break-inside: avoid; margin-bottom: 12px; }
+  .ficha-section-title { background: #f0f0f0 !important; color: #333 !important; -webkit-print-color-adjust: exact; }
+  .ficha-input, .ficha-select, .ficha-textarea { background: white !important; color: black !important; border: 1px solid #ccc !important; }
+  .declaracion-box { background: #f9f9f9 !important; border: 1px solid #ccc !important; color: black !important; max-height: none !important; }
+  .declaracion-aceptada { background: #e6fff0 !important; color: #006633 !important; border: 1px solid #00cc66 !important; -webkit-print-color-adjust: exact; }
+  .ficha-badge { display: none; }
+}
+
+/* ── FICHA MÉDICA SCREEN ORIGINAL ── */
+.ficha-screen-head { display: flex; align-items: center; justify-content: space-between; padding: 0 0 16px; border-bottom: 0.5px solid var(--border); margin-bottom: 20px; }
+.ficha-screen-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.ficha-body { display: flex; flex-direction: column; gap: 16px; max-width: 800px; }
+.ficha-section { border: 1px solid #2a2a2a; border-radius: 12px; background: #111; }
+.ficha-section-title { background: #1a1a1a; padding: 11px 16px; font-size: 11px; font-weight: 700; color: #FF4500; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; border-radius: 12px 12px 0 0; }
+.ficha-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px; }
+.ficha-grid-1 { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 18px; }
+.ficha-field { display: flex; flex-direction: column; gap: 6px; }
+.ficha-label { font-size: 11px; color: #777; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.ficha-input { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f0f0f0; outline: none; width: 100%; box-sizing: border-box; }
+.ficha-input:focus { border-color: #FF4500; }
+.ficha-select { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f0f0f0; outline: none; width: 100%; box-sizing: border-box; }
+.ficha-select:focus { border-color: #FF4500; }
+.ficha-textarea { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f0f0f0; outline: none; resize: vertical; min-height: 90px; font-family: inherit; width: 100%; box-sizing: border-box; }
+.ficha-textarea:focus { border-color: #FF4500; }
+.declaracion-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px; font-size: 12px; color: #aaa; line-height: 1.7; max-height: 140px; overflow-y: auto; }
+.declaracion-check { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; cursor: pointer; }
+.declaracion-check input[type=checkbox] { width: 18px; height: 18px; accent-color: #FF4500; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.declaracion-check label { font-size: 13px; color: #ccc; cursor: pointer; line-height: 1.5; }
+.declaracion-aceptada { background: #00FF8815; border: 1px solid #00FF8840; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #00FF88; display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.ficha-badge { font-size: 11px; padding: 4px 10px; border-radius: 10px; font-weight: 600; }
+.ficha-badge.completa { background: #00FF8820; color: #00FF88; }
+.ficha-badge.incompleta { background: #f59e0b20; color: #f59e0b; }
+
+/* ── LOGIN ── */
+.login-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0a0a0a; z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; overflow: hidden; }
+.login-overlay.hidden { display: none; }
+.login-title { font-size: 22px; font-weight: 600; color: var(--text1); text-align: center; }
+.login-sub { font-size: 12px; color: var(--text3); text-align: center; margin-top: -12px; }
+.login-users { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 400px; }
+.login-user-btn { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px 20px; cursor: pointer; text-align: center; min-width: 120px; transition: all 0.15s; }
+.login-user-btn:hover { border-color: var(--accent); background: var(--accent)10; }
+.login-user-btn.selected { border-color: var(--accent); background: var(--accent)15; }
+.login-user-nombre { font-size: 14px; font-weight: 500; color: var(--text1); }
+.login-user-rol { font-size: 11px; color: var(--text3); margin-top: 3px; text-transform: capitalize; }
+.login-pin-area { display: none; flex-direction: column; align-items: center; gap: 10px; }
+.login-pin-area.visible { display: flex; }
+.login-pin-dots { display: flex; gap: 10px; }
+.login-pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2); transition: all 0.15s; }
+.login-pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+.login-numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 200px; }
+.login-num { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 10px; padding: 14px; font-size: 18px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; color: var(--text1); }
+.login-num:hover { background: var(--bg2); }
+.login-num:active { transform: scale(0.95); }
+.login-error { font-size: 12px; color: #FF4444; display: none; }
+.login-error.show { display: block; }
+.login-user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent)20; color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 8px; }
+
+/* ── USUARIOS CONFIG ── */
+.usr-grid { display: flex; flex-direction: column; gap: 8px; }
+.usr-row { background: var(--bg2); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.usr-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent)20; color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.usr-info { flex: 1; }
+.usr-nombre { font-size: 13px; font-weight: 500; }
+.usr-rol { font-size: 11px; color: var(--text3); text-transform: capitalize; }
+.usr-actions { display: flex; gap: 6px; }
+.modal-usuario-overlay { position: fixed; inset: 0; background: #000000bb; display: none; align-items: center; justify-content: center; z-index: 500; }
+.modal-usuario-overlay.open { display: flex; }
+.modal-usuario { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 24px; width: 380px; max-height: 90vh; overflow-y: auto; }
+.modal-usuario-title { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
+.perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.perm-item { display: flex; align-items: center; gap: 8px; background: var(--bg2); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.perm-item input { accent-color: var(--accent); cursor: pointer; }
+.perm-item label { font-size: 12px; color: var(--text2); cursor: pointer; }
+
+/* ── VENCIMIENTOS ── */
+.venc-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.venc-header-stats { display: flex; gap: 10px; }
+.venc-stat { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px 18px; flex: 1; }
+.venc-stat-val { font-size: 28px; font-weight: 600; }
+.venc-stat-val.red { color: #FF4444; }
+.venc-stat-val.yellow { color: #f59e0b; }
+.venc-stat-val.ok { color: #00FF88; }
+.venc-stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.venc-lista { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+.venc-lista-head { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; padding: 10px 16px; background: var(--bg2); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.venc-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; padding: 11px 16px; border-top: 0.5px solid var(--bg2); align-items: center; transition: background 0.1s; }
+.venc-row:hover { background: var(--bg2); }
+.venc-nombre { font-size: 13px; color: var(--text1); display: flex; align-items: center; gap: 8px; }
+.venc-av { width: 28px; height: 28px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 12px; overflow: hidden; flex-shrink: 0; }
+.venc-av img { width: 100%; height: 100%; object-fit: cover; }
+.venc-plan { font-size: 11px; color: var(--text3); }
+.venc-tel { font-size: 12px; color: var(--text2); }
+.venc-dias { font-size: 13px; font-weight: 600; }
+.venc-dias.vencido { color: #FF4444; }
+.venc-dias.urgente { color: #f59e0b; }
+.venc-dias.ok { color: #00FF88; }
+
+.venc-empty { padding: 40px; text-align: center; color: var(--text3); font-size: 13px; }
+.nav-badge { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #FF4444; border-radius: 50%; display: none; box-shadow: 0 0 6px #FF444480; }
+.nav-badge.show { display: block; }
+
+/* ── QR ── */
+.modal-qr-overlay { position: fixed; inset: 0; background: #000000cc; display: none; align-items: center; justify-content: center; z-index: 400; }
+.modal-qr-overlay.open { display: flex; }
+.modal-qr { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 28px; width: 320px; text-align: center; }
+.modal-qr-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.modal-qr-sub { font-size: 11px; color: var(--text3); margin-bottom: 20px; }
+.modal-qr img { width: 220px; height: 220px; border-radius: 10px; border: 3px solid white; }
+.modal-qr-nombre { font-size: 13px; color: var(--text2); margin-top: 12px; font-weight: 500; }
+.modal-qr-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: center; }
+
+.btn-scan-qr { background: var(--accent)15; border: 0.5px solid var(--accent)40; color: var(--accent); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+.btn-scan-qr:hover { background: var(--accent)25; }
+.qr-scan-overlay { position: absolute; inset: 0; background: #000000cc; display: none; align-items: center; justify-content: center; z-index: 10; flex-direction: column; gap: 12px; }
+.qr-scan-overlay.active { display: flex; }
+.qr-scan-frame { width: 200px; height: 200px; border: 2px solid var(--accent); border-radius: 12px; position: relative; box-shadow: 0 0 0 9999px #00000080; }
+.qr-scan-corner { position: absolute; width: 20px; height: 20px; border-color: var(--accent); border-style: solid; }
+.qr-scan-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.qr-scan-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.qr-scan-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.qr-scan-corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+.qr-scan-line { position: absolute; left: 4px; right: 4px; height: 2px; background: var(--accent); opacity: 0.8; animation: scanline 2s linear infinite; top: 0; }
+@keyframes scanline { 0% { top: 4px; } 100% { top: 190px; } }
+.qr-scan-label { color: white; font-size: 13px; }
+.qr-scan-cancel { background: #ffffff15; border: 0.5px solid #ffffff30; color: white; border-radius: 8px; padding: 8px 20px; font-size: 12px; cursor: pointer; }
+
+.mp-congelado-banner { margin: 0 20px 0; background: #1e3a5f; border: 0.5px solid #3b82f680; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #93c5fd; }
+.mp-congelado-banner i { font-size: 16px; color: #3b82f6; }
+.btn-congelar { background: #1e3a5f; border: 0.5px solid #3b82f680; color: #93c5fd; border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+.btn-congelar:hover { background: #3b82f620; }
+.btn-descongelar { background: #1e3a5f; border: 0.5px solid #3b82f6; color: #3b82f6; border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.mp-pagos { margin: 0 20px 16px; border-top: 0.5px solid var(--border2); padding-top: 14px; }
+.mp-pagos-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.mp-pago-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 7px; background: var(--bg2); margin-bottom: 5px; font-size: 12px; }
+.mp-pago-fecha { color: var(--text3); min-width: 90px; }
+.mp-pago-plan { color: var(--text2); flex: 1; padding: 0 10px; }
+.mp-pago-metodo { color: var(--text3); font-size: 11px; min-width: 80px; text-align: right; }
+.mp-pago-monto { color: var(--accent); font-weight: 600; min-width: 80px; text-align: right; }
+.mp-pagos-empty { font-size: 12px; color: var(--text3); text-align: center; padding: 12px 0; }
+.modal-perfil-overlay.open { display: flex; }
+.modal-perfil { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 16px; width: 700px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+.mp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+.mp-title { font-size: 15px; font-weight: 500; }
+.mp-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 4px; }
+.mp-close:hover { color: var(--text2); }
+.mp-body { display: flex; flex: 1; overflow: hidden; }
+.mp-foto-col { width: 220px; flex-shrink: 0; background: var(--bg); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 24px 16px; gap: 14px; }
+.mp-avatar { width: 130px; height: 130px; border-radius: 50%; background: var(--bg2); border: 2px solid #2a2a2a; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 48px; color: #333; }
+.mp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.mp-avatar.ok { border-color: #00FF88; }
+.mp-avatar.bad { border-color: #FF3333; }
+.mp-estado { font-size: 12px; font-weight: 500; }
+.mp-estado.ok { color: #00FF88; }
+.mp-estado.bad { color: #FF3333; }
+#mpVideoCapture { width: 180px; border-radius: 8px; display: none; }
+.mp-datos-col { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.mp-footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-top: 0.5px solid var(--border); flex-shrink: 0; background: var(--bg1); }
+.btn-danger { background: #FF333315; border: 0.5px solid #FF333340; color: #FF3333; border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+.btn-danger:hover { background: #FF333330; }
+
+/* MODAL PAGO */
+.modal-overlay { position: fixed; inset: 0; background: #000000aa; display: flex; align-items: center; justify-content: center; z-index: 200; display: none; }
+.modal { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 14px; padding: 24px; width: 340px; display: flex; flex-direction: column; gap: 14px; }
+.modal-title { font-size: 15px; font-weight: 500; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon"><i class="ti ti-dumbbell" style="color:#fff;font-size:15px"></i></div>
+    <div>
+      <div class="logo-text">GymOS</div>
+      <div class="logo-sub">Control de acceso</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <img id="topbarLogo" src="" alt="" class="topbar-logo" style="display:none">
+    <div class="gym-badge" id="gymNombre">Mi Gimnasio</div>
+    <button onclick="cerrarSesion()" style="background:var(--bg2);border:0.5px solid var(--border);color:var(--text3);cursor:pointer;font-size:11px;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px" title="Cerrar sesión"><i class="ti ti-logout"></i> <span id="headerUsuario" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></button>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay" style="gap:14px">
+  <img id="loginLogo" src="" alt="" class="login-logo" style="display:none">
+  <div style="text-align:center;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:40px;line-height:1">🏋️</div>
+    <div class="login-title" id="loginGymNombre" style="font-size:24px;font-weight:700;margin:0">GymOS</div>
+    <div class="login-sub" style="font-size:12px;color:#666;margin:0">Seleccioná tu usuario para continuar</div>
+  </div>
+  <div class="login-users" id="loginUsers"></div>
+  <div class="login-pin-area" id="loginPinArea">
+    <div style="font-size:13px;color:var(--text3)" id="loginPinLabel">Ingresá tu PIN</div>
+    <div class="login-pin-dots" id="loginPinDots">
+      <div class="login-pin-dot" id="dot0"></div>
+      <div class="login-pin-dot" id="dot1"></div>
+      <div class="login-pin-dot" id="dot2"></div>
+      <div class="login-pin-dot" id="dot3"></div>
+    </div>
+    <div class="login-numpad">
+      <div class="login-num" onclick="loginNum('1')">1</div>
+      <div class="login-num" onclick="loginNum('2')">2</div>
+      <div class="login-num" onclick="loginNum('3')">3</div>
+      <div class="login-num" onclick="loginNum('4')">4</div>
+      <div class="login-num" onclick="loginNum('5')">5</div>
+      <div class="login-num" onclick="loginNum('6')">6</div>
+      <div class="login-num" onclick="loginNum('7')">7</div>
+      <div class="login-num" onclick="loginNum('8')">8</div>
+      <div class="login-num" onclick="loginNum('9')">9</div>
+      <div class="login-num" onclick="loginBack()">⌫</div>
+      <div class="login-num" onclick="loginNum('0')">0</div>
+      <div class="login-num" onclick="loginCancelar()" style="font-size:11px;color:var(--text3)">Volver</div>
+    </div>
+    <div class="login-error" id="loginError">PIN incorrecto</div>
+  </div>
+  <div id="loginCerrarSesionBtn" style="display:none;margin-top:8px">
+    <button onclick="cerrarSesionDesdeLogin()" style="background:transparent;border:0.5px solid #333;color:#666;border-radius:8px;padding:8px 20px;font-size:12px;cursor:pointer">
+      <i class="ti ti-logout"></i> Cerrar sesión actual
+    </button>
+  </div>
+</div>
+
+<!-- MODAL USUARIO -->
+<div class="modal-usuario-overlay" id="modalUsuario">
+  <div class="modal-usuario">
+    <div class="modal-usuario-title" id="modalUsuarioTitle">Nuevo usuario</div>
+    <input type="hidden" id="usuarioEditId">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="font-size:11px;color:var(--text3)">Nombre</label><input class="form-input" id="usuarioNombre" style="width:100%;margin-top:4px"></div>
+      <div><label style="font-size:11px;color:var(--text3)">PIN (4 dígitos)</label><input class="form-input" id="usuarioPin" type="password" maxlength="4" style="width:100%;margin-top:4px" placeholder="••••"></div>
+      <div>
+        <label style="font-size:11px;color:var(--text3)">Rol</label>
+        <select class="form-input" id="usuarioRol" style="width:100%;margin-top:4px" onchange="aplicarPermisosDefault()">
+          <option value="administrador">Administrador</option>
+          <option value="encargado">Encargado</option>
+          <option value="recepcionista">Recepcionista</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:8px">Permisos</label>
+        <div class="perm-grid">
+          <div class="perm-item"><input type="checkbox" id="perm-ingreso"><label for="perm-ingreso">Ingreso</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-socios"><label for="perm-socios">Socios</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-nuevo"><label for="perm-nuevo">Nuevo socio</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-cuotas"><label for="perm-cuotas">Cuotas</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-agenda"><label for="perm-agenda">Agenda</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-reportes"><label for="perm-reportes">Reportes</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-vencimientos"><label for="perm-vencimientos">Vencimientos</label></div>
+          <div class="perm-item"><input type="checkbox" id="perm-config"><label for="perm-config">Configuración</label></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn-sec" onclick="cerrarModalUsuario()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarUsuario()"><i class="ti ti-check"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-body">
+  <div class="sidebar">
+    <div class="nav-item active" id="nav-ingreso" onclick="showScreen('ingreso')">
+      <i class="ti ti-scan"></i><div class="tip">Ingreso</div>
+    </div>
+    <div class="nav-item" id="nav-socios" onclick="showScreen('socios')">
+      <i class="ti ti-users"></i><div class="tip">Socios</div>
+    </div>
+    <div class="nav-item" id="nav-nuevo" onclick="showScreen('nuevo')">
+      <i class="ti ti-user-plus"></i><div class="tip">Nuevo socio</div>
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-item" id="nav-cuotas" onclick="showScreen('cuotas')">
+      <i class="ti ti-cash"></i><div class="tip">Cuotas</div>
+    </div>
+    <div class="nav-item" id="nav-agenda" onclick="showScreen('agenda')">
+      <i class="ti ti-calendar"></i><div class="tip">Agenda</div>
+    </div>
+    <div class="nav-item" id="nav-reportes" onclick="showScreen('reportes')">
+      <i class="ti ti-chart-bar"></i><div class="tip">Reportes</div>
+    </div>
+    <div class="nav-item" id="nav-vencimientos" onclick="showScreen('vencimientos')">
+      <i class="ti ti-bell"></i><div class="tip">Vencimientos</div>
+      <div class="nav-badge" id="navBadgeVenc"></div>
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-item" id="nav-config" onclick="showScreen('config')">
+      <i class="ti ti-settings"></i><div class="tip">Configuración</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- INGRESO -->
+    <div class="screen active" id="screen-ingreso">
+      <div class="ingreso-body">
+        <div class="cam-area">
+          <div class="cam-placeholder" id="camPlaceholder">
+            <i class="ti ti-camera" style="font-size:52px;color:#2a2a2a"></i>
+            <div style="font-size:12px;color:#444;letter-spacing:1px">Cámara no iniciada</div>
+          </div>
+          <video id="videoEl" autoplay playsinline></video>
+          <div class="scan-frame">
+            <div class="sc tl"></div><div class="sc tr"></div>
+            <div class="sc bl"></div><div class="sc br"></div>
+            <div class="scan-line"></div>
+          </div>
+          <div class="qr-scan-overlay" id="qrScanOverlay">
+            <div class="qr-scan-frame">
+              <div class="qr-scan-corner tl"></div>
+              <div class="qr-scan-corner tr"></div>
+              <div class="qr-scan-corner bl"></div>
+              <div class="qr-scan-corner br"></div>
+              <div class="qr-scan-line"></div>
+            </div>
+            <div class="qr-scan-label">Mostrá el QR frente a la cámara</div>
+            <button class="qr-scan-cancel" onclick="cancelarScanQR()">Cancelar</button>
+          </div>
+          <div class="status-pill" id="statusPill">
+            <div class="pulse"></div>
+            <span id="statusText">Esperando cámara...</span>
+          </div>
+          <button class="cam-btn" onclick="toggleCam()">
+            <i class="ti ti-camera" id="camBtnIcon"></i>
+            <span id="camBtnText">Iniciar cámara</span>
+          </button>
+        </div>
+        <div class="side-panel">
+          <!-- Pestañas -->
+          <div class="sp-tabs">
+            <div class="sp-tab active" onclick="spTab('socio',this)">Socio</div>
+            <div class="sp-tab" onclick="spTab('cobro',this)">Cobro</div>
+            <div class="sp-tab" onclick="spTab('buscar',this)">Buscar</div>
+            <div class="sp-tab" onclick="spTab('ingresos',this)">Ingresos</div>
+          </div>
+
+          <!-- PANE SOCIO -->
+          <div class="sp-pane active" id="pane-socio">
+            <div class="socio-card">
+              <div class="srow">
+                <div class="avatar" id="ingresoAvatar"><i class="ti ti-user"></i></div>
+                <div style="flex:1">
+                  <div class="sname" id="ingresoNombre">Esperando...</div>
+                  <div class="splan" id="ingresoPlan">Sin escanear</div>
+                </div>
+              </div>
+              <div class="badge wait" id="ingresoBadge"><i class="ti ti-scan" style="font-size:11px"></i> En espera</div>
+            </div>
+            <div class="detalle">
+              <div class="drow"><span class="dlabel">Vencimiento</span><span class="dval" id="dVenc">--</span></div>
+              <div class="drow"><span class="dlabel">Días restantes</span><span class="dval" id="dDias">--</span></div>
+              <div class="drow"><span class="dlabel">Último ingreso</span><span class="dval" id="dUltimo">--</span></div>
+              <div class="drow"><span class="dlabel">Ingresos hoy</span><span class="dval" id="dHoy">--</span></div>
+            </div>
+            <div class="socio-acciones">
+              <button class="btn-registrar-pago" onclick="spTab('cobro', document.querySelectorAll('.sp-tab')[1])">
+                <i class="ti ti-cash"></i> Registrar pago
+              </button>
+              <button class="btn-ver-perfil" id="btnVerPerfil" onclick="verPerfilReconocido()" title="Ver perfil">
+                <i class="ti ti-user"></i>
+              </button>
+            </div>
+            <button class="btn-scan-qr" onclick="activarScanQR()" style="margin-top:8px;width:100%;justify-content:center"><i class="ti ti-qrcode"></i> Escanear QR</button>
+          </div>
+
+          <!-- PANE COBRO -->
+          <div class="sp-pane" id="pane-cobro">
+            <div class="cobro-pane">
+              <div class="cobro-socio-info">
+                <div>
+                  <div class="cobro-socio-nombre" id="cobroNombre">Sin socio seleccionado</div>
+                  <div class="cobro-socio-sub" id="cobroSub">Reconocé un socio o buscalo</div>
+                </div>
+              </div>
+              <div class="cobro-grid" id="cobroGrid">
+                <div class="cobro-btn sel" onclick="selCobro(this,'Plan Mensual')" data-plan="Plan Mensual">
+                  <i class="ti ti-calendar-month"></i>
+                  <span class="cb-label">Mensual</span>
+                  <span class="cb-price" id="precioPlanMensual">$0</span>
+                </div>
+                <div class="cobro-btn" onclick="selCobro(this,'Plan Trimestral')" data-plan="Plan Trimestral">
+                  <i class="ti ti-calendar-stats"></i>
+                  <span class="cb-label">Trimestral</span>
+                  <span class="cb-price" id="precioPlanTrimestral">$0</span>
+                </div>
+                <div class="cobro-btn" onclick="selCobro(this,'Plan Anual')" data-plan="Plan Anual">
+                  <i class="ti ti-calendar"></i>
+                  <span class="cb-label">Anual</span>
+                  <span class="cb-price" id="precioPlanAnual">$0</span>
+                </div>
+                <div class="cobro-btn" onclick="selCobro(this,'Inscripcion')" data-plan="Inscripcion">
+                  <i class="ti ti-file-plus"></i>
+                  <span class="cb-label">Inscripción</span>
+                  <span class="cb-price" id="precioPlanInscripcion">$0</span>
+                </div>
+              </div>
+              <select class="cobro-metodo" id="cobroMetodo">
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="tarjeta">Tarjeta / QR</option>
+              </select>
+              <div class="cobro-total">
+                <span class="cobro-total-label">Total a cobrar</span>
+                <span class="cobro-total-val" id="cobroTotal">$0</span>
+              </div>
+              <button class="btn-confirmar-cobro" onclick="confirmarCobroPanel()">
+                <i class="ti ti-check"></i> Confirmar cobro
+              </button>
+              <button class="btn-comprobante" onclick="enviarComprobante()">
+                <i class="ti ti-mail"></i> Enviar comprobante por mail
+              </button>
+            </div>
+          </div>
+
+          <!-- PANE BUSCAR -->
+          <div class="sp-pane" id="pane-buscar">
+            <div class="buscar-pane">
+              <div class="buscar-input-wrap">
+                <i class="ti ti-search"></i>
+                <input type="text" placeholder="Nombre o DNI..." oninput="buscarEnPanel(this.value)" id="buscarPanelInput">
+              </div>
+              <div class="buscar-results" id="buscarResults">
+                <div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Escribí para buscar</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANE INGRESOS -->
+          <div class="sp-pane" id="pane-ingresos">
+            <div class="hist-area">
+              <div class="hist-title">Ingresos de hoy</div>
+              <div id="histList"><div style="font-size:12px;color:#444;padding:10px 0">Sin registros hoy</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOCIOS -->
+    <div class="screen" id="screen-socios">
+      <div class="page-head">
+        <div class="page-title">Socios</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="search-box">
+            <i class="ti ti-search" style="color:#555;font-size:14px"></i>
+            <input id="searchInput" placeholder="Buscar socio..." oninput="buscarSocios()">
+          </div>
+          <button class="btn-primary" onclick="showScreen('nuevo')"><i class="ti ti-plus"></i> Nuevo</button>
+        </div>
+      </div>
+      <div class="socios-list" id="sociosList"></div>
+    </div>
+
+    <!-- NUEVO SOCIO -->
+    <div class="screen" id="screen-nuevo">
+      <div class="page-head">
+        <div class="page-title">Nuevo socio</div>
+      </div>
+      <div class="form-area">
+        <div class="form-col">
+          <div class="form-group"><div class="form-label">Nombre completo *</div><input class="form-input" id="fNombre" placeholder="Ej: Carlos Mendoza"></div>
+          <div class="form-group"><div class="form-label">DNI</div><input class="form-input" id="fDni" placeholder="Ej: 30.123.456"></div>
+          <div class="form-group"><div class="form-label">Teléfono</div><input class="form-input" id="fTel" placeholder="Ej: 264 512-3456"></div>
+          <div class="form-group"><div class="form-label">Email</div><input class="form-input" id="fEmail" placeholder="Ej: carlos@email.com"></div>
+          <div class="form-group">
+            <div class="form-label">Plan</div>
+            <select class="form-select" id="fPlan">
+              <option>Plan Mensual</option>
+              <option>Plan Trimestral</option>
+              <option>Plan Anual</option>
+            </select>
+          </div>
+          <div class="form-group"><div class="form-label">Fecha de inicio</div><input class="form-input" id="fFecha" type="date"></div>
+          <div class="form-group"><div class="form-label">Observaciones</div><textarea class="form-input" id="fObs" rows="3" placeholder="Notas adicionales..." style="resize:none"></textarea></div>
+        </div>
+        <div class="form-col">
+          <div class="form-label">Foto para reconocimiento facial</div>
+          <div class="photo-area">
+            <img id="photoPreview" src="" alt="Foto">
+            <video id="videoCapture" autoplay playsinline></video>
+            <div id="photoPlaceholder" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+              <i class="ti ti-camera" style="font-size:44px;color:#333"></i>
+              <div style="font-size:12px;color:#555;text-align:center">Activá la cámara para capturar<br>el rostro del socio</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+              <button class="btn-primary" onclick="abrirCamaraCaptura()" id="btnAbrirCam"><i class="ti ti-camera"></i> Abrir cámara</button>
+              <button class="btn-primary" onclick="capturarFoto()" id="btnCapturar" style="display:none"><i class="ti ti-camera-check"></i> Capturar</button>
+              <button class="btn-sec" onclick="reiniciarFoto()" id="btnReiniciar" style="display:none"><i class="ti ti-refresh"></i> Repetir</button>
+            </div>
+          </div>
+          <input type="hidden" id="fotoBase64">
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-sec" onclick="showScreen('socios')">Cancelar</button>
+        <button class="btn-primary" onclick="guardarSocio()"><i class="ti ti-check"></i> Guardar socio</button>
+      </div>
+    </div>
+
+    <!-- CUOTAS -->
+    <div class="screen" id="screen-cuotas">
+      <div class="page-head"><div class="page-title">Cuotas y pagos</div></div>
+      <div class="cuotas-body">
+        <div class="stats-row" id="cuotasStats">
+          <div class="stat-card"><div class="stat-val ok" id="cAlDia">-</div><div class="stat-lbl">Al día</div></div>
+          <div class="stat-card"><div class="stat-val bad" id="cMorosos">-</div><div class="stat-lbl">Morosos</div></div>
+          <div class="stat-card"><div class="stat-val" id="cTotal">-</div><div class="stat-lbl">Total socios</div></div>
+        </div>
+        <div class="sec-title">MOROSOS</div>
+        <div id="morososList"><div style="color:#555;font-size:13px;padding:10px 0">Sin morosos</div></div>
+        <div class="sec-title" style="margin-top:8px">AL DÍA</div>
+        <div id="alDiaList"></div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="screen" id="screen-agenda">
+      <div class="page-head">
+        <div class="page-title">Agenda de clases</div>
+        <button class="btn-primary" onclick="mostrarModalClase()"><i class="ti ti-plus"></i> Nueva clase</button>
+      </div>
+      <div class="agenda-body">
+        <div class="dias-row" id="diasRow"></div>
+        <div id="clasesList"></div>
+      </div>
+    </div>
+
+    <!-- REPORTES -->
+    <div class="screen" id="screen-reportes">
+      <div class="page-head"><div class="page-title">Reportes</div><button class="btn-sec" onclick="cargarReportes()" style="font-size:11px"><i class="ti ti-refresh"></i> Actualizar</button></div>
+      <div class="reportes-body">
+
+        <!-- KPIs socios -->
+        <div class="rep-kpi-grid">
+          <div class="rep-kpi">
+            <i class="ti ti-users rep-kpi-icon"></i>
+            <div class="rep-kpi-val" id="rTotal">-</div>
+            <div class="rep-kpi-lbl">Socios activos</div>
+          </div>
+          <div class="rep-kpi green">
+            <i class="ti ti-circle-check rep-kpi-icon"></i>
+            <div class="rep-kpi-val" id="rAlDia">-</div>
+            <div class="rep-kpi-lbl">Al día</div>
+          </div>
+          <div class="rep-kpi red">
+            <i class="ti ti-alert-triangle rep-kpi-icon"></i>
+            <div class="rep-kpi-val" id="rMorosos">-</div>
+            <div class="rep-kpi-lbl">Morosos</div>
+          </div>
+          <div class="rep-kpi blue">
+            <i class="ti ti-door-enter rep-kpi-icon"></i>
+            <div class="rep-kpi-val" id="rHoy">-</div>
+            <div class="rep-kpi-lbl">Ingresos hoy</div>
+            <div class="rep-kpi-sub" id="rVencenPronto"></div>
+          </div>
+        </div>
+
+        <!-- Dinero -->
+        <div class="rep-dinero-grid">
+          <div class="rep-dinero">
+            <div class="rep-dinero-lbl">Recaudado hoy</div>
+            <div class="rep-dinero-val" id="rDineroHoy">$0</div>
+            <div class="rep-dinero-sub" id="rPagosHoy">0 pagos</div>
+          </div>
+          <div class="rep-dinero">
+            <div class="rep-dinero-lbl">Esta semana</div>
+            <div class="rep-dinero-val" id="rDineroSemana">$0</div>
+          </div>
+          <div class="rep-dinero">
+            <div class="rep-dinero-lbl">Este mes</div>
+            <div class="rep-dinero-val" id="rDineroMes">$0</div>
+            <div class="rep-dinero-sub" id="rPagosMes">0 pagos</div>
+          </div>
+        </div>
+
+        <!-- Gráfico + Métodos -->
+        <div class="rep-row">
+          <div class="rep-panel">
+            <div class="rep-panel-title">Recaudación últimos 7 días</div>
+            <div class="rep-sparkline" id="rSparkline"></div>
+          </div>
+          <div class="rep-panel">
+            <div class="rep-panel-title">Métodos de pago (mes)</div>
+            <div id="rMetodos"><div style="font-size:12px;color:var(--text3)">Sin datos</div></div>
+          </div>
+        </div>
+
+        <!-- Distribución socios + Planes -->
+        <div class="rep-row">
+          <div class="rep-panel">
+            <div class="rep-panel-title">Distribución de socios</div>
+            <div class="rep-bar-row"><span class="rep-bar-label">Al día</span><div class="rep-bar-track"><div class="rep-bar-fill" id="barAlDia" style="width:0%"></div></div><span class="rep-bar-val" id="barAlDiaVal">0</span></div>
+            <div class="rep-bar-row"><span class="rep-bar-label">Morosos</span><div class="rep-bar-track"><div class="rep-bar-fill" id="barMor" style="width:0%;background:#FF4444"></div></div><span class="rep-bar-val" id="barMorVal">0</span></div>
+            <div class="rep-bar-row"><span class="rep-bar-label">Vencen en 7d</span><div class="rep-bar-track"><div class="rep-bar-fill" id="barVence" style="width:0%;background:#f59e0b"></div></div><span class="rep-bar-val" id="barVenceVal">0</span></div>
+          </div>
+          <div class="rep-panel">
+            <div class="rep-panel-title">Planes más cobrados (mes)</div>
+            <div id="rPlanes"><div style="font-size:12px;color:var(--text3)">Sin datos</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FICHA MÉDICA -->
+    <div class="screen" id="screen-ficha">
+      <div class="page-head">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="volverDeFicha()" class="btn-sec" style="font-size:12px"><i class="ti ti-arrow-left"></i> Volver</button>
+          <div class="page-title">📋 Ficha Médica — <span id="fichaSocioNombre"></span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div id="fichaEstado"></div>
+          <button class="btn-sec" onclick="imprimirFicha()" style="font-size:12px"><i class="ti ti-printer"></i> Imprimir</button>
+          <button class="btn-primary" onclick="guardarFicha()"><i class="ti ti-check"></i> Guardar ficha</button>
+        </div>
+      </div>
+      <div class="page-body" style="overflow-y:auto;padding:20px">
+        <div class="ficha-body">
+
+          <!-- Datos personales -->
+          <div class="ficha-section">
+            <div class="ficha-section-title"><i class="ti ti-user"></i> Datos personales</div>
+            <div class="ficha-grid">
+              <div class="ficha-field">
+                <div class="ficha-label">Fecha de nacimiento</div>
+                <input class="ficha-input" type="date" id="fichaNacimiento">
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">Sexo</div>
+                <select class="ficha-select" id="fichaSexo">
+                  <option value="">— Seleccionar —</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="femenino">Femenino</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">Grupo sanguíneo</div>
+                <select class="ficha-select" id="fichaGrupo">
+                  <option value="">— Seleccionar —</option>
+                  <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                  <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                </select>
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">¿Hace ejercicio actualmente?</div>
+                <select class="ficha-select" id="fichaEjercicio">
+                  <option value="">— Seleccionar —</option>
+                  <option value="si">Sí, regularmente</option>
+                  <option value="a_veces">A veces</option>
+                  <option value="no">No, es nuevo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Medidas -->
+          <div class="ficha-section">
+            <div class="ficha-section-title"><i class="ti ti-ruler"></i> Medidas actuales</div>
+            <div class="ficha-grid">
+              <div class="ficha-field">
+                <div class="ficha-label">Peso (kg)</div>
+                <input class="ficha-input" id="fichaPeso" placeholder="Ej: 75">
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">Altura (cm)</div>
+                <input class="ficha-input" id="fichaAltura" placeholder="Ej: 175">
+              </div>
+            </div>
+          </div>
+
+          <!-- Antecedentes médicos -->
+          <div class="ficha-section">
+            <div class="ficha-section-title"><i class="ti ti-heart-rate-monitor"></i> Antecedentes médicos</div>
+            <div class="ficha-grid-1">
+              <div class="ficha-field">
+                <div class="ficha-label">Enfermedades crónicas (diabetes, hipertensión, cardíacas, etc.)</div>
+                <textarea class="ficha-textarea" id="fichaEnfermedades" placeholder="Ej: Hipertensión controlada — o escribí: Ninguna"></textarea>
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">Lesiones o cirugías previas</div>
+                <textarea class="ficha-textarea" id="fichaLesiones" placeholder="Ej: Cirugía de rodilla derecha (2022) — o escribí: Ninguna"></textarea>
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">Medicación actual</div>
+                <textarea class="ficha-textarea" id="fichaMedicacion" placeholder="Ej: Enalapril 10mg — o escribí: Ninguna"></textarea>
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">Alergias conocidas</div>
+                <textarea class="ficha-textarea" id="fichaAlergias" placeholder="Ej: Alergia a penicilina — o escribí: Ninguna"></textarea>
+              </div>
+              <div class="ficha-field">
+                <div class="ficha-label">¿Tiene autorización médica para realizar actividad física?</div>
+                <select class="ficha-select" id="fichaAutorizacion">
+                  <option value="">— Seleccionar —</option>
+                  <option value="si">Sí, con apto médico</option>
+                  <option value="no_necesita">No necesita (sin condiciones)</option>
+                  <option value="no">No, está en trámite</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observaciones -->
+          <div class="ficha-section">
+            <div class="ficha-section-title"><i class="ti ti-notes"></i> Observaciones del entrenador</div>
+            <div class="ficha-grid-1">
+              <div class="ficha-field">
+                <textarea class="ficha-textarea" id="fichaObservaciones" placeholder="Anotaciones internas del entrenador..." style="min-height:100px"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Declaración jurada -->
+          <div class="ficha-section">
+            <div class="ficha-section-title"><i class="ti ti-writing"></i> Declaración Jurada de Aptitud Física</div>
+            <div style="padding:18px">
+              <div class="declaracion-box" id="fichaDeclaracionTexto"></div>
+              <div id="fichaDeclaracionCheck">
+                <div class="declaracion-check">
+                  <input type="checkbox" id="fichaCheckDeclaracion">
+                  <label for="fichaCheckDeclaracion">He leído y acepto la declaración jurada. Declaro que la información proporcionada es verdadera y asumo total responsabilidad por mi estado de salud.</label>
+                </div>
+              </div>
+              <div id="fichaDeclaracionAceptada" class="declaracion-aceptada" style="display:none">
+                <i class="ti ti-circle-check"></i>
+                <span>Declaración aceptada el <strong id="fichaDeclaracionFecha"></strong></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- VENCIMIENTOS -->
+    <div class="screen" id="screen-vencimientos">
+      <div class="page-head">
+        <div class="page-title">Vencimientos</div>
+        <button class="btn-sec" onclick="cargarVencimientos()" style="font-size:11px"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+      <div class="venc-body">
+        <div class="venc-header-stats">
+          <div class="venc-stat"><div class="venc-stat-val red" id="vencVencidos">-</div><div class="venc-stat-lbl">Ya vencidos</div></div>
+          <div class="venc-stat"><div class="venc-stat-val yellow" id="vencHoy">-</div><div class="venc-stat-lbl">Vencen hoy</div></div>
+          <div class="venc-stat"><div class="venc-stat-val yellow" id="vencSemana">-</div><div class="venc-stat-lbl">En 7 días</div></div>
+          <div class="venc-stat"><div class="venc-stat-val" id="vencAlerta" style="color:var(--accent)">-</div><div class="venc-stat-lbl" id="vencAlertaLbl">Días de alerta</div></div>
+        </div>
+        <div class="venc-lista">
+          <div class="venc-lista-head">
+            <span>Socio</span><span>Plan</span><span>Teléfono</span><span>Vencimiento</span><span>Email</span>
+          </div>
+          <div id="vencLista"><div class="venc-empty">Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="screen" id="screen-config">
+      <div class="page-head">
+        <div class="page-title">Configuración</div>
+        <button class="btn-primary" onclick="guardarConfig()"><i class="ti ti-check"></i> Guardar</button>
+      </div>
+      <div class="config-body">
+        <div class="config-section">
+          <div class="config-sec-title">Datos del gimnasio</div>
+          <div class="config-row"><span class="config-key">Nombre del gimnasio</span><input class="form-input" id="cfgNombre" style="width:220px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Teléfono</span><input class="form-input" id="cfgTel" style="width:220px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row" style="align-items:flex-start;flex-direction:column;gap:8px">
+            <span class="config-key">Logo del gimnasio</span>
+            <div style="display:flex;align-items:center;gap:12px">
+              <img id="cfgLogoPreview" src="" style="height:48px;max-width:120px;object-fit:contain;display:none;border-radius:6px;background:#1a1a1a;padding:4px">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <input type="file" id="cfgLogoFile" accept="image/*" onchange="subirLogo(this)" style="font-size:11px;color:var(--text2)">
+                <button class="btn-sec" onclick="quitarLogo()" style="font-size:11px;padding:4px 10px" id="cfgLogoBtnQuitar" style="display:none">Quitar logo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title">Precios de planes</div>
+          <div class="config-row"><span class="config-key">Plan Mensual</span><input class="form-input" id="cfgMensual" style="width:140px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Plan Trimestral</span><input class="form-input" id="cfgTrimestral" style="width:140px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Plan Anual</span><input class="form-input" id="cfgAnual" style="width:140px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Inscripción</span><input class="form-input" id="cfgInscripcion" style="width:140px;padding:6px 10px;font-size:12px" placeholder="0"></div>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title">Apariencia</div>
+          <div class="config-row">
+            <span class="config-key">Tema de color</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div onclick="aplicarTema('')" id="tema-orig" title="Original" style="width:28px;height:28px;border-radius:6px;background:#0d0d0d;border:2px solid #FF4500;cursor:pointer;box-shadow:0 0 8px #FF450060"></div>
+              <div onclick="aplicarTema('b')" id="tema-b" title="Gris medio" style="width:28px;height:28px;border-radius:6px;background:#1f1f1f;border:2px solid #333;cursor:pointer"></div>
+              <div onclick="aplicarTema('c')" id="tema-c" title="Slate azul" style="width:28px;height:28px;border-radius:6px;background:#0f1923;border:2px solid #2d5a8e;cursor:pointer"></div>
+            </div>
+          </div>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title" style="display:flex;align-items:center;justify-content:space-between">
+            Usuarios
+            <button class="btn-primary" onclick="abrirModalUsuario()" style="font-size:11px;padding:5px 10px"><i class="ti ti-plus"></i> Nuevo</button>
+          </div>
+          <div class="usr-grid" id="usrGrid">Cargando...</div>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title">Email (Gmail)</div>
+          <div class="config-row"><span class="config-key">Email remitente</span><input class="form-input" id="cfgEmail" type="email" placeholder="tugym@gmail.com" style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Contraseña de app</span><input class="form-input" id="cfgEmailPass" type="password" placeholder="xxxx xxxx xxxx xxxx" style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Nombre remitente</span><input class="form-input" id="cfgEmailNombre" placeholder="Mi Gimnasio" style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <div style="padding:4px 0 0"><a href="https://myaccount.google.com/apppasswords" target="_blank" style="font-size:11px;color:var(--accent);opacity:0.7">¿Cómo generar la contraseña de app? →</a></div>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title">Alertas de vencimiento</div>
+          <div class="config-row">
+            <span class="config-key">Días de alerta antes del vencimiento</span>
+            <input class="form-input" id="cfgDiasAlerta" type="number" min="1" max="30" style="width:80px;padding:6px 10px;font-size:12px" placeholder="7">
+          </div>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title">Declaración jurada</div>
+          <div style="padding:4px 0 8px;font-size:11px;color:var(--text3)">Texto que el socio acepta al firmar la ficha médica</div>
+          <textarea id="cfgDeclaracion" style="width:100%;background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);resize:vertical;min-height:100px;font-family:inherit" placeholder="Ingresá el texto de la declaración jurada..."></textarea>
+        </div>
+        <div class="config-section">
+          <div class="config-sec-title">Sistema</div>
+          <div class="config-row"><span class="config-key">Versión</span><span class="config-val">GymOS v1.0.0</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL QR -->
+<div class="modal-qr-overlay" id="modalQR">
+  <div class="modal-qr">
+    <div class="modal-qr-title">QR de acceso</div>
+    <div class="modal-qr-sub">El socio muestra este QR en la cámara para ingresar</div>
+    <img id="qrImg" src="" alt="QR">
+    <div class="modal-qr-nombre" id="qrNombre"></div>
+    <div class="modal-qr-actions">
+      <button class="btn-primary" onclick="enviarQRporMail()"><i class="ti ti-mail"></i> Enviar QR por mail</button>
+      <button class="btn-sec" onclick="cerrarQR()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL PAGO -->
+<div class="modal-overlay" id="modalPago">
+  <div class="modal">
+    <div class="modal-title">Registrar pago</div>
+    <div class="form-group"><div class="form-label">Socio</div><input class="form-input" id="pagoNombre" disabled></div>
+    <div class="form-group"><div class="form-label">Monto</div><input class="form-input" id="pagoMonto" type="number" placeholder="Ej: 18000"></div>
+    <div class="form-group">
+      <div class="form-label">Método de pago</div>
+      <select class="form-select" id="pagoMetodo">
+        <option value="efectivo">Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="tarjeta">Tarjeta</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-sec" onclick="cerrarModalPago()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarPago()"><i class="ti ti-check"></i> Confirmar pago</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="snapCanvas" style="display:none"></canvas>
+<canvas id="mpSnapCanvas" style="display:none"></canvas>
+
+<!-- MODAL PERFIL SOCIO -->
+<div class="modal-perfil-overlay" id="modalPerfil">
+  <div class="modal-perfil">
+    <div class="mp-header">
+      <div class="mp-title">Perfil del socio</div>
+      <button class="mp-close" onclick="cerrarPerfil()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mp-body">
+      <!-- Columna foto -->
+      <div class="mp-foto-col">
+        <div class="mp-avatar" id="mpAvatar"><i class="ti ti-user"></i></div>
+        <div class="mp-estado" id="mpEstado">—</div>
+        <div style="font-size:11px;color:#555;text-align:center" id="mpVenc">—</div>
+        <video id="mpVideoCapture" autoplay playsinline></video>
+        <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+          <button class="btn-primary" onclick="mpAbrirCamara()" id="mpBtnCam" style="width:100%;justify-content:center"><i class="ti ti-camera"></i> Cambiar foto</button>
+          <button class="btn-primary" onclick="mpCapturar()" id="mpBtnCapturar" style="display:none;width:100%;justify-content:center"><i class="ti ti-camera-check"></i> Capturar</button>
+          <button class="btn-sec" onclick="mpCancelarFoto()" id="mpBtnCancelarFoto" style="display:none;width:100%;justify-content:center"><i class="ti ti-x"></i> Cancelar</button>
+        </div>
+        <input type="hidden" id="mpFotoBase64">
+      </div>
+      <!-- Columna datos -->
+      <div class="mp-datos-col">
+        <div class="form-group"><div class="form-label">Nombre completo *</div><input class="form-input" id="mpNombre" placeholder="Nombre completo"></div>
+        <div class="form-group"><div class="form-label">DNI</div><input class="form-input" id="mpDni" placeholder="Ej: 30.123.456"></div>
+        <div class="form-group"><div class="form-label">Teléfono</div><input class="form-input" id="mpTel" placeholder="Ej: 264 512-3456"></div>
+        <div class="form-group"><div class="form-label">Email</div><input class="form-input" id="mpEmail" placeholder="Ej: carlos@email.com"></div>
+        <div class="form-group">
+          <div class="form-label">Plan</div>
+          <select class="form-select" id="mpPlan">
+            <option>Plan Mensual</option>
+            <option>Plan Trimestral</option>
+            <option>Plan Anual</option>
+          </select>
+        </div>
+        <div class="form-group"><div class="form-label">Fecha de vencimiento</div><input class="form-input" id="mpFechaVenc" type="date"></div>
+        <div class="form-group">
+          <div class="form-label">Objetivo / Rutina</div>
+          <select class="form-select" id="mpObjetivo" onchange="guardarObjetivo()">
+            <option value="">— Sin asignar —</option>
+            <option value="musculacion">💪 Musculación / Volumen</option>
+            <option value="perdida_peso">🔥 Pérdida de peso</option>
+            <option value="fitness">🏃 Fitness / Salud general</option>
+            <option value="definicion">✨ Definición muscular</option>
+          </select>
+        </div>
+        <div style="background:#1a1a1a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;font-size:11px;color:#555">
+          <div style="display:flex;justify-content:space-between"><span>ID Socio</span><span id="mpId" style="color:#444">—</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Miembro desde</span><span id="mpDesde" style="color:#444">—</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <span>App del socio</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <a id="mpPwaLink" href="#" target="_blank" style="color:var(--accent);font-size:11px;text-decoration:none">Abrir →</a>
+              <button onclick="enviarAppAlSocio()" style="background:var(--accent);border:none;color:white;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="ti ti-mail"></i> Enviar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="mpCongeladoBanner" style="display:none;margin:0 20px 10px">
+      <div class="mp-congelado-banner">
+        <i class="ti ti-snowflake"></i>
+        <span>Membresía congelada — <span id="mpCongeladoDesde"></span> · <strong id="mpCongeladoDias"></strong> días pausados</span>
+      </div>
+    </div>
+    <div class="mp-pagos">
+      <div class="mp-pagos-title">Historial de pagos</div>
+      <div id="mpPagosLista"><div class="mp-pagos-empty">Cargando...</div></div>
+    </div>
+    <div class="mp-footer">
+      <div style="display:flex;gap:8px">
+        <button class="btn-danger" onclick="eliminarSocio()"><i class="ti ti-trash"></i> Dar de baja</button>
+        <button class="btn-congelar" id="mpBtnCongelar" onclick="toggleCongelar()"><i class="ti ti-snowflake"></i> <span id="mpCongelarLabel">Congelar</span></button>
+        <button class="btn-scan-qr" onclick="verQR(socioEditandoId)"><i class="ti ti-qrcode"></i> QR</button>
+        <button class="btn-scan-qr" onclick="abrirFichaVentana(socioEditandoId)" style="background:var(--blue)15;border-color:var(--blue)40;color:var(--blue)"><i class="ti ti-clipboard-heart"></i> Ficha</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec" onclick="cerrarPerfil()">Cancelar</button>
+        <button class="btn-primary" onclick="guardarPerfil()"><i class="ti ti-check"></i> Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5001';
+let socioParaPago = null;
+let streamCaptura = null;
+let streamIngreso = null;
+let diaSeleccionado = '';
+
+// ── RELOJ ──
+function tick() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-AR');
+}
+tick(); setInterval(tick, 1000);
+
+// ── INIT ──
+cargarConfig();
+
+// ── LOGIN / ROLES ──
+let usuarioActual = null;
+let loginUsuarioId = null;
+let loginPin = '';
+
+const PERMISOS_DEFAULT = {
+  administrador: {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,config:true},
+  encargado:     {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,config:false},
+  recepcionista: {ingreso:true,socios:true,nuevo:false,cuotas:true,agenda:false,reportes:false,vencimientos:true,config:false},
+};
+
+async function mostrarLogin() {
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('loginPinArea').classList.remove('visible');
+  loginPin = ''; loginUsuarioId = null;
+  actualizarDots();
+  document.getElementById('loginCerrarSesionBtn').style.display = usuarioActual ? 'block' : 'none';
+  try {
+    const res = await fetch(`${API}/api/usuarios`);
+    const users = await res.json();
+    const cfg = await (await fetch(`${API}/api/config`)).json();
+    document.getElementById('loginGymNombre').textContent = cfg.gym_nombre || 'GymOS';
+    const grid = document.getElementById('loginUsers');
+    grid.innerHTML = users.map(u => `
+      <div class="login-user-btn" id="login-usr-${u.id}" onclick="seleccionarUsuario(${u.id}, '${u.nombre}')">
+        <div class="login-user-avatar"><i class="ti ti-user"></i></div>
+        <div class="login-user-nombre">${u.nombre}</div>
+        <div class="login-user-rol">${u.rol}</div>
+      </div>`).join('');
+  } catch(e) { console.error('Login:', e); }
+}
+
+function seleccionarUsuario(id, nombre) {
+  loginUsuarioId = id;
+  loginPin = '';
+  actualizarDots();
+  document.querySelectorAll('.login-user-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById(`login-usr-${id}`)?.classList.add('selected');
+  document.getElementById('loginPinLabel').textContent = `PIN de ${nombre}`;
+  document.getElementById('loginPinArea').classList.add('visible');
+  document.getElementById('loginError').classList.remove('show');
+}
+
+function loginNum(n) {
+  if (loginPin.length >= 4) return;
+  loginPin += n;
+  actualizarDots();
+  if (loginPin.length === 4) setTimeout(verificarPin, 200);
+}
+
+function loginBack() {
+  loginPin = loginPin.slice(0, -1);
+  actualizarDots();
+}
+
+function loginCancelar() {
+  loginPin = ''; loginUsuarioId = null;
+  actualizarDots();
+  document.querySelectorAll('.login-user-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('loginPinArea').classList.remove('visible');
+  document.getElementById('loginError').classList.remove('show');
+}
+
+// Capturar teclado físico para el PIN
+document.addEventListener('keydown', function(e) {
+  const loginVisible = !document.getElementById('loginOverlay').classList.contains('hidden');
+  if (!loginVisible) return;
+  if (e.key >= '0' && e.key <= '9') loginNum(e.key);
+  else if (e.key === 'Backspace') loginBack();
+  else if (e.key === 'Escape') loginCancelar();
+});
+
+function actualizarDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`dot${i}`)?.classList.toggle('filled', i < loginPin.length);
+  }
+}
+
+async function verificarPin() {
+  try {
+    const res = await fetch(`${API}/api/usuarios/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({id: loginUsuarioId, pin: loginPin})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      usuarioActual = data.usuario;
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('headerUsuario').textContent = data.usuario.nombre;
+      aplicarPermisos(data.usuario.permisos);
+      // Ir a ingreso por defecto
+      showScreen('ingreso');
+    } else {
+      loginPin = '';
+      actualizarDots();
+      document.getElementById('loginError').classList.add('show');
+      setTimeout(() => document.getElementById('loginError').classList.remove('show'), 2000);
+    }
+  } catch(e) { loginPin = ''; actualizarDots(); }
+}
+
+function aplicarPermisos(permisos) {
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  pantallas.forEach(p => {
+    const nav = document.getElementById(`nav-${p}`);
+    if (nav) nav.style.display = permisos[p] ? '' : 'none';
+  });
+}
+
+function cerrarSesionDesdeLogin() {
+  // Si hay sesión activa, cerrarla y quedarse en login
+  usuarioActual = null;
+  document.getElementById('headerUsuario').textContent = '';
+  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'].forEach(p => {
+    const nav = document.getElementById(`nav-${p}`);
+    if (nav) nav.style.display = '';
+  });
+  document.getElementById('loginCerrarSesionBtn').style.display = 'none';
+  mostrarLogin();
+}
+
+function cerrarSesion() {
+  usuarioActual = null;
+  // Restaurar todos los nav items
+  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'].forEach(p => {
+    const nav = document.getElementById(`nav-${p}`);
+    if (nav) nav.style.display = '';
+  });
+  mostrarLogin();
+}
+
+// ── GESTIÓN USUARIOS EN CONFIG ──
+async function cargarUsuariosConfig() {
+  try {
+    const res = await fetch(`${API}/api/usuarios`);
+    const users = await res.json();
+    const grid = document.getElementById('usrGrid');
+    if (!grid) return;
+    grid.innerHTML = users.map(u => `
+      <div class="usr-row">
+        <div class="usr-avatar"><i class="ti ti-user"></i></div>
+        <div class="usr-info">
+          <div class="usr-nombre">${u.nombre}</div>
+          <div class="usr-rol">${u.rol}</div>
+        </div>
+        <div class="usr-actions">
+          <button class="btn-sec" style="font-size:11px;padding:5px 10px" onclick="editarUsuario(${u.id}, '${u.nombre}', '${u.rol}', ${JSON.stringify(u.permisos).replace(/"/g,"'")})"><i class="ti ti-edit"></i></button>
+          <button class="btn-danger" style="font-size:11px;padding:5px 10px" onclick="eliminarUsuario(${u.id}, '${u.nombre}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`).join('') || '<div style="font-size:12px;color:var(--text3)">Sin usuarios</div>';
+  } catch(e) {}
+}
+
+function abrirModalUsuario() {
+  document.getElementById('modalUsuarioTitle').textContent = 'Nuevo usuario';
+  document.getElementById('usuarioEditId').value = '';
+  document.getElementById('usuarioNombre').value = '';
+  document.getElementById('usuarioPin').value = '';
+  document.getElementById('usuarioRol').value = 'recepcionista';
+  aplicarPermisosDefault();
+  document.getElementById('modalUsuario').classList.add('open');
+}
+
+function editarUsuario(id, nombre, rol, permisos) {
+  document.getElementById('modalUsuarioTitle').textContent = 'Editar usuario';
+  document.getElementById('usuarioEditId').value = id;
+  document.getElementById('usuarioNombre').value = nombre;
+  document.getElementById('usuarioPin').value = '';
+  document.getElementById('usuarioRol').value = rol;
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  pantallas.forEach(p => {
+    const el = document.getElementById(`perm-${p}`);
+    if (el) el.checked = permisos[p] || false;
+  });
+  document.getElementById('modalUsuario').classList.add('open');
+}
+
+function aplicarPermisosDefault() {
+  const rol = document.getElementById('usuarioRol').value;
+  const def = PERMISOS_DEFAULT[rol] || {};
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  pantallas.forEach(p => {
+    const el = document.getElementById(`perm-${p}`);
+    if (el) el.checked = def[p] || false;
+  });
+}
+
+function cerrarModalUsuario() {
+  document.getElementById('modalUsuario').classList.remove('open');
+}
+
+async function guardarUsuario() {
+  const id   = document.getElementById('usuarioEditId').value;
+  const nombre = document.getElementById('usuarioNombre').value.trim();
+  const pin    = document.getElementById('usuarioPin').value.trim();
+  const rol    = document.getElementById('usuarioRol').value;
+  if (!nombre) { toast('Ingresá un nombre', 'bad'); return; }
+  if (!id && !pin) { toast('Ingresá un PIN', 'bad'); return; }
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  const permisos = {};
+  pantallas.forEach(p => { permisos[p] = document.getElementById(`perm-${p}`)?.checked || false; });
+  const body = {nombre, pin, rol, permisos};
+  try {
+    const url  = id ? `${API}/api/usuarios/${id}` : `${API}/api/usuarios`;
+    const method = id ? 'PUT' : 'POST';
+    const res  = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const data = await res.json();
+    if (data.ok) {
+      toast(id ? 'Usuario actualizado' : 'Usuario creado', 'ok');
+      cerrarModalUsuario();
+      cargarUsuariosConfig();
+    } else toast(data.error || 'Error', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function eliminarUsuario(id, nombre) {
+  if (!confirm(`¿Eliminar usuario ${nombre}?`)) return;
+  try {
+    const res = await fetch(`${API}/api/usuarios/${id}`, {method:'DELETE'});
+    const data = await res.json();
+    if (data.ok) { toast('Usuario eliminado', 'ok'); cargarUsuariosConfig(); }
+    else toast(data.error || 'Error', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+// Mostrar login al iniciar
+setTimeout(mostrarLogin, 500);
+
+// ── NAVEGACIÓN ──
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'socios') cargarSocios();
+  if (name === 'cuotas') cargarCuotas();
+  if (name === 'reportes') cargarReportes();
+  if (name === 'agenda') cargarAgenda();
+  if (name === 'config') { cargarConfig(); cargarUsuariosConfig(); }
+  if (name === 'vencimientos') cargarVencimientos();
+  // ficha no carga automático — se carga via abrirFicha()
+  if (name === 'ingreso') cargarHistorial();
+}
+
+// ── TOAST ──
+function toast(msg, tipo = '') {
+  const t = document.getElementById('toast');
+  t.innerHTML = (tipo === 'ok' ? '✅ ' : tipo === 'bad' ? '❌ ' : 'ℹ️ ') + msg;
+  t.className = 'toast show ' + tipo;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── INGRESO / CÁMARA ──
+let camActiva = false;
+let scanInterval = null;
+
+async function toggleCam() {
+  if (!camActiva) {
+    // Iniciar reconocimiento en el servidor
+    await fetch(API + '/api/camara/iniciar', {method:'POST'});
+    document.getElementById('camBtnText').textContent = 'Detener cámara';
+    document.getElementById('camBtnIcon').className = 'ti ti-camera-off';
+    document.getElementById('statusText').textContent = 'Cámara activa — escaneando...';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    // Mostrar stream MJPEG del servidor
+    const imgStream = document.createElement('img');
+    imgStream.id = 'mjpegStream';
+    imgStream.src = API + '/api/camara/stream';
+    imgStream.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    const camArea = document.querySelector('.cam-area');
+    camArea.insertBefore(imgStream, camArea.firstChild);
+    camActiva = true;
+    scanInterval = setInterval(consultarReconocimiento, 1000);
+  } else {
+    await fetch(API + '/api/camara/detener', {method:'POST'});
+    if (scanInterval) clearInterval(scanInterval);
+    const stream = document.getElementById('mjpegStream');
+    if (stream) { stream.src = ''; stream.remove(); }
+    document.getElementById('camPlaceholder').style.display = 'flex';
+    document.getElementById('camBtnText').textContent = 'Iniciar cámara';
+    document.getElementById('camBtnIcon').className = 'ti ti-camera';
+    document.getElementById('statusText').textContent = 'Esperando cámara...';
+    camActiva = false;
+    resetPanel();
+  }
+}
+
+async function consultarReconocimiento() {
+  try {
+    const r = await fetch(API + '/api/camara/estado');
+    const d = await r.json();
+    if (d.socio) {
+      mostrarSocio(d.socio);
+    }
+  } catch(e) {}
+}
+
+function mostrarSocio(s) {
+  const ok = s.estado === 'al_dia';
+  socioReconocidoId = s.id;
+  document.getElementById('ingresoNombre').textContent = s.nombre;
+  document.getElementById('ingresoPlan').textContent = (s.plan || '--') + ' · #' + String(s.id).padStart(4,'0');
+  const badge = document.getElementById('ingresoBadge');
+  const av = document.getElementById('ingresoAvatar');
+  if (ok) {
+    badge.className = 'badge ok';
+    badge.innerHTML = '<i class="ti ti-circle-check" style="font-size:11px"></i> Acceso permitido';
+    av.className = 'avatar ok';
+  } else {
+    badge.className = 'badge bad';
+    badge.innerHTML = '<i class="ti ti-alert-triangle" style="font-size:11px"></i> Cuota vencida';
+    av.className = 'avatar bad';
+  }
+  if (s.foto) av.innerHTML = `<img src="${API}/fotos/${s.foto}">`;
+  document.getElementById('dVenc').textContent = s.fecha_venc || '--';
+  const dias = s.dias_restantes;
+  const diasEl = document.getElementById('dDias');
+  diasEl.textContent = dias !== null ? (dias >= 0 ? dias + ' días' : 'Vencido hace ' + Math.abs(dias) + ' días') : '--';
+  diasEl.className = 'dval ' + (dias !== null && dias < 0 ? 'bad' : dias !== null && dias <= 5 ? 'bad' : 'ok');
+  // Sincronizar pestaña Cobro
+  document.getElementById('cobroNombre').textContent = s.nombre;
+  document.getElementById('cobroSub').textContent = (s.plan || 'Sin plan') + ' · #' + String(s.id).padStart(4,'0');
+  cargarHistorial();
+}
+
+function resetPanel() {
+  socioReconocidoId = null;
+  document.getElementById('ingresoNombre').textContent = 'Esperando...';
+  document.getElementById('ingresoPlan').textContent = 'Sin escanear';
+  document.getElementById('ingresoBadge').className = 'badge wait';
+  document.getElementById('ingresoBadge').innerHTML = '<i class="ti ti-scan" style="font-size:11px"></i> En espera';
+  document.getElementById('ingresoAvatar').className = 'avatar';
+  document.getElementById('ingresoAvatar').innerHTML = '<i class="ti ti-user"></i>';
+  document.getElementById('dVenc').textContent = '--';
+  document.getElementById('dDias').textContent = '--';
+  document.getElementById('dUltimo').textContent = '--';
+  document.getElementById('dHoy').textContent = '--';
+  document.getElementById('cobroNombre').textContent = 'Sin socio seleccionado';
+  document.getElementById('cobroSub').textContent = 'Reconocé un socio o buscalo';
+}
+
+async function cargarHistorial() {
+  try {
+    const res = await fetch(`${API}/api/ingresos/hoy`);
+    const data = await res.json();
+    const list = document.getElementById('histList');
+    if (!data.length) { list.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0">Sin registros hoy</div>'; return; }
+    list.innerHTML = data.map(i => `
+      <div class="hrow">
+        <div style="display:flex;align-items:center">
+          <div class="hdot"></div>
+          <span class="hname">${i.nombre}</span>
+        </div>
+        <span class="htime">${i.hora}</span>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+// ── SOCIOS ──
+async function cargarSocios(q = '') {
+  try {
+    const res = await fetch(`${API}/api/socios?q=${q}`);
+    const socios = await res.json();
+    const list = document.getElementById('sociosList');
+    if (!socios.length) { list.innerHTML = '<div style="color:#555;font-size:13px;padding:20px 0">No se encontraron socios</div>'; return; }
+    list.innerHTML = socios.map(s => {
+      const ok = s.estado === 'al_dia';
+      const fotoSrc = s.foto ? `${API}/fotos/${s.foto}` : null;
+      const avContent = fotoSrc ? `<img src="${fotoSrc}">` : `<i class="ti ti-user"></i>`;
+      return `<div class="socio-item" onclick="verSocio(${s.id})">
+        <div class="av-sm ${ok?'ok':'bad'}">${avContent}</div>
+        <div class="si-info">
+          <div class="si-name">${s.nombre}</div>
+          <div class="si-sub">${s.plan || 'Sin plan'} · #${String(s.id).padStart(4,'0')}</div>
+        </div>
+        <div>
+          <div class="si-estado ${ok?'ok':'bad'}">${ok?'Al día':'Vencido'}</div>
+          <div class="si-venc">${s.fecha_venc ? 'Vence '+s.fecha_venc : '--'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+function buscarSocios() {
+  cargarSocios(document.getElementById('searchInput').value);
+}
+
+function verSocio(id) {
+  abrirPerfil(id);
+}
+
+// ── MODAL PERFIL ──
+let socioEditandoId = null;
+let mpStream = null;
+
+async function abrirPerfil(id) {
+  socioEditandoId = id;
+  try {
+    const res = await fetch(`${API}/api/socios/${id}`);
+    const s = await res.json();
+    const ok = s.estado === 'al_dia';
+
+    // Foto
+    const av = document.getElementById('mpAvatar');
+    if (s.foto) {
+      av.innerHTML = `<img src="${API}/fotos/${s.foto}">`;
+    } else {
+      av.innerHTML = `<i class="ti ti-user"></i>`;
+    }
+    av.className = 'mp-avatar ' + (ok ? 'ok' : 'bad');
+
+    // Estado
+    const congelado = s.congelado === 1;
+    document.getElementById('mpEstado').textContent = congelado ? '❄️ Congelado' : (ok ? '✅ Al día' : '❌ Vencido');
+    document.getElementById('mpEstado').className = 'mp-estado ' + (congelado ? '' : ok ? 'ok' : 'bad');
+    document.getElementById('mpVenc').textContent = congelado ? 'Membresía pausada' : (s.fecha_venc ? 'Vence: ' + s.fecha_venc : 'Sin vencimiento');
+    // Banner congelado
+    const banner = document.getElementById('mpCongeladoBanner');
+    banner.style.display = congelado ? 'block' : 'none';
+    if (congelado) {
+      document.getElementById('mpCongeladoDesde').textContent = 'desde ' + (s.fecha_congelado || '');
+      document.getElementById('mpCongeladoDias').textContent = s.dias_congelados || 0;
+    }
+    // Botón congelar
+    document.getElementById('mpCongelarLabel').textContent = congelado ? 'Descongelar' : 'Congelar';
+    document.getElementById('mpBtnCongelar').querySelector('i').className = congelado ? 'ti ti-player-play' : 'ti ti-snowflake';
+
+    // Datos
+    document.getElementById('mpNombre').value = s.nombre || '';
+    document.getElementById('mpDni').value = s.dni || '';
+    document.getElementById('mpTel').value = s.telefono || '';
+    document.getElementById('mpEmail').value = s.email || '';
+    document.getElementById('mpPlan').value = s.plan || 'Plan Mensual';
+    document.getElementById('mpObjetivo').value = s.objetivo || '';
+    document.getElementById('mpPwaLink').href = `${window.location.origin}/socio/${s.id}`;
+    document.getElementById('mpFechaVenc').value = s.fecha_venc || '';
+    document.getElementById('mpId').textContent = '#' + String(s.id).padStart(4, '0');
+    document.getElementById('mpDesde').textContent = s.fecha_inicio || '—';
+    document.getElementById('mpFotoBase64').value = '';
+
+    // Reset cámara
+    mpCancelarFoto();
+
+    document.getElementById('modalPerfil').classList.add('open');
+    cargarPagosPerfil(id);
+  } catch(e) { toast('No se pudo cargar el perfil', 'bad'); }
+}
+
+async function cargarPagosPerfil(id) {
+  const lista = document.getElementById('mpPagosLista');
+  try {
+    const res = await fetch(`${API}/api/pagos/${id}`);
+    const pagos = await res.json();
+    if (!pagos.length) {
+      lista.innerHTML = '<div class="mp-pagos-empty">Sin pagos registrados</div>';
+      return;
+    }
+    const metodoLabel = { efectivo: 'Efectivo', transferencia: 'Transferencia', 'tarjeta/QR': 'Tarjeta/QR' };
+    lista.innerHTML = pagos.map(p => `
+      <div class="mp-pago-row">
+        <span class="mp-pago-fecha">${p.fecha}</span>
+        <span class="mp-pago-plan">${p.plan || '—'}</span>
+        <span class="mp-pago-metodo">${metodoLabel[p.metodo] || p.metodo}</span>
+        <span class="mp-pago-monto">$${parseInt(p.monto).toLocaleString('es-AR')}</span>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div class="mp-pagos-empty">Error al cargar pagos</div>';
+  }
+}
+
+async function verQR(id) {
+  if (!id) return;
+  try {
+    const res = await fetch(`${API}/api/socios/${id}/qr`);
+    const data = await res.json();
+    if (!data.ok) { toast('Error al generar QR', 'bad'); return; }
+    document.getElementById('qrImg').src = `${API}${data.qr_url}?t=${Date.now()}`;
+    document.getElementById('qrNombre').textContent = data.socio;
+    document.getElementById('modalQR').classList.add('open');
+  } catch(e) { toast('No se pudo generar el QR', 'bad'); }
+}
+
+function cerrarQR() {
+  document.getElementById('modalQR').classList.remove('open');
+}
+
+let scanQRInterval = null;
+function activarScanQR() {
+  document.getElementById('qrScanOverlay').classList.add('active');
+  // Usar OpenCV del backend para detectar QR en el stream
+  scanQRInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`${API}/api/qr/scan_frame`);
+      const data = await res.json();
+      if (data.ok && data.qr_data) {
+        clearInterval(scanQRInterval);
+        cancelarScanQR();
+        // Procesar el QR
+        const res2 = await fetch(`${API}/api/qr/escanear`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({qr_data: data.qr_data})
+        });
+        const d2 = await res2.json();
+        if (d2.ok) {
+          mostrarSocio(d2.socio);
+          toast(`✅ Acceso registrado — ${d2.socio.nombre}`, 'ok');
+        } else {
+          toast(d2.error || 'QR no reconocido', 'bad');
+        }
+      }
+    } catch(e) {}
+  }, 800);
+}
+
+async function enviarQRporMail() {
+  const id = socioEditandoId;
+  if (!id) return;
+  try {
+    const res = await fetch(`${API}/api/socios/${id}/email_qr`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) { toast('✅ QR enviado por mail', 'ok'); cerrarQR(); }
+    else toast(data.error || 'Error al enviar', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function enviarEmailVencimiento(id, nombre, email) {
+  if (!confirm(`¿Enviar aviso de vencimiento a ${nombre} (${email})?`)) return;
+  try {
+    const res = await fetch(`${API}/api/socios/${id}/email_vencimiento`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) toast(`✅ Email enviado a ${email}`, 'ok');
+    else toast(data.error || 'Error al enviar', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+function cancelarScanQR() {
+  if (scanQRInterval) { clearInterval(scanQRInterval); scanQRInterval = null; }
+  document.getElementById('qrScanOverlay').classList.remove('active');
+}
+
+// ── FICHA MÉDICA ──
+let fichaActualSocioId = null;
+let fichaOrigenSocioId = null;
+
+function abrirFichaVentana(id) {
+  if (!id) return;
+  window.open(`/ficha/${id}`, 'ficha_medica', 'width=1000,height=750,resizable=yes,scrollbars=yes');
+}
+
+async function abrirFicha(id) {
+  fichaActualSocioId = id;
+  fichaOrigenSocioId = id;
+  // Abrir ficha en ventana nueva
+  window.open(`${API}/ficha/${id}`, 'ficha_medica', 'width=900,height=700,scrollbars=yes');
+}
+
+async function abrirFichaScreen(id) {
+  fichaActualSocioId = id;
+  fichaOrigenSocioId = id;
+  document.getElementById('modalPerfil').classList.remove('open');
+  showScreen('ficha');
+  document.body.classList.add('ficha-mode');
+  try {
+    const res = await fetch(`${API}/api/socios/${id}/ficha`);
+    const data = await res.json();
+    const f = data.ficha || {};
+    // Nombre
+    const nombre = document.getElementById('mpNombre')?.value || `Socio #${id}`;
+    document.getElementById('fichaSocioNombre').textContent = nombre;
+    // Campos
+    document.getElementById('fichaNacimiento').value = f.fecha_nacimiento || '';
+    document.getElementById('fichaSexo').value = f.sexo || '';
+    document.getElementById('fichaGrupo').value = f.grupo_sanguineo || '';
+    document.getElementById('fichaEjercicio').value = f.hace_ejercicio || '';
+    document.getElementById('fichaPeso').value = f.peso || '';
+    document.getElementById('fichaAltura').value = f.altura || '';
+    document.getElementById('fichaEnfermedades').value = f.enfermedades || '';
+    document.getElementById('fichaLesiones').value = f.lesiones || '';
+    document.getElementById('fichaMedicacion').value = f.medicacion || '';
+    document.getElementById('fichaAlergias').value = f.alergias || '';
+    document.getElementById('fichaAutorizacion').value = f.autorizacion_medica || '';
+    document.getElementById('fichaObservaciones').value = f.observaciones || '';
+    document.getElementById('fichaDeclaracionTexto').textContent = data.declaracion_texto || '';
+    document.getElementById('fichaCheckDeclaracion').checked = false;
+    if (f.declaracion_aceptada) {
+      document.getElementById('fichaDeclaracionCheck').style.display = 'none';
+      document.getElementById('fichaDeclaracionAceptada').style.display = 'flex';
+      document.getElementById('fichaDeclaracionFecha').textContent = f.declaracion_fecha || '';
+      document.getElementById('fichaEstado').innerHTML = '<span class="ficha-badge completa">✅ Declaración aceptada</span>';
+    } else {
+      document.getElementById('fichaDeclaracionCheck').style.display = 'block';
+      document.getElementById('fichaDeclaracionAceptada').style.display = 'none';
+      document.getElementById('fichaEstado').innerHTML = '<span class="ficha-badge incompleta">⚠️ Pendiente de firma</span>';
+    }
+  } catch(e) { toast('No se pudo cargar la ficha', 'bad'); }
+}
+
+function volverDeFicha() {
+  document.body.classList.remove('ficha-mode');
+  showScreen('socios');
+  if (fichaOrigenSocioId) {
+    setTimeout(() => abrirPerfil(fichaOrigenSocioId), 100);
+  }
+}
+
+function imprimirFicha() {
+  document.body.classList.remove('ficha-mode');
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.querySelector('.sidebar').style.display = 'none';
+      document.querySelector('.topbar').style.display = 'none';
+      document.querySelector('.content').style.marginLeft = '0';
+    }, 500);
+  }, 100);
+}
+
+async function guardarFicha() {
+  if (!fichaActualSocioId) return;
+  const declaracionCheck = document.getElementById('fichaCheckDeclaracion').checked;
+  const body = {
+    fecha_nacimiento: document.getElementById('fichaNacimiento').value,
+    sexo: document.getElementById('fichaSexo').value,
+    grupo_sanguineo: document.getElementById('fichaGrupo').value,
+    hace_ejercicio: document.getElementById('fichaEjercicio').value,
+    peso: document.getElementById('fichaPeso').value,
+    altura: document.getElementById('fichaAltura').value,
+    enfermedades: document.getElementById('fichaEnfermedades').value,
+    lesiones: document.getElementById('fichaLesiones').value,
+    medicacion: document.getElementById('fichaMedicacion').value,
+    alergias: document.getElementById('fichaAlergias').value,
+    autorizacion_medica: document.getElementById('fichaAutorizacion').value,
+    observaciones: document.getElementById('fichaObservaciones').value,
+    declaracion_aceptada: declaracionCheck ? 1 : 0,
+  };
+  try {
+    const res = await fetch(`${API}/api/socios/${fichaActualSocioId}/ficha`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('✅ Ficha guardada correctamente', 'ok');
+      if (declaracionCheck) {
+        document.getElementById('fichaDeclaracionCheck').style.display = 'none';
+        document.getElementById('fichaDeclaracionAceptada').style.display = 'flex';
+        document.getElementById('fichaDeclaracionFecha').textContent = new Date().toLocaleString('es-AR');
+        document.getElementById('fichaEstado').innerHTML = '<span class="ficha-badge completa">✅ Declaración aceptada</span>';
+      }
+    } else toast('Error al guardar', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function enviarAppAlSocio() {
+  if (!socioEditandoId) return;
+  const email = document.getElementById('mpEmail')?.value;
+  if (!email) { toast('El socio no tiene email registrado', 'bad'); return; }
+  const nombre = document.getElementById('mpNombre')?.value || 'Socio';
+  const link = `${window.location.origin}/socio/${socioEditandoId}`;
+  try {
+    const res = await fetch(`${API}/api/socios/${socioEditandoId}/enviar_app`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, nombre, link})
+    });
+    const data = await res.json();
+    if (data.ok) toast('✅ App enviada a ' + email, 'ok');
+    else toast(data.error || 'Error al enviar', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function guardarObjetivo() {
+  if (!socioEditandoId) return;
+  const objetivo = document.getElementById('mpObjetivo').value;
+  try {
+    await fetch(`${API}/api/socios/${socioEditandoId}/objetivo`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({objetivo})
+    });
+    toast(objetivo ? '✅ Objetivo actualizado' : 'Objetivo removido', 'ok');
+  } catch(e) {}
+}
+
+async function toggleCongelar() {
+  if (!socioEditandoId) return;
+  const label = document.getElementById('mpCongelarLabel').textContent;
+  const accion = label === 'Congelar' ? 'congelar' : 'descongelar';
+  const msg = accion === 'congelar'
+    ? '¿Congelar la membresía? Se pausará el vencimiento hasta que descongelés.'
+    : '¿Descongelar? Se restaurarán los días restantes a partir de hoy.';
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch(`${API}/api/socios/${socioEditandoId}/${accion}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      toast(accion === 'congelar' ? '❄️ Membresía congelada' : '✅ Membresía descongelada', 'ok');
+      abrirPerfil(socioEditandoId);
+    } else toast(data.error || 'Error', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+function cerrarPerfil() {
+  mpCancelarFoto();
+  document.getElementById('modalPerfil').classList.remove('open');
+  socioEditandoId = null;
+}
+
+async function mpAbrirCamara() {
+  try {
+    mpStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.getElementById('mpVideoCapture');
+    video.srcObject = mpStream;
+    video.style.display = 'block';
+    document.getElementById('mpBtnCam').style.display = 'none';
+    document.getElementById('mpBtnCapturar').style.display = 'flex';
+    document.getElementById('mpBtnCancelarFoto').style.display = 'flex';
+  } catch(e) { toast('No se pudo acceder a la cámara', 'bad'); }
+}
+
+function mpCapturar() {
+  const video = document.getElementById('mpVideoCapture');
+  const canvas = document.getElementById('mpSnapCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+  document.getElementById('mpFotoBase64').value = dataUrl;
+  const av = document.getElementById('mpAvatar');
+  av.innerHTML = `<img src="${dataUrl}">`;
+  mpCancelarFoto();
+  toast('Foto capturada — guardá los cambios para aplicarla', '');
+}
+
+function mpCancelarFoto() {
+  if (mpStream) { mpStream.getTracks().forEach(t => t.stop()); mpStream = null; }
+  document.getElementById('mpVideoCapture').style.display = 'none';
+  document.getElementById('mpBtnCam').style.display = 'flex';
+  document.getElementById('mpBtnCapturar').style.display = 'none';
+  document.getElementById('mpBtnCancelarFoto').style.display = 'none';
+}
+
+async function guardarPerfil() {
+  if (!socioEditandoId) return;
+  const nombre = document.getElementById('mpNombre').value.trim();
+  if (!nombre) { toast('El nombre es obligatorio', 'bad'); return; }
+
+  const body = {
+    nombre,
+    dni: document.getElementById('mpDni').value,
+    telefono: document.getElementById('mpTel').value,
+    email: document.getElementById('mpEmail').value,
+    plan: document.getElementById('mpPlan').value,
+    fecha_venc: document.getElementById('mpFechaVenc').value || null,
+    foto_base64: document.getElementById('mpFotoBase64').value || null,
+  };
+
+  try {
+    const res = await fetch(`${API}/api/socios/${socioEditandoId}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      toast('Cambios guardados', 'ok');
+      cerrarPerfil();
+      cargarSocios();
+    } else {
+      toast('Error al guardar', 'bad');
+    }
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function eliminarSocio() {
+  if (!socioEditandoId) return;
+  if (!confirm('¿Dar de baja a este socio? No se eliminará del historial.')) return;
+  try {
+    const res = await fetch(`${API}/api/socios/${socioEditandoId}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast('Socio dado de baja', 'ok');
+      cerrarPerfil();
+      cargarSocios();
+    }
+  } catch(e) { toast('Error al dar de baja', 'bad'); }
+}
+
+// ── NUEVO SOCIO ──
+async function abrirCamaraCaptura() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    streamCaptura = stream;
+    const video = document.getElementById('videoCapture');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('photoPlaceholder').style.display = 'none';
+    document.getElementById('btnAbrirCam').style.display = 'none';
+    document.getElementById('btnCapturar').style.display = 'flex';
+  } catch(e) { toast('No se pudo acceder a la cámara', 'bad'); }
+}
+
+function capturarFoto() {
+  const video = document.getElementById('videoCapture');
+  const canvas = document.getElementById('snapCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+  document.getElementById('fotoBase64').value = dataUrl;
+  document.getElementById('photoPreview').src = dataUrl;
+  document.getElementById('photoPreview').style.display = 'block';
+  video.style.display = 'none';
+  if (streamCaptura) streamCaptura.getTracks().forEach(t => t.stop());
+  document.getElementById('btnCapturar').style.display = 'none';
+  document.getElementById('btnReiniciar').style.display = 'flex';
+  document.getElementById('btnAbrirCam').style.display = 'none';
+}
+
+function reiniciarFoto() {
+  document.getElementById('fotoBase64').value = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('photoPlaceholder').style.display = 'flex';
+  document.getElementById('btnReiniciar').style.display = 'none';
+  document.getElementById('btnAbrirCam').style.display = 'flex';
+}
+
+async function guardarSocio() {
+  const nombre = document.getElementById('fNombre').value.trim();
+  if (!nombre) { toast('El nombre es obligatorio', 'bad'); return; }
+  const body = {
+    nombre,
+    dni: document.getElementById('fDni').value,
+    telefono: document.getElementById('fTel').value,
+    email: document.getElementById('fEmail').value,
+    plan: document.getElementById('fPlan').value,
+    fecha_inicio: document.getElementById('fFecha').value || new Date().toISOString().split('T')[0],
+    foto_base64: document.getElementById('fotoBase64').value || null,
+  };
+  try {
+    const res = await fetch(`${API}/api/socios`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (res.ok) {
+      toast('Socio guardado correctamente', 'ok');
+      // Limpiar form
+      ['fNombre','fDni','fTel','fEmail','fObs'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('fFecha').value = '';
+      reiniciarFoto();
+      showScreen('socios');
+    } else {
+      toast('Error al guardar el socio', 'bad');
+    }
+  } catch(e) { toast('No se pudo conectar con el servidor', 'bad'); }
+}
+
+// ── CUOTAS ──
+async function cargarCuotas() {
+  try {
+    const res = await fetch(`${API}/api/socios`);
+    const socios = await res.json();
+    const morosos = socios.filter(s => s.estado !== 'al_dia');
+    const alDia = socios.filter(s => s.estado === 'al_dia');
+    document.getElementById('cAlDia').textContent = alDia.length;
+    document.getElementById('cMorosos').textContent = morosos.length;
+    document.getElementById('cTotal').textContent = socios.length;
+    const renderItem = s => `
+      <div class="cuota-item">
+        <div class="av-sm ${s.estado==='al_dia'?'ok':'bad'}"><i class="ti ti-user"></i></div>
+        <div class="ci-info">
+          <div class="ci-name">${s.nombre}</div>
+          <div class="ci-sub">${s.estado==='al_dia' ? 'Vence '+s.fecha_venc : 'Venció '+s.fecha_venc} · ${s.plan}</div>
+        </div>
+        <button class="btn-pago" onclick="abrirPago(${s.id},'${s.nombre}','${s.plan}')">Registrar pago</button>
+      </div>`;
+    document.getElementById('morososList').innerHTML = morosos.length ? morosos.map(renderItem).join('') : '<div style="color:#555;font-size:13px;padding:8px 0">Sin morosos 🎉</div>';
+    document.getElementById('alDiaList').innerHTML = alDia.map(renderItem).join('');
+  } catch(e) {}
+}
+
+function abrirPago(id, nombre, plan) {
+  socioParaPago = id;
+  document.getElementById('pagoNombre').value = nombre;
+  // precio por defecto según plan
+  const precios = {'Plan Mensual': 18000, 'Plan Trimestral': 50000, 'Plan Anual': 180000};
+  document.getElementById('pagoMonto').value = precios[plan] || '';
+  document.getElementById('modalPago').style.display = 'flex';
+}
+
+function cerrarModalPago() {
+  document.getElementById('modalPago').style.display = 'none';
+  socioParaPago = null;
+}
+
+async function confirmarPago() {
+  if (!socioParaPago) return;
+  const body = { socio_id: socioParaPago, monto: parseInt(document.getElementById('pagoMonto').value), metodo: document.getElementById('pagoMetodo').value };
+  try {
+    const res = await fetch(`${API}/api/pagos`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (res.ok) { toast('Pago registrado y cuota renovada', 'ok'); cerrarModalPago(); cargarCuotas(); }
+    else toast('Error al registrar pago', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+// ── AGENDA ──
+function cargarAgenda() {
+  const dias = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const hoy = new Date();
+  const diaSemana = (hoy.getDay() + 6) % 7;
+  const row = document.getElementById('diasRow');
+  row.innerHTML = dias.map((d, i) => {
+    const fecha = new Date(hoy); fecha.setDate(hoy.getDate() - diaSemana + i);
+    const isActive = i === diaSemana;
+    if (isActive) diaSeleccionado = d;
+    return `<div class="dia-btn ${isActive?'active':''}" onclick="seleccionarDia('${d}', this)">
+      <div class="dia-nombre">${d.toUpperCase()}</div>
+      <div class="dia-num">${fecha.getDate()}</div>
+    </div>`;
+  }).join('');
+  cargarClases(diaSeleccionado);
+}
+
+function seleccionarDia(dia, el) {
+  document.querySelectorAll('.dia-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  diaSeleccionado = dia;
+  cargarClases(dia);
+}
+
+async function cargarClases(dia) {
+  try {
+    const res = await fetch(`${API}/api/clases?dia=${dia}`);
+    const clases = await res.json();
+    const list = document.getElementById('clasesList');
+    if (!clases.length) { list.innerHTML = '<div style="color:#555;font-size:13px;padding:10px 0">Sin clases este día</div>'; return; }
+    list.innerHTML = clases.map(c => `
+      <div class="clase-item">
+        <div class="clase-hora">${c.hora}</div>
+        <div class="clase-info">
+          <div class="clase-nombre">${c.nombre}</div>
+          <div class="clase-prof">Prof. ${c.profesor}</div>
+        </div>
+        <div class="clase-cupos">${c.cupo_act}/${c.cupo_max} cupos</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function mostrarModalClase() {
+  toast('Próximamente: agregar clases', '');
+}
+
+// ── REPORTES ──
+async function cargarReportes() {
+  try {
+    const res = await fetch(`${API}/api/reportes`);
+    const d = await res.json();
+    const fmt = n => '$' + (n||0).toLocaleString('es-AR');
+
+    // KPIs
+    document.getElementById('rTotal').textContent = d.total_socios;
+    document.getElementById('rAlDia').textContent = d.al_dia;
+    document.getElementById('rMorosos').textContent = d.morosos;
+    document.getElementById('rHoy').textContent = d.ingresos_hoy;
+    document.getElementById('rVencenPronto').textContent = d.vencen_pronto ? `⚠️ ${d.vencen_pronto} vencen en 7d` : '';
+
+    // Dinero
+    document.getElementById('rDineroHoy').textContent = fmt(d.recaudado_hoy);
+    document.getElementById('rDineroSemana').textContent = fmt(d.recaudado_semana);
+    document.getElementById('rDineroMes').textContent = fmt(d.recaudado_mes);
+    document.getElementById('rPagosHoy').textContent = `${d.cantidad_pagos_hoy} pago${d.cantidad_pagos_hoy !== 1 ? 's' : ''}`;
+    document.getElementById('rPagosMes').textContent = `${d.cantidad_pagos_mes} pago${d.cantidad_pagos_mes !== 1 ? 's' : ''} este mes`;
+
+    // Sparkline 7 días
+    const spark = document.getElementById('rSparkline');
+    const max7 = Math.max(...d.ultimos7.map(x => x.monto), 1);
+    spark.innerHTML = d.ultimos7.map((x, i) => {
+      const h = Math.max(Math.round((x.monto / max7) * 56), 2);
+      const isToday = i === 6;
+      return `<div class="rep-spark-col">
+        <div class="rep-spark-bar${isToday ? ' today' : ''}" style="height:${h}px" title="${fmt(x.monto)}"></div>
+        <span class="rep-spark-lbl">${x.dia}</span>
+      </div>`;
+    }).join('');
+
+    // Métodos de pago
+    const metEl = document.getElementById('rMetodos');
+    const colores = { efectivo: '#00FF88', transferencia: '#3b82f6', 'tarjeta/QR': '#f59e0b' };
+    const metodos = d.metodos || {};
+    const totalMet = Object.values(metodos).reduce((a,b) => a+b, 0) || 1;
+    if (Object.keys(metodos).length) {
+      metEl.innerHTML = Object.entries(metodos).sort((a,b) => b[1]-a[1]).map(([m,v]) => `
+        <div class="rep-metodo-item">
+          <span class="rep-metodo-name"><span class="rep-metodo-dot" style="background:${colores[m]||'var(--accent)'}"></span>${m.charAt(0).toUpperCase()+m.slice(1)}</span>
+          <span class="rep-metodo-monto">${fmt(v)} <span style="color:var(--text3);font-size:10px">${Math.round(v/totalMet*100)}%</span></span>
+        </div>`).join('');
+    } else {
+      metEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">Sin pagos este mes</div>';
+    }
+
+    // Distribución barras
+    const total = d.total_socios || 1;
+    document.getElementById('barAlDia').style.width = Math.round(d.al_dia/total*100) + '%';
+    document.getElementById('barAlDiaVal').textContent = d.al_dia;
+    document.getElementById('barMor').style.width = Math.round(d.morosos/total*100) + '%';
+    document.getElementById('barMorVal').textContent = d.morosos;
+    document.getElementById('barVence').style.width = Math.round(d.vencen_pronto/total*100) + '%';
+    document.getElementById('barVenceVal').textContent = d.vencen_pronto;
+
+    // Planes
+    const planesEl = document.getElementById('rPlanes');
+    const planes = d.planes || {};
+    const maxPlan = Math.max(...Object.values(planes), 1);
+    if (Object.keys(planes).length) {
+      planesEl.innerHTML = Object.entries(planes).sort((a,b) => b[1]-a[1]).map(([pl,cnt]) => `
+        <div class="rep-bar-row">
+          <span class="rep-bar-label">${pl.replace('Plan ','')}</span>
+          <div class="rep-bar-track"><div class="rep-bar-fill" style="width:${Math.round(cnt/maxPlan*100)}%"></div></div>
+          <span class="rep-bar-val">${cnt} cobro${cnt!==1?'s':''}</span>
+        </div>`).join('');
+    } else {
+      planesEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">Sin pagos este mes</div>';
+    }
+
+  } catch(e) { console.error('Reportes:', e); }
+}
+
+// ── VENCIMIENTOS ──
+let audioCtx = null;
+function beepAlerta() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+  } catch(e) {}
+}
+
+async function cargarVencimientos() {
+  try {
+    const res = await fetch(`${API}/api/vencimientos`);
+    const data = await res.json();
+    const socios = data.socios || [];
+    const diasAlerta = data.dias_alerta || 7;
+
+    // Stats
+    const vencidos = socios.filter(s => s.dias_restantes < 0);
+    const hoy = socios.filter(s => s.dias_restantes === 0);
+    const semana = socios.filter(s => s.dias_restantes > 0 && s.dias_restantes <= 7);
+    document.getElementById('vencVencidos').textContent = vencidos.length;
+    document.getElementById('vencHoy').textContent = hoy.length;
+    document.getElementById('vencSemana').textContent = semana.length;
+    document.getElementById('vencAlerta').textContent = diasAlerta + 'd';
+
+    // Badge en nav
+    const badge = document.getElementById('navBadgeVenc');
+    if (socios.length > 0) {
+      badge.classList.add('show');
+      if (vencidos.length > 0 || hoy.length > 0) beepAlerta();
+    } else {
+      badge.classList.remove('show');
+    }
+
+    // Lista
+    const lista = document.getElementById('vencLista');
+    if (!socios.length) {
+      lista.innerHTML = '<div class="venc-empty">✅ Sin vencimientos próximos</div>';
+      return;
+    }
+
+    lista.innerHTML = socios.map(s => {
+      const dias = s.dias_restantes;
+      const clsDias = dias < 0 ? 'vencido' : dias <= 3 ? 'urgente' : 'ok';
+      const txtDias = dias < 0 ? `Venció hace ${Math.abs(dias)}d` : dias === 0 ? 'Vence HOY' : `${dias} días`;
+      const foto = s.foto ? `<img src="${API}/fotos/${s.foto}">` : '<i class="ti ti-user" style="font-size:12px;color:#555"></i>';
+      const tel = s.telefono || '';
+      return `<div class="venc-row">
+        <div class="venc-nombre"><div class="venc-av">${foto}</div>${s.nombre}</div>
+        <span class="venc-plan">${s.plan || '—'}</span>
+        <span class="venc-tel">${tel || '—'}</span>
+        <span class="venc-dias ${clsDias}">${txtDias}</span>
+        ${s.email
+            ? `<button class="btn-scan-qr" onclick="enviarEmailVencimiento(${s.id}, '${s.nombre.split(' ')[0]}', '${s.email}')"><i class="ti ti-mail"></i> Enviar aviso</button>`
+            : `<span style="font-size:11px;color:#444">Sin email</span>`}
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('Vencimientos:', e); }
+}
+
+// Chequear vencimientos al iniciar (badge + sonido)
+setTimeout(async () => {
+  try {
+    const res = await fetch(`${API}/api/vencimientos`);
+    const data = await res.json();
+    if (data.socios && data.socios.length > 0) {
+      document.getElementById('navBadgeVenc').classList.add('show');
+      const urgentes = data.socios.filter(s => s.dias_restantes <= 0);
+      if (urgentes.length > 0) beepAlerta();
+    }
+  } catch(e) {}
+}, 2000);
+
+// ── CONFIG ──
+async function subirLogo(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const formData = new FormData();
+  formData.append('logo', file);
+  try {
+    const res = await fetch(`${API}/api/config/logo`, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.ok) {
+      const logoUrl = `/static/logos/${data.filename}?t=${Date.now()}`;
+      ['topbarLogo','loginLogo','cfgLogoPreview'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.src = logoUrl; el.style.display = ''; }
+      });
+      document.getElementById('cfgLogoBtnQuitar').style.display = '';
+      toast('✅ Logo actualizado', 'ok');
+    } else toast('Error al subir el logo', 'bad');
+  } catch(e) { toast('No se pudo subir el logo', 'bad'); }
+}
+
+async function quitarLogo() {
+  try {
+    const res = await fetch(`${API}/api/config/logo`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      ['topbarLogo','loginLogo','cfgLogoPreview'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.src = ''; el.style.display = 'none'; }
+      });
+      document.getElementById('cfgLogoBtnQuitar').style.display = 'none';
+      toast('Logo eliminado', 'ok');
+    }
+  } catch(e) { toast('Error', 'bad'); }
+}
+
+async function cargarConfig() {
+  try {
+    const res = await fetch(`${API}/api/config`);
+    const d = await res.json();
+    document.getElementById('cfgNombre').value = d.gym_nombre || '';
+    document.getElementById('cfgTel').value = d.gym_telefono || '';
+    document.getElementById('cfgMensual').value = d.precio_mensual || '';
+    document.getElementById('cfgTrimestral').value = d.precio_trimestral || '';
+    document.getElementById('cfgAnual').value = d.precio_anual || '';
+    if (document.getElementById('cfgInscripcion')) document.getElementById('cfgInscripcion').value = d.precio_inscripcion || '';
+    if (document.getElementById('cfgDiasAlerta')) document.getElementById('cfgDiasAlerta').value = d.dias_alerta_vencimiento || '7';
+    if (document.getElementById('cfgDeclaracion')) document.getElementById('cfgDeclaracion').value = d.declaracion_texto || '';
+    if (document.getElementById('cfgEmail')) document.getElementById('cfgEmail').value = d.gym_email || '';
+    if (document.getElementById('cfgEmailPass')) document.getElementById('cfgEmailPass').value = d.gym_email_pass || '';
+    if (document.getElementById('cfgEmailNombre')) document.getElementById('cfgEmailNombre').value = d.gym_email_nombre || '';
+    document.getElementById('gymNombre').textContent = d.gym_nombre || 'Mi Gimnasio';
+    // Logo
+    if (d.gym_logo) {
+      const logoUrl = `/static/logos/${d.gym_logo}?t=${Date.now()}`;
+      ['topbarLogo','loginLogo','cfgLogoPreview'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.src = logoUrl; el.style.display = ''; }
+      });
+      const btnQ = document.getElementById('cfgLogoBtnQuitar');
+      if (btnQ) btnQ.style.display = '';
+    }
+    // Sincronizar precios con panel de cobro
+    preciosConfig.mensual = parseInt(d.precio_mensual) || 0;
+    preciosConfig.trimestral = parseInt(d.precio_trimestral) || 0;
+    preciosConfig.anual = parseInt(d.precio_anual) || 0;
+    preciosConfig.inscripcion = parseInt(d.precio_inscripcion) || 0;
+    actualizarPrecioCobro();
+  } catch(e) {}
+}
+
+async function guardarConfig() {
+  const body = {
+    gym_nombre: document.getElementById('cfgNombre').value,
+    gym_telefono: document.getElementById('cfgTel').value,
+    precio_mensual: document.getElementById('cfgMensual').value,
+    precio_trimestral: document.getElementById('cfgTrimestral').value,
+    precio_anual: document.getElementById('cfgAnual').value,
+    precio_inscripcion: document.getElementById('cfgInscripcion') ? document.getElementById('cfgInscripcion').value : '0',
+    dias_alerta_vencimiento: document.getElementById('cfgDiasAlerta') ? document.getElementById('cfgDiasAlerta').value : '7',
+    declaracion_texto: document.getElementById('cfgDeclaracion') ? document.getElementById('cfgDeclaracion').value : '',
+    gym_email: document.getElementById('cfgEmail') ? document.getElementById('cfgEmail').value : '',
+    gym_email_pass: document.getElementById('cfgEmailPass') ? document.getElementById('cfgEmailPass').value : '',
+    gym_email_nombre: document.getElementById('cfgEmailNombre') ? document.getElementById('cfgEmailNombre').value : '',
+  };
+  try {
+    const res = await fetch(`${API}/api/config`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (res.ok) {
+      toast('Configuración guardada', 'ok');
+      document.getElementById('gymNombre').textContent = body.gym_nombre || 'Mi Gimnasio';
+    }
+  } catch(e) { toast('Error al guardar', 'bad'); }
+}
+
+// ── PESTAÑAS PANEL DERECHO ──
+let socioReconocidoId = null;
+let planSeleccionado = 'Plan Mensual';
+let preciosConfig = { mensual: 0, trimestral: 0, anual: 0, inscripcion: 0 };
+
+function spTab(nombre, el) {
+  document.querySelectorAll('.sp-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sp-pane').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('pane-' + nombre).classList.add('active');
+  if (nombre === 'ingresos') cargarHistorial();
+  if (nombre === 'cobro') actualizarPrecioCobro();
+}
+
+function actualizarPrecioCobro() {
+  document.getElementById('precioPlanMensual').textContent = '$' + preciosConfig.mensual.toLocaleString('es-AR');
+  document.getElementById('precioPlanTrimestral').textContent = '$' + preciosConfig.trimestral.toLocaleString('es-AR');
+  document.getElementById('precioPlanAnual').textContent = '$' + preciosConfig.anual.toLocaleString('es-AR');
+  document.getElementById('precioPlanInscripcion').textContent = '$' + preciosConfig.inscripcion.toLocaleString('es-AR');
+  actualizarTotal();
+}
+
+function selCobro(el, plan) {
+  document.querySelectorAll('.cobro-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  planSeleccionado = plan;
+  actualizarTotal();
+}
+
+function actualizarTotal() {
+  const precios = {
+    'Plan Mensual': preciosConfig.mensual,
+    'Plan Trimestral': preciosConfig.trimestral,
+    'Plan Anual': preciosConfig.anual,
+    'Inscripcion': preciosConfig.inscripcion
+  };
+  const monto = precios[planSeleccionado] || 0;
+  document.getElementById('cobroTotal').textContent = '$' + monto.toLocaleString('es-AR');
+}
+
+function verPerfilReconocido() {
+  if (socioReconocidoId) abrirPerfil(socioReconocidoId);
+  else toast('Primero reconocé un socio', '');
+}
+
+async function confirmarCobroPanel() {
+  if (!socioReconocidoId) { toast('Primero reconocé o buscá un socio', 'bad'); return; }
+  const precios = {
+    'Plan Mensual': preciosConfig.mensual,
+    'Plan Trimestral': preciosConfig.trimestral,
+    'Plan Anual': preciosConfig.anual,
+    'Inscripcion': preciosConfig.inscripcion
+  };
+  const monto = precios[planSeleccionado] || 0;
+  if (!monto) { toast('Configurá los precios en Ajustes', 'bad'); return; }
+  const metodo = document.getElementById('cobroMetodo').value;
+  const body = { socio_id: socioReconocidoId, monto, metodo, plan: planSeleccionado };
+  try {
+    const res = await fetch(`${API}/api/pagos`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      toast('Pago registrado correctamente ✓', 'ok');
+      cargarCuotas();
+      // Refrescar datos del socio directamente desde la respuesta
+      if (data.socio) mostrarSocio(data.socio);
+      else consultarReconocimiento();
+    } else toast('Error al registrar el pago', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function enviarComprobante() {
+  if (!socioReconocidoId) { toast('Primero seleccioná un socio', 'bad'); return; }
+  toast('Enviando comprobante...', '');
+  try {
+    const res = await fetch(`${API}/api/pagos/comprobante`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ socio_id: socioReconocidoId })
+    });
+    if (res.ok) toast('Comprobante enviado por mail', 'ok');
+    else toast('No se pudo enviar el comprobante', 'bad');
+  } catch(e) { toast('Error al enviar comprobante', 'bad'); }
+}
+
+async function buscarEnPanel(q) {
+  const results = document.getElementById('buscarResults');
+  if (!q || q.length < 2) {
+    results.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Escribí para buscar</div>';
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/api/socios?q=${encodeURIComponent(q)}`);
+    const socios = await res.json();
+    if (!socios.length) { results.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Sin resultados</div>'; return; }
+    results.innerHTML = socios.map(s => {
+      const ok = s.estado === 'al_dia';
+      const fotoSrc = s.foto ? `${API}/fotos/${s.foto}` : null;
+      const avContent = fotoSrc ? `<img src="${fotoSrc}">` : `<i class="ti ti-user" style="font-size:14px"></i>`;
+      return `<div class="buscar-item" onclick="seleccionarSocioPanel(${s.id},'${s.nombre.replace(/'/g,"\\'")}','${s.plan||''}',${ok})">
+        <div class="buscar-av ${ok?'ok':'bad'}">${avContent}</div>
+        <div style="flex:1">
+          <div class="buscar-nombre">${s.nombre}</div>
+          <div class="buscar-sub">${s.plan||'Sin plan'} · #${String(s.id).padStart(4,'0')}</div>
+        </div>
+        <div class="buscar-estado ${ok?'ok':'bad'}">${ok?'Al día':'Vencido'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function seleccionarSocioPanel(id, nombre, plan, ok) {
+  socioReconocidoId = id;
+  // Actualizar pestaña Socio
+  document.getElementById('ingresoNombre').textContent = nombre;
+  document.getElementById('ingresoPlan').textContent = (plan || '--') + ' · #' + String(id).padStart(4,'0');
+  const badge = document.getElementById('ingresoBadge');
+  const av = document.getElementById('ingresoAvatar');
+  if (ok) {
+    badge.className = 'badge ok'; badge.innerHTML = '<i class="ti ti-circle-check" style="font-size:11px"></i> Acceso permitido';
+    av.className = 'avatar ok';
+  } else {
+    badge.className = 'badge bad'; badge.innerHTML = '<i class="ti ti-alert-triangle" style="font-size:11px"></i> Cuota vencida';
+    av.className = 'avatar bad';
+  }
+  // Actualizar pestaña Cobro
+  document.getElementById('cobroNombre').textContent = nombre;
+  document.getElementById('cobroSub').textContent = (plan || 'Sin plan') + ' · #' + String(id).padStart(4,'0');
+  // Cambiar a pestaña Socio
+  spTab('socio', document.querySelectorAll('.sp-tab')[0]);
+  toast(nombre + ' seleccionado', 'ok');
+}
+
+// ── TEMAS ──
+function aplicarTema(tema) {
+  if (tema) document.body.setAttribute('data-theme', tema);
+  else document.body.removeAttribute('data-theme');
+  localStorage.setItem('gymos-tema', tema);
+  // Actualizar borde de selección en los círculos
+  ['orig','b','c'].forEach(t => {
+    const el = document.getElementById('tema-' + t);
+    if (!el) return;
+    const activo = (tema === '' && t === 'orig') || tema === t;
+    el.style.boxShadow = activo ? '0 0 10px var(--accent)' : 'none';
+    el.style.borderColor = activo ? 'var(--accent)' : (t === 'orig' ? '#FF4500' : t === 'b' ? '#333' : '#2d5a8e');
+    el.style.transform = activo ? 'scale(1.15)' : 'scale(1)';
+  });
+}
+// Aplicar tema guardado al cargar
+(function() {
+  const t = localStorage.getItem('gymos-tema') || '';
+  aplicarTema(t);
+})();
+
+cargarHistorial();
+
+// Fecha por defecto en formulario
+document.getElementById('fFecha').value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>

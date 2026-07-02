@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#FF4500">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mi Membresía</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Gimnasio">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --accent: #FF4500;
+    --bg0: #0a0a0a;
+    --bg1: #111;
+    --bg2: #1a1a1a;
+    --bg3: #222;
+    --text1: #f0f0f0;
+    --text2: #aaa;
+    --text3: #666;
+    --green: #00FF88;
+    --red: #FF4444;
+    --yellow: #f59e0b;
+    --blue: #3b82f6;
+  }
+  body { background: var(--bg0); color: var(--text1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* HEADER */
+  .pwa-header { background: linear-gradient(160deg, #FF4500, #cc3300); padding: 32px 16px 24px; text-align: center; position: relative; }
+  .gym-nombre { font-size: 11px; color: #fff9; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase; }
+  .socio-avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid white; object-fit: cover; margin: 0 auto 12px; display: block; background: #fff2; box-shadow: 0 4px 20px #0006; }
+  .socio-nombre { font-size: 24px; font-weight: 700; color: white; letter-spacing: -0.5px; }
+  .socio-plan { font-size: 12px; color: #fff9; margin-top: 5px; background: #ffffff20; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+
+  /* CARD FLOTANTE */
+  .status-card { background: var(--bg1); border-radius: 20px; margin: 12px 12px 0; padding: 18px 20px; border: 0.5px solid #2a2a2a; box-shadow: 0 8px 40px #0009; }
+  .status-row { display: flex; justify-content: space-between; align-items: center; }
+  .status-badge { font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 20px; letter-spacing: 0.3px; }
+  .status-badge.al-dia { background: var(--green)20; color: var(--green); border: 1px solid var(--green)40; }
+  .status-badge.vencido { background: var(--red)20; color: var(--red); border: 1px solid var(--red)40; }
+  .status-badge.congelado { background: var(--blue)20; color: var(--blue); border: 1px solid var(--blue)40; }
+  .dias-restantes { font-size: 36px; font-weight: 800; line-height: 1; }
+  .dias-restantes.ok { color: var(--green); }
+  .dias-restantes.warn { color: var(--yellow); }
+  .dias-restantes.bad { color: var(--red); }
+  .dias-label { font-size: 11px; color: var(--text3); }
+  .venc-fecha { font-size: 12px; color: var(--text2); margin-top: 10px; padding-top: 10px; border-top: 0.5px solid #222; }
+
+  /* CONTENIDO */
+  .pwa-content { padding: 16px 12px 100px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* SECTION */
+  .section { background: var(--bg1); border-radius: 16px; border: 0.5px solid #1e1e1e; overflow: hidden; box-shadow: 0 2px 12px #0004; }
+  .section-header { padding: 16px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .section-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent)20; color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .section-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .section-chevron { color: var(--text3); font-size: 16px; transition: transform 0.2s; }
+  .section-chevron.open { transform: rotate(180deg); }
+  .section-body { display: none; padding: 0 16px 16px; }
+  .section-body.open { display: block; }
+
+  /* QR */
+  .qr-container { text-align: center; padding: 16px 0; }
+  .qr-container img { width: 180px; height: 180px; border-radius: 12px; border: 4px solid white; }
+  .qr-hint { font-size: 12px; color: var(--text3); margin-top: 10px; }
+
+  /* PAGOS */
+  .pago-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid #1a1a1a; }
+  .pago-row:last-child { border-bottom: none; }
+  .pago-info { font-size: 12px; color: var(--text2); }
+  .pago-monto { font-size: 14px; font-weight: 600; color: var(--accent); }
+
+  /* PLAN ALIMENTARIO */
+  .plan-disclaimer { background: var(--yellow)10; border: 0.5px solid var(--yellow)30; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--yellow); margin-bottom: 14px; display: flex; gap: 8px; align-items: flex-start; }
+  .comida-bloque { margin-bottom: 14px; }
+  .comida-titulo { font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .comida-items { display: flex; flex-direction: column; gap: 4px; }
+  .comida-item { font-size: 13px; color: var(--text2); padding: 5px 0; border-bottom: 0.5px solid #1a1a1a; display: flex; gap: 6px; }
+  .comida-item:last-child { border-bottom: none; }
+  .comida-item::before { content: '•'; color: var(--accent); flex-shrink: 0; }
+
+  /* RUTINA */
+  .dia-bloque { margin-bottom: 14px; }
+  .dia-titulo { font-size: 12px; font-weight: 700; color: var(--text1); background: var(--bg2); padding: 6px 10px; border-radius: 8px; margin-bottom: 8px; }
+  .ejercicio-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid #1a1a1a; }
+  .ejercicio-item:last-child { border-bottom: none; }
+  .ejercicio-nombre { font-size: 13px; color: var(--text2); }
+  .ejercicio-series { font-size: 11px; color: var(--accent); font-weight: 600; background: var(--accent)15; padding: 2px 8px; border-radius: 10px; }
+
+  /* BOTÓN RENOVAR */
+  .btn-renovar { background: var(--accent); color: white; border: none; border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+
+  /* NAVBAR BOTTOM */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 0.5px solid #222; display: flex; padding: 10px 0 env(safe-area-inset-bottom); z-index: 100; box-shadow: 0 -4px 20px #0008; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; cursor: pointer; color: #444; font-size: 10px; font-weight: 500; transition: all 0.15s; border: none; background: none; letter-spacing: 0.3px; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn.active i { filter: drop-shadow(0 0 6px var(--accent)); }
+  .nav-btn i { font-size: 22px; }
+
+  /* TABS */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; }
+  .error-msg { text-align: center; padding: 60px 20px; color: var(--red); font-size: 14px; }
+
+  /* INSTALL MODAL */
+  .install-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: flex-end; justify-content: center; }
+  .install-overlay.hidden { display: none; }
+  .install-card { background: #111; border-radius: 20px 20px 0 0; padding: 24px; width: 100%; max-width: 480px; border-top: 1px solid #222; }
+  .install-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .install-sub { font-size: 13px; color: #888; margin-bottom: 20px; }
+  .install-btn { background: #FF4500; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .install-btn:active { background: #cc3300; }
+  .install-skip { background: none; border: none; color: #555; font-size: 13px; width: 100%; margin-top: 12px; cursor: pointer; padding: 8px; }
+  .install-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .install-step { display: flex; align-items: center; gap: 12px; }
+  .install-step-num { width: 28px; height: 28px; border-radius: 50%; background: #FF4500; color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .install-step-txt { font-size: 13px; color: #ccc; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading">Cargando tu membresía...</div>
+</div>
+
+<!-- INSTALL MODAL -->
+<div class="install-overlay hidden" id="installOverlay">
+  <div class="install-card">
+    <div id="installAndroid" style="display:none">
+      <div class="install-title">📱 Instalá la app</div>
+      <div class="install-sub">Accedé rápido desde tu celular sin abrir el navegador</div>
+      <button class="install-btn" id="installBtn" onclick="instalarApp()">
+        <i class="ti ti-download"></i> Instalar app
+      </button>
+      <button class="install-skip" onclick="cerrarInstall()">Ahora no</button>
+    </div>
+    <div id="installIOS" style="display:none">
+      <div class="install-title">📱 Instalá la app en iPhone</div>
+      <div class="install-sub">Seguí estos pasos para agregar la app a tu pantalla de inicio</div>
+      <div class="install-steps">
+        <div class="install-step"><div class="install-step-num">1</div><div class="install-step-txt">Tocá el botón <strong>Compartir</strong> <span style="font-size:16px">⬆️</span> en la barra de Safari</div></div>
+        <div class="install-step"><div class="install-step-num">2</div><div class="install-step-txt">Buscá la opción <strong>"Agregar a pantalla de inicio"</strong></div></div>
+        <div class="install-step"><div class="install-step-num">3</div><div class="install-step-txt">Tocá <strong>"Agregar"</strong> y listo — la app aparece en tu pantalla</div></div>
+      </div>
+      <button class="install-skip" onclick="cerrarInstall()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATOS PRECARGADOS ──────────────────────────────────────────────────────────
+
+const PLANES_ALIMENTARIOS = {
+  musculacion: {
+    nombre: '💪 Musculación / Volumen',
+    objetivo: 'Aumentar masa muscular con superávit calórico controlado.',
+    comidas: [
+      { titulo: '🌅 Desayuno', emoji: '🌅', items: ['Avena con leche + 1 banana + miel', '3 huevos revueltos o en tortilla', 'Tostadas integrales con mantequilla de maní', 'Jugo de naranja natural'] },
+      { titulo: '🍎 Media mañana', emoji: '🍎', items: ['Yogur griego con granola y frutas', 'Puñado de almendras o nueces', 'Batido de proteína (opcional)'] },
+      { titulo: '🍽️ Almuerzo', emoji: '🍽️', items: ['200g pechuga de pollo o carne magra', 'Arroz integral o pasta (150g cocido)', 'Ensalada de vegetales con aceite de oliva', 'Legumbres (lentejas, garbanzos)'] },
+      { titulo: '⚡ Pre-entreno', emoji: '⚡', items: ['Banana + café sin azúcar', 'Arroz con atún (liviano)', 'Batido de carbohidratos (opcional)'] },
+      { titulo: '🔥 Post-entreno', emoji: '🔥', items: ['Batido de proteína whey + leche', 'Fruta de absorción rápida (banana, melón)', 'Pan integral con jamón bajo en grasa'] },
+      { titulo: '🌙 Cena', emoji: '🌙', items: ['200g salmón, atún o pollo al horno', 'Batata o papa cocida', 'Brócoli, espinaca o vegetales al vapor', 'Aceite de oliva'] },
+    ]
+  },
+  perdida_peso: {
+    nombre: '🔥 Pérdida de Peso',
+    objetivo: 'Déficit calórico controlado preservando músculo.',
+    comidas: [
+      { titulo: '🌅 Desayuno', emoji: '🌅', items: ['Avena con agua o leche descremada', '2 claras de huevo + 1 huevo entero', 'Frutas frescas (frutillas, arándanos)', 'Té verde o café sin azúcar'] },
+      { titulo: '🍎 Media mañana', emoji: '🍎', items: ['Manzana o pera', 'Yogur descremado sin azúcar', '10 almendras o nueces'] },
+      { titulo: '🍽️ Almuerzo', emoji: '🍽️', items: ['150g pechuga de pollo o pescado grillado', 'Ensalada grande (lechuga, tomate, pepino, zanahoria)', 'Porción pequeña de arroz integral o quinoa', 'Limón y aceite de oliva (poca cantidad)'] },
+      { titulo: '☀️ Merienda', emoji: '☀️', items: ['Infusión sin azúcar', 'Zanahoria o apio con hummus', 'Yogur descremado'] },
+      { titulo: '🌙 Cena', emoji: '🌙', items: ['150g pescado blanco o pollo al horno', 'Vegetales al vapor (brócoli, espárragos, zucchini)', 'Sin carbohidratos o muy poca cantidad', 'Caldo casero si hay hambre nocturno'] },
+    ]
+  },
+  fitness: {
+    nombre: '🏃 Fitness / Salud General',
+    objetivo: 'Alimentación equilibrada para bienestar y energía diaria.',
+    comidas: [
+      { titulo: '🌅 Desayuno', emoji: '🌅', items: ['Pan integral con palta y huevo', 'Jugo de naranja o fruta fresca', 'Café con leche o té', 'Porción de queso fresco (opcional)'] },
+      { titulo: '🍎 Media mañana', emoji: '🍎', items: ['Fruta de estación', 'Puñado de mix de frutos secos', 'Barra de cereal natural'] },
+      { titulo: '🍽️ Almuerzo', emoji: '🍽️', items: ['Proteína magra (pollo, pescado, huevo, legumbres)', 'Arroz, pasta o papa en porciones moderadas', 'Ensalada variada de colores', 'Aceite de oliva y limón'] },
+      { titulo: '☀️ Merienda', emoji: '☀️', items: ['Yogur natural con frutas', 'Tostadas con mermelada sin azúcar', 'Mate o té con galletitas integrales'] },
+      { titulo: '🌙 Cena', emoji: '🌙', items: ['Sopa casera de verduras', 'Proteína liviana (huevo, pescado, pollo)', 'Vegetales salteados o al vapor', 'Porción moderada de carbohidratos'] },
+    ]
+  },
+  definicion: {
+    nombre: '✨ Definición Muscular',
+    objetivo: 'Reducir grasa manteniendo músculo con proteína alta.',
+    comidas: [
+      { titulo: '🌅 Desayuno', emoji: '🌅', items: ['Omelette de 4 claras + 1 yema con espinaca', 'Avena con agua (sin azúcar)', 'Café negro sin azúcar', 'Fruta baja en azúcar (frutillas, kiwi)'] },
+      { titulo: '🍎 Media mañana', emoji: '🍎', items: ['Yogur griego 0% grasa', 'Nueces o almendras (10 unidades)', 'Proteína whey en agua (opcional)'] },
+      { titulo: '🍽️ Almuerzo', emoji: '🍽️', items: ['200g pechuga de pollo o filete de pescado blanco', 'Vegetales fibrosos (brócoli, espárragos, espinaca)', 'Porción pequeña de arroz integral o quinoa', 'Aceite de oliva (1 cucharadita)'] },
+      { titulo: '⚡ Pre-entreno', emoji: '⚡', items: ['Batata pequeña o arroz integral', 'Clara de huevo o proteína magra', 'Café o té verde (sin azúcar)'] },
+      { titulo: '🔥 Post-entreno', emoji: '🔥', items: ['Proteína whey en agua', 'Banana o fruta de rápida absorción', 'Arroz de coco (porción pequeña)'] },
+      { titulo: '🌙 Cena', emoji: '🌙', items: ['Filete de pescado blanco al vapor', 'Verduras asadas o al vapor (sin límite)', 'Ensalada verde con limón', 'Sin carbohidratos (o mínimos)'] },
+    ]
+  }
+};
+
+const RUTINAS = {
+  musculacion: {
+    nombre: '💪 Rutina de Musculación',
+    dias: [
+      { dia: 'Lunes — Pecho y Tríceps', ejercicios: [
+        {n:'Press de banca plano', s:'4 × 8-10 reps'}, {n:'Press inclinado con mancuernas', s:'3 × 10-12 reps'},
+        {n:'Aperturas en polea', s:'3 × 12-15 reps'}, {n:'Fondos en paralelas', s:'3 × al fallo'},
+        {n:'Extensión de tríceps en polea', s:'4 × 12 reps'}
+      ]},
+      { dia: 'Martes — Espalda y Bíceps', ejercicios: [
+        {n:'Peso muerto', s:'4 × 6-8 reps'}, {n:'Dominadas', s:'4 × al fallo'},
+        {n:'Remo con barra', s:'4 × 10 reps'}, {n:'Curl con barra', s:'3 × 12 reps'},
+        {n:'Curl martillo', s:'3 × 12 reps'}
+      ]},
+      { dia: 'Miércoles — Piernas', ejercicios: [
+        {n:'Sentadilla con barra', s:'4 × 8-10 reps'}, {n:'Prensa de piernas', s:'4 × 12 reps'},
+        {n:'Extensión de cuádriceps', s:'3 × 15 reps'}, {n:'Curl femoral', s:'3 × 12 reps'},
+        {n:'Elevación de pantorrillas', s:'4 × 20 reps'}
+      ]},
+      { dia: 'Jueves — Hombros', ejercicios: [
+        {n:'Press militar con barra', s:'4 × 8-10 reps'}, {n:'Elevaciones laterales', s:'4 × 15 reps'},
+        {n:'Elevaciones frontales', s:'3 × 12 reps'}, {n:'Pájaros en banco', s:'3 × 15 reps'},
+        {n:'Encogimientos con mancuernas', s:'3 × 15 reps'}
+      ]},
+      { dia: 'Viernes — Full body / Funcional', ejercicios: [
+        {n:'Peso muerto rumano', s:'3 × 10 reps'}, {n:'Press banca + dominadas superseteo', s:'3 × 10 reps'},
+        {n:'Sentadilla goblet', s:'3 × 15 reps'}, {n:'Plancha abdominal', s:'3 × 60 seg'},
+        {n:'Cardio moderado', s:'20 minutos'}
+      ]},
+    ]
+  },
+  perdida_peso: {
+    nombre: '🔥 Rutina para Pérdida de Peso',
+    dias: [
+      { dia: 'Lunes — Cardio + Tren superior', ejercicios: [
+        {n:'Caminata rápida o bicicleta', s:'20 min'}, {n:'Flexiones de pecho', s:'3 × 15 reps'},
+        {n:'Remo con banda elástica', s:'3 × 15 reps'}, {n:'Press hombros con mancuernas', s:'3 × 12 reps'},
+        {n:'Curl de bíceps ligero', s:'3 × 15 reps'}
+      ]},
+      { dia: 'Martes — Circuito de piernas', ejercicios: [
+        {n:'Sentadillas con peso corporal', s:'4 × 20 reps'}, {n:'Estocadas alternadas', s:'3 × 16 reps'},
+        {n:'Puente de glúteos', s:'3 × 20 reps'}, {n:'Step ups', s:'3 × 15 reps c/lado'},
+        {n:'Saltos al cajón (suave)', s:'3 × 10 reps'}
+      ]},
+      { dia: 'Miércoles — Cardio + Core', ejercicios: [
+        {n:'Cardio moderado (elíptica, cinta)', s:'30 min'}, {n:'Plancha', s:'3 × 45 seg'},
+        {n:'Crunch abdominal', s:'3 × 20 reps'}, {n:'Elevación de piernas', s:'3 × 15 reps'},
+        {n:'Mountain climbers', s:'3 × 30 seg'}
+      ]},
+      { dia: 'Jueves — Full body funcional', ejercicios: [
+        {n:'Burpees', s:'3 × 10 reps'}, {n:'Sentadilla + press', s:'3 × 12 reps'},
+        {n:'Remo + curl', s:'3 × 12 reps'}, {n:'Plancha lateral', s:'3 × 30 seg c/lado'},
+        {n:'Jumping jacks', s:'3 × 30 seg'}
+      ]},
+      { dia: 'Viernes — Cardio largo', ejercicios: [
+        {n:'Caminata, bicicleta o natación', s:'40-50 min a ritmo moderado'},
+        {n:'Estiramientos generales', s:'10-15 min'},
+        {n:'Respiración y relajación', s:'5 min'}
+      ]},
+    ]
+  },
+  fitness: {
+    nombre: '🏃 Rutina Fitness General',
+    dias: [
+      { dia: 'Lunes — Tren superior', ejercicios: [
+        {n:'Press de banca o flexiones', s:'3 × 12 reps'}, {n:'Remo con mancuernas', s:'3 × 12 reps'},
+        {n:'Press hombros', s:'3 × 12 reps'}, {n:'Curl bíceps', s:'3 × 12 reps'},
+        {n:'Cardio suave', s:'15 min'}
+      ]},
+      { dia: 'Miércoles — Tren inferior', ejercicios: [
+        {n:'Sentadillas', s:'4 × 15 reps'}, {n:'Prensa de piernas', s:'3 × 15 reps'},
+        {n:'Estocadas', s:'3 × 12 reps c/lado'}, {n:'Extensión + curl femoral', s:'3 × 15 reps'},
+        {n:'Pantorrillas', s:'3 × 20 reps'}
+      ]},
+      { dia: 'Viernes — Full body + Cardio', ejercicios: [
+        {n:'Circuito full body (6 ejercicios)', s:'3 vueltas × 12 reps c/u'},
+        {n:'Cardio (bicicleta, cinta, elíptica)', s:'20-25 min'},
+        {n:'Core (plancha, crunch)', s:'3 × 15-20 reps'},
+        {n:'Estiramientos', s:'10 min'}
+      ]},
+    ]
+  },
+  definicion: {
+    nombre: '✨ Rutina de Definición',
+    dias: [
+      { dia: 'Lunes — Pecho + Cardio HIIT', ejercicios: [
+        {n:'Press banca con peso moderado', s:'4 × 15 reps'}, {n:'Aperturas con mancuernas', s:'4 × 15 reps'},
+        {n:'Fondos', s:'3 × al fallo'}, {n:'HIIT en cinta (30s rápido / 30s lento)', s:'15 min'}
+      ]},
+      { dia: 'Martes — Espalda + Cardio', ejercicios: [
+        {n:'Dominadas o jalón al pecho', s:'4 × 12 reps'}, {n:'Remo sentado en polea', s:'4 × 15 reps'},
+        {n:'Face pulls', s:'3 × 15 reps'}, {n:'Cardio moderado', s:'20 min'}
+      ]},
+      { dia: 'Miércoles — Piernas + Core', ejercicios: [
+        {n:'Sentadilla frontal', s:'4 × 12 reps'}, {n:'Peso muerto piernas rígidas', s:'4 × 12 reps'},
+        {n:'Extensión + curl femoral', s:'3 × 15 reps'}, {n:'Plancha + crunch', s:'3 × 20 reps'}
+      ]},
+      { dia: 'Jueves — Hombros + Bíceps + Tríceps', ejercicios: [
+        {n:'Elevaciones laterales', s:'4 × 15 reps'}, {n:'Curl alterno con mancuernas', s:'3 × 15 reps'},
+        {n:'Extensión tríceps polea', s:'3 × 15 reps'}, {n:'HIIT bicicleta', s:'15 min'}
+      ]},
+      { dia: 'Viernes — Full body + Cardio largo', ejercicios: [
+        {n:'Circuito funcional full body', s:'4 vueltas × 12 reps'}, {n:'Cardio continuo moderado', s:'30 min'},
+        {n:'Abdominales', s:'3 × 20 reps'}, {n:'Estiramientos completos', s:'10 min'}
+      ]},
+    ]
+  }
+};
+
+// ── APP ────────────────────────────────────────────────────────────────────────
+const socioId = window.location.pathname.split('/').pop();
+let socioData = null;
+let tabActual = 'inicio';
+
+async function init() {
+  try {
+    const res = await fetch(`/api/socio/${socioId}/pwa`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    socioData = data.socio;
+    renderApp();
+  } catch(e) {
+    document.getElementById('app').innerHTML = `<div class="error-msg">❌ No se pudo cargar tu membresía.<br><small>${e.message}</small></div>`;
+  }
+}
+
+function renderApp() {
+  const s = socioData;
+  const hoy = new Date();
+  const venc = s.fecha_venc ? new Date(s.fecha_venc) : null;
+  const dias = venc ? Math.ceil((venc - hoy) / (1000*60*60*24)) : null;
+  const congelado = s.congelado === 1;
+  let estadoLabel, estadoClass, diasClass;
+  if (congelado) { estadoLabel = '❄️ Congelada'; estadoClass = 'congelado'; diasClass = ''; }
+  else if (!dias || dias < 0) { estadoLabel = '❌ Vencida'; estadoClass = 'vencido'; diasClass = 'bad'; }
+  else if (dias <= 7) { estadoLabel = '⚠️ Por vencer'; estadoClass = 'vencido'; diasClass = 'warn'; }
+  else { estadoLabel = '✅ Al día'; estadoClass = 'al-dia'; diasClass = 'ok'; }
+  const foto = s.foto ? `/fotos/${s.foto}` : null;
+
+  const objetivo = s.objetivo || '';
+  const plan = PLANES_ALIMENTARIOS[objetivo];
+  const rutina = RUTINAS[objetivo];
+
+  document.getElementById('app').innerHTML = `
+    <!-- HEADER -->
+    <div class="pwa-header" style="position:relative">
+      ${s.gym_logo ? `<img src="http://localhost:5001/static/logos/${s.gym_logo}" alt="logo" style="position:absolute;top:12px;right:12px;height:56px;max-width:140px;object-fit:contain;z-index:2;border-radius:6px">` : ''}
+      <div class="gym-nombre">${s.gym_nombre}</div>
+      ${foto ? `<img class="socio-avatar" src="${foto}" alt="${s.nombre}">` : `<div class="socio-avatar" style="display:flex;align-items:center;justify-content:center;font-size:36px">👤</div>`}
+      <div class="socio-nombre">${s.nombre}</div>
+      <div class="socio-plan">${s.plan || 'Sin plan asignado'}</div>
+    </div>
+
+    <!-- STATUS CARD -->
+    <div class="status-card">
+      <div class="status-row">
+        <div>
+          <div class="status-badge ${estadoClass}">${estadoLabel}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="dias-restantes ${diasClass}">${congelado ? '—' : (dias !== null ? Math.abs(dias) : '—')}</div>
+          <div class="dias-label">${congelado ? 'membresía pausada' : dias === null ? 'sin vencimiento' : dias < 0 ? 'días vencida' : 'días restantes'}</div>
+        </div>
+      </div>
+      ${venc ? `<div class="venc-fecha">📅 Vencimiento: ${venc.toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'})}</div>` : ''}
+    </div>
+
+    <!-- CONTENIDO POR TABS -->
+    <div class="pwa-content">
+
+      <!-- TAB INICIO -->
+      <div class="tab-content active" id="tab-inicio">
+
+        <!-- QR -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection('qr')">
+            <div class="section-icon"><i class="ti ti-qrcode"></i></div>
+            <div class="section-title">Mi QR de acceso</div>
+            <i class="ti ti-chevron-down section-chevron" id="chev-qr"></i>
+          </div>
+          <div class="section-body" id="body-qr">
+            <div class="qr-container">
+              <img src="/qr/socio_${s.id}.png" alt="QR de acceso" onerror="this.style.display='none';document.getElementById('qr-gen-btn').style.display='block'">
+              <div id="qr-gen-btn" style="display:none">
+                <button onclick="generarQR()" style="background:var(--accent);color:white;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:13px">Generar mi QR</button>
+              </div>
+              <div class="qr-hint">Mostrá este código en la cámara del gimnasio para registrar tu ingreso</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORIAL PAGOS -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection('pagos')">
+            <div class="section-icon" style="background:var(--green)20;color:var(--green)"><i class="ti ti-receipt"></i></div>
+            <div class="section-title">Últimos pagos</div>
+            <i class="ti ti-chevron-down section-chevron" id="chev-pagos"></i>
+          </div>
+          <div class="section-body" id="body-pagos">
+            ${s.pagos && s.pagos.length ? s.pagos.map(p => `
+              <div class="pago-row">
+                <div>
+                  <div class="pago-info">${p.plan || 'Pago'} · ${p.metodo || ''}</div>
+                  <div class="pago-info" style="font-size:11px;color:var(--text3)">${p.fecha}</div>
+                </div>
+                <div class="pago-monto">$${parseInt(p.monto).toLocaleString('es-AR')}</div>
+              </div>`).join('') : '<div style="font-size:13px;color:var(--text3);padding:10px 0">Sin pagos registrados</div>'}
+          </div>
+        </div>
+
+        <!-- BOTÓN RENOVAR -->
+        ${(s.gym_email || s.gym_telefono) ? `
+        <button class="btn-renovar" onclick="solicitarRenovacion()">
+          <i class="ti ti-refresh"></i> Quiero renovar mi membresía
+        </button>` : ''}
+
+      </div>
+
+      <!-- TAB ALIMENTACIÓN -->
+      <div class="tab-content" id="tab-dieta">
+        ${plan ? `
+          <div class="section" style="border:none;background:transparent">
+            <div class="section-body open" style="padding:0">
+              <div style="margin-bottom:14px">
+                <div style="font-size:16px;font-weight:700;margin-bottom:4px">${plan.nombre}</div>
+                <div style="font-size:12px;color:var(--text2)">${plan.objetivo}</div>
+              </div>
+              <div class="plan-disclaimer">
+                <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0"></i>
+                <span>Este plan es una <strong>guía orientativa</strong>. No reemplaza la consulta con un nutricionista. Adaptalo a tus necesidades.</span>
+              </div>
+              ${plan.comidas.map(c => `
+                <div class="comida-bloque">
+                  <div class="comida-titulo">${c.titulo}</div>
+                  <div class="comida-items">
+                    ${c.items.map(i => `<div class="comida-item">${i}</div>`).join('')}
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>` :
+          `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
+            <i class="ti ti-salad" style="font-size:48px;display:block;margin-bottom:12px"></i>
+            <div style="font-size:14px">Tu gimnasio aún no asignó un objetivo.</div>
+            <div style="font-size:12px;margin-top:6px">Consultá con tu entrenador.</div>
+          </div>`}
+      </div>
+
+      <!-- TAB RUTINA -->
+      <div class="tab-content" id="tab-rutina">
+        ${rutina ? `
+          <div class="section" style="border:none;background:transparent">
+            <div class="section-body open" style="padding:0">
+              <div style="margin-bottom:16px">
+                <div style="font-size:16px;font-weight:700">${rutina.nombre}</div>
+              </div>
+              ${rutina.dias.map(d => `
+                <div class="dia-bloque">
+                  <div class="dia-titulo">${d.dia}</div>
+                  ${d.ejercicios.map(e => `
+                    <div class="ejercicio-item">
+                      <span class="ejercicio-nombre">${e.n}</span>
+                      <span class="ejercicio-series">${e.s}</span>
+                    </div>`).join('')}
+                </div>`).join('')}
+            </div>
+          </div>` :
+          `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
+            <i class="ti ti-barbell" style="font-size:48px;display:block;margin-bottom:12px"></i>
+            <div style="font-size:14px">Tu gimnasio aún no asignó una rutina.</div>
+            <div style="font-size:12px;margin-top:6px">Consultá con tu entrenador.</div>
+          </div>`}
+      </div>
+
+    </div>
+
+    <!-- NAVBAR BOTTOM -->
+    <div class="bottom-nav">
+      <button class="nav-btn active" id="nav-inicio" onclick="cambiarTab('inicio')">
+        <i class="ti ti-home"></i>Inicio
+      </button>
+      <button class="nav-btn" id="nav-dieta" onclick="cambiarTab('dieta')">
+        <i class="ti ti-salad"></i>Dieta
+      </button>
+      <button class="nav-btn" id="nav-rutina" onclick="cambiarTab('rutina')">
+        <i class="ti ti-barbell"></i>Rutina
+      </button>
+    </div>
+  `;
+}
+
+function cambiarTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`)?.classList.add('active');
+  document.getElementById(`nav-${tab}`)?.classList.add('active');
+  tabActual = tab;
+}
+
+function toggleSection(id) {
+  const body = document.getElementById(`body-${id}`);
+  const chev = document.getElementById(`chev-${id}`);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+async function generarQR() {
+  try {
+    await fetch(`/api/socios/${socioId}/qr`);
+    window.location.reload();
+  } catch(e) {}
+}
+
+async function solicitarRenovacion() {
+  toast('Enviando solicitud...');
+  try {
+    const res = await fetch(`/api/socio/${socioId}/renovacion`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) toast('✅ Solicitud enviada al gimnasio');
+    else toast('❌ ' + (data.error || 'Error al enviar'));
+  } catch(e) { toast('❌ No se pudo conectar'); }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// PWA Install
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Mostrar modal Android si no está instalada
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    setTimeout(mostrarInstall, 1500);
+  }
+});
+
+function mostrarInstall() {
+  const overlay = document.getElementById('installOverlay');
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isStandalone) return; // ya instalada
+  overlay.classList.remove('hidden');
+  if (isIOS) {
+    document.getElementById('installIOS').style.display = 'block';
+    document.getElementById('installAndroid').style.display = 'none';
+  } else {
+    document.getElementById('installAndroid').style.display = 'block';
+    document.getElementById('installIOS').style.display = 'none';
+  }
+}
+
+async function instalarApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    cerrarInstall();
+  }
+}
+
+function cerrarInstall() {
+  document.getElementById('installOverlay').classList.add('hidden');
+}
+
+// Mostrar botón instalar también en el contenido
+function agregarBotonInstalar() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isStandalone) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const btn = document.createElement('button');
+  btn.innerHTML = '<i class="ti ti-download"></i> Instalar app en mi celular';
+  btn.style.cssText = 'position:fixed;bottom:80px;right:16px;background:#FF4500;color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:100;display:flex;align-items:center;gap:6px;box-shadow:0 4px 20px rgba(255,69,0,0.4)';
+  btn.onclick = mostrarInstall;
+  document.body.appendChild(btn);
+  // Ocultar después de 10 segundos
+  setTimeout(() => btn.style.display = 'none', 10000);
+}
+
+init();
+setTimeout(agregarBotonInstalar, 2000);
+</script>
+</body>
+</html>
