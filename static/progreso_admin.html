@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progreso del socio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --accent: #FF4500; --bg0: #0a0a0a; --bg1: #111; --bg2: #1a1a1a; --bg3: #222;
+    --text1: #f0f0f0; --text2: #aaa; --text3: #666;
+    --green: #00cc66; --red: #FF4444; --yellow: #f59e0b; --blue: #3b82f6;
+  }
+  body { background: var(--bg0); color: var(--text1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+  .header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .header i { font-size: 24px; color: var(--accent); }
+  .header h1 { font-size: 18px; font-weight: 700; }
+  .header .sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .card { background: var(--bg1); border: 0.5px solid #222; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .resumen { display: flex; justify-content: space-around; text-align: center; margin-bottom: 10px; }
+  .resumen-val { font-size: 22px; font-weight: 800; }
+  .resumen-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+  .delta { text-align: center; font-size: 13px; font-weight: 600; margin-top: 6px; }
+  .delta.down { color: var(--green); }
+  .delta.up { color: var(--yellow); }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .mcard { background: var(--bg2); border-radius: 12px; padding: 12px 8px; text-align: center; }
+  .mcard-val { font-size: 15px; font-weight: 700; }
+  .mcard-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .mcard-trend { font-size: 10px; font-weight: 600; margin-top: 3px; }
+  .mcard-trend.down { color: var(--green); }
+  .mcard-trend.up { color: var(--yellow); }
+  .mcard-trend.flat { color: var(--text3); }
+  .section-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+  .hist-item { padding: 14px 0; border-bottom: 0.5px solid #1a1a1a; }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .hist-fecha { font-size: 13px; color: var(--text1); font-weight: 600; }
+  .hist-inicial { font-size: 9px; color: var(--accent); background: var(--accent)15; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+  .hist-datos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .chip { font-size: 11px; background: var(--bg3); color: var(--text2); padding: 3px 9px; border-radius: 8px; }
+  .comentario-box { margin-top: 6px; }
+  .comentario-existente { background: var(--blue)10; border-left: 2px solid var(--blue); border-radius: 0 8px 8px 0; padding: 8px 10px; font-size: 12px; color: #cde; margin-bottom: 6px; }
+  .comentario-input-row { display: flex; gap: 6px; }
+  .comentario-input-row input { flex: 1; background: var(--bg2); border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 8px 10px; color: var(--text1); font-size: 12px; }
+  .comentario-input-row button { background: var(--blue); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty i { font-size: 44px; display: block; margin-bottom: 12px; }
+  .loading { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="app"><div class="loading">Cargando...</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const sid = window.location.pathname.split('/').pop();
+const API = '';
+let progresoData = null;
+let socioNombre = '';
+
+const METRICAS_INFO = {
+  peso:    { label: 'Peso',      unit: 'kg' },
+  cintura: { label: 'Cintura',   unit: 'cm' },
+  brazo:   { label: 'Brazo',     unit: 'cm' },
+  pecho:   { label: 'Pecho',     unit: 'cm' },
+  cadera:  { label: 'Cadera',    unit: 'cm' },
+  pierna:  { label: 'Pierna',    unit: 'cm' },
+  grasa:   { label: '% Grasa',   unit: '%' },
+};
+const ORDEN_METRICAS = {
+  perdida_peso: ['peso', 'cintura', 'grasa', 'cadera', 'pierna', 'brazo', 'pecho'],
+  definicion:   ['grasa', 'cintura', 'peso', 'brazo', 'pecho', 'cadera', 'pierna'],
+  musculacion:  ['peso', 'brazo', 'pecho', 'pierna', 'cadera', 'cintura', 'grasa'],
+  fitness:      ['peso', 'cintura', 'grasa', 'brazo', 'pecho', 'cadera', 'pierna'],
+};
+
+async function init() {
+  try {
+    const [rSocio, rProg] = await Promise.all([
+      fetch(`${API}/api/socios/${sid}`),
+      fetch(`${API}/api/socios/${sid}/progreso`)
+    ]);
+    const dSocio = await rSocio.json();
+    const dProg = await rProg.json();
+    if (!dProg.ok) throw new Error(dProg.error || 'Error al cargar');
+    socioNombre = dSocio.nombre || 'Socio';
+    progresoData = dProg;
+    render();
+  } catch(e) {
+    document.getElementById('app').innerHTML = `<div class="empty"><i class="ti ti-alert-circle"></i>No se pudo cargar el progreso.<br><small>${e.message}</small></div>`;
+  }
+}
+
+function render() {
+  const { registros, peso_objetivo, objetivo } = progresoData;
+  const orden = ORDEN_METRICAS[objetivo] || ORDEN_METRICAS.fitness;
+
+  let body;
+  if (!registros.length) {
+    body = `<div class="empty"><i class="ti ti-chart-line"></i>Este socio todavía no cargó ninguna medición desde su app.</div>`;
+  } else {
+    const inicial = registros.find(r => r.es_inicial) || registros[0];
+    const ultimo = registros[registros.length - 1];
+    const pesoInicial = parseFloat(inicial.peso);
+    const pesoActual = parseFloat(ultimo.peso);
+
+    let deltaHTML = '';
+    if (!isNaN(pesoInicial) && !isNaN(pesoActual) && registros.length > 1) {
+      const delta = pesoActual - pesoInicial;
+      const cls = delta < -0.05 ? 'down' : delta > 0.05 ? 'up' : '';
+      const txt = delta < -0.05 ? `↓ Bajó ${Math.abs(delta).toFixed(1)}kg` : delta > 0.05 ? `↑ Subió ${delta.toFixed(1)}kg` : 'Se mantuvo estable';
+      deltaHTML = `<div class="delta ${cls}">${txt}</div>`;
+    }
+
+    const resumenHTML = `
+      <div class="card">
+        <div class="resumen">
+          <div><div class="resumen-val">${!isNaN(pesoInicial) ? pesoInicial + 'kg' : '—'}</div><div class="resumen-label">Inicial</div></div>
+          <div><div class="resumen-val" style="color:var(--accent)">${!isNaN(pesoActual) ? pesoActual + 'kg' : '—'}</div><div class="resumen-label">Actual</div></div>
+          <div><div class="resumen-val" style="color:var(--text3)">${peso_objetivo ? peso_objetivo + 'kg' : '—'}</div><div class="resumen-label">Objetivo</div></div>
+        </div>
+        ${deltaHTML}
+      </div>`;
+
+    const cardsHTML = `<div class="card"><div class="section-title">Últimas mediciones</div><div class="cards">
+      ${orden.map(key => metricCardHTML(key, registros)).filter(Boolean).join('') || '<div style="color:var(--text3);font-size:12px">Sin datos</div>'}
+    </div></div>`;
+
+    const historialHTML = `<div class="card"><div class="section-title">Historial (${registros.length} registro${registros.length !== 1 ? 's' : ''})</div>
+      ${registros.slice().reverse().map(r => {
+        const chips = ['peso','grasa','cintura','brazo','pecho','cadera','pierna']
+          .filter(k => r[k])
+          .map(k => `<span class="chip">${METRICAS_INFO[k].label}: ${r[k]}${METRICAS_INFO[k].unit}</span>`).join('');
+        const fechaFmt = new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-AR', {day:'2-digit',month:'short',year:'numeric'});
+        return `
+          <div class="hist-item">
+            <div class="hist-top">
+              <div class="hist-fecha">${fechaFmt}${r.es_inicial ? '<span class="hist-inicial">INICIAL</span>' : ''}</div>
+            </div>
+            <div class="hist-datos">${chips}</div>
+            <div class="comentario-box" id="cbox-${r.id}">
+              ${r.comentario_profe ? `<div class="comentario-existente">💬 ${r.comentario_profe}</div>` : ''}
+              <div class="comentario-input-row">
+                <input type="text" id="cinput-${r.id}" placeholder="Dejar un comentario para el socio..." value="">
+                <button onclick="guardarComentario(${r.id})">Enviar</button>
+              </div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+    body = resumenHTML + cardsHTML + historialHTML;
+  }
+
+  document.getElementById('app').innerHTML = `
+    <div class="header">
+      <i class="ti ti-chart-line"></i>
+      <div><h1>Progreso — ${socioNombre}</h1><div class="sub">Vista de solo lectura · los datos los carga el socio desde su app</div></div>
+    </div>
+    ${body}
+  `;
+}
+
+function metricCardHTML(key, registros) {
+  const conValor = registros.filter(r => r[key]);
+  if (!conValor.length) return '';
+  const info = METRICAS_INFO[key];
+  const ultimo = parseFloat(conValor[conValor.length - 1][key]);
+  let trendHTML = '<span class="mcard-trend flat">—</span>';
+  if (conValor.length >= 2) {
+    const anterior = parseFloat(conValor[conValor.length - 2][key]);
+    const diff = ultimo - anterior;
+    if (Math.abs(diff) >= 0.05) {
+      const cls = diff < 0 ? 'down' : 'up';
+      trendHTML = `<span class="mcard-trend ${cls}">${diff < 0 ? '↓' : '↑'} ${Math.abs(diff).toFixed(1)}</span>`;
+    }
+  }
+  return `<div class="mcard"><div class="mcard-val">${ultimo}${info.unit}</div><div class="mcard-label">${info.label}</div>${trendHTML}</div>`;
+}
+
+async function guardarComentario(rid) {
+  const input = document.getElementById(`cinput-${rid}`);
+  const texto = input.value.trim();
+  if (!texto) return;
+  try {
+    const res = await fetch(`${API}/api/socios/${sid}/progreso/${rid}/comentario`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comentario: texto })
+    });
+    const data = await res.json();
+    if (data.ok) { toast('✅ Comentario enviado'); progresoData = null; init(); }
+    else toast('❌ Error al enviar');
+  } catch(e) { toast('❌ No se pudo conectar'); }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -413,14 +413,6 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .nav-badge.show { display: block; }
 
 /* ── QR ── */
-.modal-qr-overlay { position: fixed; inset: 0; background: #000000cc; display: none; align-items: center; justify-content: center; z-index: 400; }
-.modal-qr-overlay.open { display: flex; }
-.modal-qr { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 28px; width: 320px; text-align: center; }
-.modal-qr-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.modal-qr-sub { font-size: 11px; color: var(--text3); margin-bottom: 20px; }
-.modal-qr img { width: 220px; height: 220px; border-radius: 10px; border: 3px solid white; }
-.modal-qr-nombre { font-size: 13px; color: var(--text2); margin-top: 12px; font-weight: 500; }
-.modal-qr-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: center; }
 
 .btn-scan-qr { background: var(--accent)15; border: 0.5px solid var(--accent)40; color: var(--accent); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
 .btn-scan-qr:hover { background: var(--accent)25; }
@@ -798,8 +790,14 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
               <div style="font-size:12px;color:#555;text-align:center">Activá la cámara para capturar<br>el rostro del socio</div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-              <button class="btn-primary" onclick="abrirCamaraCaptura()" id="btnAbrirCam"><i class="ti ti-camera"></i> Abrir cámara</button>
-              <button class="btn-primary" onclick="capturarFoto()" id="btnCapturar" style="display:none"><i class="ti ti-camera-check"></i> Capturar</button>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <button class="btn-primary" onclick="abrirCamaraCaptura()" id="btnAbrirCam"><i class="ti ti-camera"></i> Abrir cámara</button>
+                <button class="btn-primary" onclick="capturarFoto()" id="btnCapturar" style="display:none"><i class="ti ti-camera-check"></i> Capturar</button>
+                <label class="btn-sec" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px">
+                  <i class="ti ti-upload"></i> Subir foto
+                  <input type="file" accept="image/*" style="display:none" onchange="subirFotoArchivo(this)">
+                </label>
+              </div>
               <button class="btn-sec" onclick="reiniciarFoto()" id="btnReiniciar" style="display:none"><i class="ti ti-refresh"></i> Repetir</button>
             </div>
           </div>
@@ -1147,20 +1145,6 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
   </div>
 </div>
 
-<!-- MODAL QR -->
-<div class="modal-qr-overlay" id="modalQR">
-  <div class="modal-qr">
-    <div class="modal-qr-title">QR de acceso</div>
-    <div class="modal-qr-sub">El socio muestra este QR en la cámara para ingresar</div>
-    <img id="qrImg" src="" alt="QR">
-    <div class="modal-qr-nombre" id="qrNombre"></div>
-    <div class="modal-qr-actions">
-      <button class="btn-primary" onclick="enviarQRporMail()"><i class="ti ti-mail"></i> Enviar QR por mail</button>
-      <button class="btn-sec" onclick="cerrarQR()">Cerrar</button>
-    </div>
-  </div>
-</div>
-
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -1261,8 +1245,8 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       <div style="display:flex;gap:8px">
         <button class="btn-danger" onclick="eliminarSocio()"><i class="ti ti-trash"></i> Dar de baja</button>
         <button class="btn-congelar" id="mpBtnCongelar" onclick="toggleCongelar()"><i class="ti ti-snowflake"></i> <span id="mpCongelarLabel">Congelar</span></button>
-        <button class="btn-scan-qr" onclick="verQR(socioEditandoId)"><i class="ti ti-qrcode"></i> QR</button>
         <button class="btn-scan-qr" onclick="abrirFichaVentana(socioEditandoId)" style="background:var(--blue)15;border-color:var(--blue)40;color:var(--blue)"><i class="ti ti-clipboard-heart"></i> Ficha</button>
+        <button class="btn-scan-qr" onclick="abrirProgresoVentana(socioEditandoId)" style="background:#00cc6615;border-color:#00cc6640;color:#00cc66"><i class="ti ti-chart-line"></i> Progreso</button>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-sec" onclick="cerrarPerfil()">Cancelar</button>
@@ -1273,7 +1257,9 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 </div>
 
 <script>
-const API = 'http://localhost:5001';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5001'
+  : '';
 let socioParaPago = null;
 let streamCaptura = null;
 let streamIngreso = null;
@@ -1724,7 +1710,7 @@ async function abrirPerfil(id) {
     document.getElementById('mpEmail').value = s.email || '';
     document.getElementById('mpPlan').value = s.plan || 'Plan Mensual';
     document.getElementById('mpObjetivo').value = s.objetivo || '';
-    document.getElementById('mpPwaLink').href = `${window.location.origin}/socio/${s.id}`;
+    document.getElementById('mpPwaLink').href = `https://gymos-o3yw.onrender.com/socio/${s.id}`;
     document.getElementById('mpFechaVenc').value = s.fecha_venc || '';
     document.getElementById('mpId').textContent = '#' + String(s.id).padStart(4, '0');
     document.getElementById('mpDesde').textContent = s.fecha_inicio || '—';
@@ -1760,22 +1746,6 @@ async function cargarPagosPerfil(id) {
   }
 }
 
-async function verQR(id) {
-  if (!id) return;
-  try {
-    const res = await fetch(`${API}/api/socios/${id}/qr`);
-    const data = await res.json();
-    if (!data.ok) { toast('Error al generar QR', 'bad'); return; }
-    document.getElementById('qrImg').src = `${API}${data.qr_url}?t=${Date.now()}`;
-    document.getElementById('qrNombre').textContent = data.socio;
-    document.getElementById('modalQR').classList.add('open');
-  } catch(e) { toast('No se pudo generar el QR', 'bad'); }
-}
-
-function cerrarQR() {
-  document.getElementById('modalQR').classList.remove('open');
-}
-
 let scanQRInterval = null;
 function activarScanQR() {
   document.getElementById('qrScanOverlay').classList.add('active');
@@ -1805,17 +1775,6 @@ function activarScanQR() {
   }, 800);
 }
 
-async function enviarQRporMail() {
-  const id = socioEditandoId;
-  if (!id) return;
-  try {
-    const res = await fetch(`${API}/api/socios/${id}/email_qr`, { method: 'POST' });
-    const data = await res.json();
-    if (data.ok) { toast('✅ QR enviado por mail', 'ok'); cerrarQR(); }
-    else toast(data.error || 'Error al enviar', 'bad');
-  } catch(e) { toast('No se pudo conectar', 'bad'); }
-}
-
 async function enviarEmailVencimiento(id, nombre, email) {
   if (!confirm(`¿Enviar aviso de vencimiento a ${nombre} (${email})?`)) return;
   try {
@@ -1838,6 +1797,11 @@ let fichaOrigenSocioId = null;
 function abrirFichaVentana(id) {
   if (!id) return;
   window.open(`/ficha/${id}`, 'ficha_medica', 'width=1000,height=750,resizable=yes,scrollbars=yes');
+}
+
+function abrirProgresoVentana(id) {
+  if (!id) return;
+  window.open(`/progreso/${id}`, 'progreso_socio', 'width=1000,height=750,resizable=yes,scrollbars=yes');
 }
 
 async function abrirFicha(id) {
@@ -1948,7 +1912,7 @@ async function enviarAppAlSocio() {
   const email = document.getElementById('mpEmail')?.value;
   if (!email) { toast('El socio no tiene email registrado', 'bad'); return; }
   const nombre = document.getElementById('mpNombre')?.value || 'Socio';
-  const link = `${window.location.origin}/socio/${socioEditandoId}`;
+  const link = `https://gymos-o3yw.onrender.com/socio/${socioEditandoId}`;
   try {
     const res = await fetch(`${API}/api/socios/${socioEditandoId}/enviar_app`, {
       method: 'POST',
@@ -2088,6 +2052,32 @@ async function abrirCamaraCaptura() {
     document.getElementById('btnAbrirCam').style.display = 'none';
     document.getElementById('btnCapturar').style.display = 'flex';
   } catch(e) { toast('No se pudo acceder a la cámara', 'bad'); }
+}
+
+async function subirFotoArchivo(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const b64 = e.target.result;
+    // Mostrar preview en formulario nuevo socio
+    const preview = document.getElementById('photoPreview');
+    if (preview) {
+      preview.src = b64;
+      preview.style.display = 'block';
+    }
+    // Guardar en campo oculto para enviar al guardar
+    const fotoInput = document.getElementById('fotoBase64');
+    if (fotoInput) fotoInput.value = b64;
+    // Ocultar placeholder
+    const placeholder = document.getElementById('photoPlaceholder');
+    if (placeholder) placeholder.style.display = 'none';
+    // Mostrar botón repetir
+    const btnR = document.getElementById('btnReiniciar');
+    if (btnR) btnR.style.display = 'flex';
+    toast('✅ Foto cargada', 'ok');
+  };
+  reader.readAsDataURL(file);
 }
 
 function capturarFoto() {

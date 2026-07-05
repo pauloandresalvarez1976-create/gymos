@@ -124,6 +124,53 @@
   .install-step-num { width: 28px; height: 28px; border-radius: 50%; background: #FF4500; color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .install-step-txt { font-size: 13px; color: #ccc; }
 
+  /* PROGRESO */
+  .prog-resumen { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 18px; text-align: center; }
+  .prog-resumen-item { flex: 1; }
+  .prog-resumen-val { font-size: 20px; font-weight: 800; }
+  .prog-resumen-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .prog-resumen-arrow { color: var(--text3); font-size: 16px; padding: 0 4px; }
+  .prog-delta { text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  .prog-delta.down { color: var(--green); }
+  .prog-delta.up { color: var(--yellow); }
+  .prog-delta.flat { color: var(--text2); }
+  .prog-progressbar-track { background: var(--bg3); border-radius: 20px; height: 8px; overflow: hidden; margin-bottom: 4px; }
+  .prog-progressbar-fill { background: linear-gradient(90deg, var(--accent), #ff8a5c); height: 100%; border-radius: 20px; transition: width 0.4s; }
+  .prog-objetivo-txt { font-size: 11px; color: var(--text3); text-align: center; margin-bottom: 18px; }
+  .prog-objetivo-edit { font-size: 11px; color: var(--accent); text-align: center; margin-bottom: 18px; cursor: pointer; text-decoration: underline; }
+  .prog-chart-wrap { margin-bottom: 18px; }
+  .prog-chart-title { font-size: 12px; color: var(--text2); margin-bottom: 8px; font-weight: 600; }
+  .prog-metric-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
+  .prog-metric-card { background: var(--bg2); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .prog-metric-val { font-size: 15px; font-weight: 700; }
+  .prog-metric-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .prog-metric-trend { font-size: 10px; font-weight: 600; margin-top: 3px; }
+  .prog-metric-trend.down { color: var(--green); }
+  .prog-metric-trend.up { color: var(--yellow); }
+  .prog-metric-trend.flat { color: var(--text3); }
+  .btn-add-progreso { background: var(--accent); color: white; border: none; border-radius: 14px; padding: 14px; font-size: 14px; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 18px; }
+  .prog-form { background: var(--bg2); border-radius: 14px; padding: 16px; margin-bottom: 18px; display: none; }
+  .prog-form.open { display: block; }
+  .prog-form-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+  .prog-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .prog-form-field { display: flex; flex-direction: column; gap: 4px; }
+  .prog-form-field label { font-size: 10px; color: var(--text3); text-transform: uppercase; }
+  .prog-form-field input { background: var(--bg1); border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 9px 10px; color: var(--text1); font-size: 13px; }
+  .prog-form-actions { display: flex; gap: 8px; }
+  .prog-form-actions button { flex: 1; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+  .prog-btn-guardar { background: var(--accent); color: white; }
+  .prog-btn-cancelar { background: var(--bg3); color: var(--text2); }
+  .prog-historial-item { padding: 12px 0; border-bottom: 0.5px solid #1a1a1a; }
+  .prog-historial-item:last-child { border-bottom: none; }
+  .prog-historial-top { display: flex; justify-content: space-between; align-items: center; }
+  .prog-historial-fecha { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .prog-historial-inicial { font-size: 9px; color: var(--accent); background: var(--accent)15; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+  .prog-historial-del { color: var(--text3); font-size: 15px; cursor: pointer; padding: 4px; }
+  .prog-historial-datos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .prog-historial-chip { font-size: 11px; background: var(--bg2); color: var(--text2); padding: 3px 9px; border-radius: 8px; }
+  .prog-comentario { margin-top: 8px; background: var(--blue)10; border-left: 2px solid var(--blue); border-radius: 0 8px 8px 0; padding: 8px 10px; font-size: 12px; color: #cde; }
+  .prog-comentario-tag { font-size: 10px; color: var(--blue); font-weight: 700; margin-bottom: 2px; }
+
   /* TOAST */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; }
@@ -326,6 +373,24 @@ const RUTINAS = {
 const socioId = window.location.pathname.split('/').pop();
 let socioData = null;
 let tabActual = 'inicio';
+let progresoData = null;
+
+// Qué métricas destacar primero según el objetivo del socio
+const ORDEN_METRICAS = {
+  perdida_peso: ['peso', 'cintura', 'grasa', 'cadera', 'pierna', 'brazo', 'pecho'],
+  definicion:   ['grasa', 'cintura', 'peso', 'brazo', 'pecho', 'cadera', 'pierna'],
+  musculacion:  ['peso', 'brazo', 'pecho', 'pierna', 'cadera', 'cintura', 'grasa'],
+  fitness:      ['peso', 'cintura', 'grasa', 'brazo', 'pecho', 'cadera', 'pierna'],
+};
+const METRICAS_INFO = {
+  peso:    { label: 'Peso',      unit: 'kg' },
+  cintura: { label: 'Cintura',   unit: 'cm' },
+  brazo:   { label: 'Brazo',     unit: 'cm' },
+  pecho:   { label: 'Pecho',     unit: 'cm' },
+  cadera:  { label: 'Cadera',    unit: 'cm' },
+  pierna:  { label: 'Pierna',    unit: 'cm' },
+  grasa:   { label: '% Grasa',   unit: '%' },
+};
 
 async function init() {
   try {
@@ -486,6 +551,11 @@ function renderApp() {
           </div>`}
       </div>
 
+      <!-- TAB PROGRESO -->
+      <div class="tab-content" id="tab-progreso">
+        <div id="progresoContainer" class="loading" style="padding:40px 20px">Cargando...</div>
+      </div>
+
     </div>
 
     <!-- NAVBAR BOTTOM -->
@@ -499,6 +569,9 @@ function renderApp() {
       <button class="nav-btn" id="nav-rutina" onclick="cambiarTab('rutina')">
         <i class="ti ti-barbell"></i>Rutina
       </button>
+      <button class="nav-btn" id="nav-progreso" onclick="cambiarTab('progreso')">
+        <i class="ti ti-chart-line"></i>Progreso
+      </button>
     </div>
   `;
 }
@@ -509,6 +582,7 @@ function cambiarTab(tab) {
   document.getElementById(`tab-${tab}`)?.classList.add('active');
   document.getElementById(`nav-${tab}`)?.classList.add('active');
   tabActual = tab;
+  if (tab === 'progreso' && !progresoData) cargarProgreso();
 }
 
 function toggleSection(id) {
@@ -516,6 +590,276 @@ function toggleSection(id) {
   const chev = document.getElementById(`chev-${id}`);
   body.classList.toggle('open');
   chev.classList.toggle('open');
+}
+
+// ── PROGRESO ─────────────────────────────────────────────
+async function cargarProgreso() {
+  try {
+    const res = await fetch(`/api/socios/${socioId}/progreso`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    progresoData = data;
+    renderProgreso();
+  } catch(e) {
+    document.getElementById('progresoContainer').innerHTML =
+      `<div class="error-msg">No se pudo cargar tu progreso.</div>`;
+  }
+}
+
+function renderProgreso() {
+  const { registros, peso_objetivo, objetivo } = progresoData;
+  const orden = ORDEN_METRICAS[objetivo] || ORDEN_METRICAS.fitness;
+  const cont = document.getElementById('progresoContainer');
+
+  if (!registros.length) {
+    cont.innerHTML = `
+      <div style="text-align:center;padding:30px 20px 10px;color:var(--text3)">
+        <i class="ti ti-chart-line" style="font-size:48px;display:block;margin-bottom:12px"></i>
+        <div style="font-size:14px">Todavía no cargaste ninguna medición.</div>
+        <div style="font-size:12px;margin-top:6px">Empezá registrando tu peso actual.</div>
+      </div>
+      <button class="btn-add-progreso" onclick="toggleFormProgreso()"><i class="ti ti-plus"></i> Cargar mi primera medición</button>
+      ${formProgresoHTML()}
+    `;
+    return;
+  }
+
+  const inicial = registros.find(r => r.es_inicial) || registros[0];
+  const ultimo = registros[registros.length - 1];
+  const pesoInicial = parseFloat(inicial.peso);
+  const pesoActual  = parseFloat(ultimo.peso);
+  const objPeso = peso_objetivo ? parseFloat(peso_objetivo) : null;
+
+  // Resumen + delta
+  let deltaHTML = '';
+  if (!isNaN(pesoInicial) && !isNaN(pesoActual) && registros.length > 1) {
+    const delta = pesoActual - pesoInicial;
+    const cls = delta < -0.05 ? 'down' : delta > 0.05 ? 'up' : 'flat';
+    const txt = delta < -0.05 ? `↓ Bajaste ${Math.abs(delta).toFixed(1)}kg desde que empezaste`
+              : delta > 0.05 ? `↑ Subiste ${delta.toFixed(1)}kg desde que empezaste`
+              : `Te mantuviste estable`;
+    deltaHTML = `<div class="prog-delta ${cls}">${txt}</div>`;
+  }
+
+  let objetivoHTML = '';
+  if (objPeso && !isNaN(pesoActual)) {
+    const total = Math.abs(pesoInicial - objPeso) || 1;
+    const avance = Math.abs(pesoInicial - pesoActual);
+    const pct = Math.max(0, Math.min(100, (avance / total) * 100));
+    const falta = Math.abs(pesoActual - objPeso).toFixed(1);
+    objetivoHTML = `
+      <div class="prog-progressbar-track"><div class="prog-progressbar-fill" style="width:${pct}%"></div></div>
+      <div class="prog-objetivo-txt">Te faltan ${falta}kg para tu objetivo de ${objPeso}kg</div>`;
+  } else {
+    objetivoHTML = `<div class="prog-objetivo-edit" onclick="editarObjetivoPeso()">+ Definir peso objetivo</div>`;
+  }
+
+  const resumenHTML = `
+    <div class="prog-resumen">
+      <div class="prog-resumen-item">
+        <div class="prog-resumen-val">${!isNaN(pesoInicial) ? pesoInicial + 'kg' : '—'}</div>
+        <div class="prog-resumen-label">Inicial</div>
+      </div>
+      <div class="prog-resumen-arrow"><i class="ti ti-arrow-right"></i></div>
+      <div class="prog-resumen-item">
+        <div class="prog-resumen-val" style="color:var(--accent)">${!isNaN(pesoActual) ? pesoActual + 'kg' : '—'}</div>
+        <div class="prog-resumen-label">Actual</div>
+      </div>
+      <div class="prog-resumen-arrow"><i class="ti ti-arrow-right"></i></div>
+      <div class="prog-resumen-item" onclick="editarObjetivoPeso()" style="cursor:pointer">
+        <div class="prog-resumen-val" style="color:var(--text3)">${objPeso ? objPeso + 'kg' : '?'}</div>
+        <div class="prog-resumen-label">Objetivo</div>
+      </div>
+    </div>
+    ${deltaHTML}
+    ${objetivoHTML}
+  `;
+
+  // Gráfico de evolución de peso
+  const pesos = registros.filter(r => r.peso).map(r => ({ fecha: r.fecha, val: parseFloat(r.peso) }));
+  const chartHTML = pesos.length >= 2 ? `
+    <div class="prog-chart-wrap">
+      <div class="prog-chart-title">Evolución de peso</div>
+      ${sparklineSVG(pesos)}
+    </div>` : '';
+
+  // Tarjetas de métricas (última medición + tendencia), ordenadas según objetivo
+  const cardsHTML = `
+    <div class="prog-metric-cards">
+      ${orden.map(key => metricCardHTML(key, registros)).filter(Boolean).join('')}
+    </div>`;
+
+  // Historial
+  const historialHTML = registros.slice().reverse().map(r => {
+    const chips = ['peso','grasa','cintura','brazo','pecho','cadera','pierna']
+      .filter(k => r[k])
+      .map(k => `<span class="prog-historial-chip">${METRICAS_INFO[k].label}: ${r[k]}${METRICAS_INFO[k].unit}</span>`)
+      .join('');
+    const fechaFmt = new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-AR', {day:'2-digit',month:'short',year:'numeric'});
+    return `
+      <div class="prog-historial-item">
+        <div class="prog-historial-top">
+          <div class="prog-historial-fecha">${fechaFmt}${r.es_inicial ? '<span class="prog-historial-inicial">INICIAL</span>' : ''}</div>
+          <div class="prog-historial-del" onclick="borrarRegistroProgreso(${r.id})"><i class="ti ti-trash"></i></div>
+        </div>
+        <div class="prog-historial-datos">${chips}</div>
+        ${r.comentario_profe ? `<div class="prog-comentario"><div class="prog-comentario-tag">💬 Tu entrenador</div>${r.comentario_profe}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  cont.innerHTML = `
+    ${resumenHTML}
+    ${chartHTML}
+    ${cardsHTML}
+    <button class="btn-add-progreso" onclick="toggleFormProgreso()"><i class="ti ti-plus"></i> Cargar nueva medición</button>
+    ${formProgresoHTML()}
+    <div class="prog-chart-title">Historial</div>
+    <div>${historialHTML}</div>
+  `;
+}
+
+function metricCardHTML(key, registros) {
+  const conValor = registros.filter(r => r[key]);
+  if (!conValor.length) return '';
+  const info = METRICAS_INFO[key];
+  const ultimo = parseFloat(conValor[conValor.length - 1][key]);
+  let trendHTML = '<span class="prog-metric-trend flat">—</span>';
+  if (conValor.length >= 2) {
+    const anterior = parseFloat(conValor[conValor.length - 2][key]);
+    const diff = ultimo - anterior;
+    if (Math.abs(diff) >= 0.05) {
+      const cls = diff < 0 ? 'down' : 'up';
+      trendHTML = `<span class="prog-metric-trend ${cls}">${diff < 0 ? '↓' : '↑'} ${Math.abs(diff).toFixed(1)}</span>`;
+    }
+  }
+  return `
+    <div class="prog-metric-card">
+      <div class="prog-metric-val">${ultimo}${info.unit}</div>
+      <div class="prog-metric-label">${info.label}</div>
+      ${trendHTML}
+    </div>`;
+}
+
+function sparklineSVG(puntos) {
+  const w = 300, h = 110, pad = 10;
+  const vals = puntos.map(p => p.val);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const rango = (max - min) || 1;
+  const stepX = (w - pad * 2) / (puntos.length - 1);
+  const coords = puntos.map((p, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - ((p.val - min) / rango) * (h - pad * 2);
+    return [x, y];
+  });
+  const path = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+  const areaPath = path + ` L${coords[coords.length-1][0].toFixed(1)},${h-pad} L${coords[0][0].toFixed(1)},${h-pad} Z`;
+  const dots = coords.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="#FF4500"><title>${puntos[i].fecha}: ${puntos[i].val}</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px">
+    <defs><linearGradient id="progGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF4500" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FF4500" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${areaPath}" fill="url(#progGrad)" stroke="none"/>
+    <path d="${path}" fill="none" stroke="#FF4500" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+}
+
+function formProgresoHTML() {
+  const hoy = new Date().toISOString().split('T')[0];
+  return `
+    <div class="prog-form" id="progForm">
+      <div class="prog-form-title">Nueva medición</div>
+      <div class="prog-form-grid">
+        <div class="prog-form-field" style="grid-column:1/-1">
+          <label>Fecha</label>
+          <input type="date" id="pf-fecha" value="${hoy}" max="${hoy}">
+        </div>
+        <div class="prog-form-field">
+          <label>Peso (kg) *</label>
+          <input type="number" step="0.1" id="pf-peso" placeholder="Ej: 78.5">
+        </div>
+        <div class="prog-form-field">
+          <label>% Grasa</label>
+          <input type="number" step="0.1" id="pf-grasa" placeholder="Opcional">
+        </div>
+        <div class="prog-form-field">
+          <label>Cintura (cm)</label>
+          <input type="number" step="0.1" id="pf-cintura" placeholder="Opcional">
+        </div>
+        <div class="prog-form-field">
+          <label>Brazo (cm)</label>
+          <input type="number" step="0.1" id="pf-brazo" placeholder="Opcional">
+        </div>
+        <div class="prog-form-field">
+          <label>Pecho (cm)</label>
+          <input type="number" step="0.1" id="pf-pecho" placeholder="Opcional">
+        </div>
+        <div class="prog-form-field">
+          <label>Cadera (cm)</label>
+          <input type="number" step="0.1" id="pf-cadera" placeholder="Opcional">
+        </div>
+        <div class="prog-form-field">
+          <label>Pierna (cm)</label>
+          <input type="number" step="0.1" id="pf-pierna" placeholder="Opcional">
+        </div>
+      </div>
+      <div class="prog-form-actions">
+        <button class="prog-btn-cancelar" onclick="toggleFormProgreso()">Cancelar</button>
+        <button class="prog-btn-guardar" onclick="guardarProgreso()">Guardar</button>
+      </div>
+    </div>`;
+}
+
+function toggleFormProgreso() {
+  document.getElementById('progForm')?.classList.toggle('open');
+}
+
+async function guardarProgreso() {
+  const peso = document.getElementById('pf-peso').value;
+  if (!peso) { toast('❌ El peso es obligatorio'); return; }
+  const body = {
+    fecha: document.getElementById('pf-fecha').value,
+    peso,
+    grasa: document.getElementById('pf-grasa').value,
+    cintura: document.getElementById('pf-cintura').value,
+    brazo: document.getElementById('pf-brazo').value,
+    pecho: document.getElementById('pf-pecho').value,
+    cadera: document.getElementById('pf-cadera').value,
+    pierna: document.getElementById('pf-pierna').value,
+  };
+  try {
+    const res = await fetch(`/api/socios/${socioId}/progreso`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.ok) { toast('✅ Medición guardada'); progresoData = null; cargarProgreso(); }
+    else toast('❌ ' + (data.error || 'Error al guardar'));
+  } catch(e) { toast('❌ No se pudo conectar'); }
+}
+
+async function borrarRegistroProgreso(rid) {
+  if (!confirm('¿Borrar este registro?')) return;
+  try {
+    const res = await fetch(`/api/socios/${socioId}/progreso/${rid}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) { toast('Registro borrado'); progresoData = null; cargarProgreso(); }
+    else toast('❌ Error al borrar');
+  } catch(e) { toast('❌ No se pudo conectar'); }
+}
+
+async function editarObjetivoPeso() {
+  const actual = progresoData?.peso_objetivo || '';
+  const nuevo = prompt('¿Cuál es tu peso objetivo (kg)?', actual);
+  if (nuevo === null) return;
+  try {
+    const res = await fetch(`/api/socios/${socioId}/progreso/objetivo`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ peso_objetivo: nuevo })
+    });
+    const data = await res.json();
+    if (data.ok) { toast('✅ Objetivo actualizado'); progresoData = null; cargarProgreso(); }
+    else toast('❌ Error al guardar');
+  } catch(e) { toast('❌ No se pudo conectar'); }
 }
 
 async function generarQR() {

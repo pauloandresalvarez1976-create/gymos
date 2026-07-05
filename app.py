@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
-from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, Text
+from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import date, datetime
 import os, base64, cv2, json, io, smtplib
@@ -28,7 +28,15 @@ LOGO_DIR = os.path.join(BASE_DIR, 'static', 'logos')
 os.makedirs(QR_DIR, exist_ok=True)
 os.makedirs(LOGO_DIR, exist_ok=True)
 
-engine  = create_engine(f'sqlite:///{DB_PATH}')
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if DATABASE_URL:
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    engine = create_engine(DATABASE_URL)
+    print("🌐 Usando Supabase (PostgreSQL)")
+else:
+    engine  = create_engine(f'sqlite:///{DB_PATH}')
+    print("💾 Usando SQLite local")
 Base    = declarative_base()
 Session = sessionmaker(bind=engine)
 
@@ -50,6 +58,8 @@ class Socio(Base):
     congelado      = Column(Integer, default=0)
     fecha_congelado = Column(Date, nullable=True)
     dias_congelados = Column(Integer, nullable=True)
+    peso_objetivo   = Column(String(10), nullable=True)
+    ultimo_resumen_mes = Column(String(7), nullable=True)  # 'YYYY-MM'
     created_at     = Column(DateTime, default=datetime.now)
 
 class FichaMedica(Base):
@@ -74,6 +84,23 @@ class FichaMedica(Base):
     declaracion_ip       = Column(String(50))
     created_at          = Column(DateTime, default=datetime.now)
     updated_at          = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class Progreso(Base):
+    __tablename__ = 'progreso'
+    id                = Column(Integer, primary_key=True)
+    socio_id          = Column(Integer, nullable=False)
+    fecha             = Column(Date, default=date.today)
+    peso              = Column(String(10))
+    grasa             = Column(String(10))
+    cintura           = Column(String(10))
+    brazo             = Column(String(10))
+    pecho             = Column(String(10))
+    cadera            = Column(String(10))
+    pierna            = Column(String(10))
+    es_inicial        = Column(Integer, default=0)
+    comentario_profe  = Column(Text)
+    comentario_fecha  = Column(DateTime, nullable=True)
+    created_at        = Column(DateTime, default=datetime.now)
 
 class Usuario(Base):
     __tablename__ = 'usuarios'
@@ -121,54 +148,100 @@ class Config(Base):
 Base.metadata.create_all(engine)
 
 def migrate_db():
-    """Agrega columnas nuevas a tablas existentes sin romper datos."""
-    import sqlite3
-    conn = sqlite3.connect(DB_PATH)
-    migraciones = [
-        ("ALTER TABLE pagos ADD COLUMN plan TEXT", "pagos.plan"),
-        ("ALTER TABLE socios ADD COLUMN congelado INTEGER DEFAULT 0", "socios.congelado"),
-        ("ALTER TABLE socios ADD COLUMN fecha_congelado DATE", "socios.fecha_congelado"),
-        ("ALTER TABLE socios ADD COLUMN dias_congelados INTEGER", "socios.dias_congelados"),
-        ("ALTER TABLE socios ADD COLUMN objetivo TEXT", "socios.objetivo"),
-    ]
-    # Crear tabla fichas_medicas
-    conn.execute("""CREATE TABLE IF NOT EXISTS fichas_medicas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        socio_id INTEGER UNIQUE,
-        fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
-        peso TEXT, altura TEXT, enfermedades TEXT, lesiones TEXT,
-        medicacion TEXT, alergias TEXT, hace_ejercicio TEXT,
-        autorizacion_medica TEXT, observaciones TEXT,
-        declaracion_aceptada INTEGER DEFAULT 0,
-        declaracion_fecha DATETIME, declaracion_ip TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
-    conn.commit()
-
-    # Crear tabla usuarios e insertar admin por defecto
-    import sqlite3 as _sq
-    _conn = _sq.connect(DB_PATH)
-    _conn.execute("""CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT, pin TEXT, rol TEXT, permisos TEXT, activo INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
-    _conn.commit()
-    if not _conn.execute("SELECT id FROM usuarios WHERE rol='administrador'").fetchone():
-        import json as _json
-        permisos_admin = _json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True})
-        _conn.execute("INSERT INTO usuarios (nombre,pin,rol,permisos,activo) VALUES (?,?,?,?,1)",
-                      ('Administrador','1234','administrador', permisos_admin))
-        _conn.commit()
-        print("Usuario admin creado: PIN 1234")
-    _conn.close()
-    for sql, desc in migraciones:
-        try:
-            conn.execute(sql)
+    """Agrega columnas nuevas compatible con PostgreSQL y SQLite."""
+    is_pg = bool(DATABASE_URL)
+    with engine.connect() as conn:
+        if is_pg:
+            # PostgreSQL: IF NOT EXISTS disponible
+            migraciones = [
+                "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS plan TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS congelado INTEGER DEFAULT 0",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS fecha_congelado DATE",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS dias_congelados INTEGER",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivo TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS peso_objetivo TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_mes TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            ]
+            conn.execute(text("""CREATE TABLE IF NOT EXISTS progreso (
+                id SERIAL PRIMARY KEY, socio_id INTEGER NOT NULL, fecha DATE,
+                peso TEXT, grasa TEXT, cintura TEXT, brazo TEXT, pecho TEXT, cadera TEXT, pierna TEXT,
+                es_inicial INTEGER DEFAULT 0, comentario_profe TEXT, comentario_fecha TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+            conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
+                id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
+                fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
+                peso TEXT, altura TEXT, enfermedades TEXT, lesiones TEXT,
+                medicacion TEXT, alergias TEXT, hace_ejercicio TEXT,
+                autorizacion_medica TEXT, observaciones TEXT,
+                declaracion_aceptada INTEGER DEFAULT 0,
+                declaracion_fecha TIMESTAMP, declaracion_ip TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+            conn.execute(text("""CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY, nombre TEXT, pin TEXT, rol TEXT,
+                permisos TEXT, activo INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
             conn.commit()
-            print(f"Migración OK: {desc}")
-        except Exception:
-            pass  # ya existe
-    conn.close()
+            for sql in migraciones:
+                try:
+                    conn.execute(text(sql)); conn.commit()
+                except Exception: pass
+            # Admin por defecto
+            try:
+                result = conn.execute(text("SELECT id FROM usuarios WHERE rol='administrador'")).fetchone()
+                if not result:
+                    permisos_admin = json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True})
+                    conn.execute(text("INSERT INTO usuarios (nombre,pin,rol,permisos,activo) VALUES (:n,:p,:r,:pe,:a)"),
+                                 {'n':'Administrador','p':'1234','r':'administrador','pe':permisos_admin,'a':1})
+                    conn.commit()
+                    print("Usuario admin creado: PIN 1234")
+            except Exception as e:
+                print(f"⚠️ No se pudo crear admin: {e}")
+        else:
+            # SQLite: sin IF NOT EXISTS en ALTER TABLE
+            import sqlite3
+            sc = sqlite3.connect(DB_PATH)
+            migraciones = [
+                ("ALTER TABLE pagos ADD COLUMN plan TEXT", "pagos.plan"),
+                ("ALTER TABLE socios ADD COLUMN congelado INTEGER DEFAULT 0", "socios.congelado"),
+                ("ALTER TABLE socios ADD COLUMN fecha_congelado DATE", "socios.fecha_congelado"),
+                ("ALTER TABLE socios ADD COLUMN dias_congelados INTEGER", "socios.dias_congelados"),
+                ("ALTER TABLE socios ADD COLUMN objetivo TEXT", "socios.objetivo"),
+                ("ALTER TABLE socios ADD COLUMN peso_objetivo TEXT", "socios.peso_objetivo"),
+                ("ALTER TABLE socios ADD COLUMN ultimo_resumen_mes TEXT", "socios.ultimo_resumen_mes"),
+            ]
+            sc.execute("""CREATE TABLE IF NOT EXISTS progreso (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, socio_id INTEGER NOT NULL, fecha DATE,
+                peso TEXT, grasa TEXT, cintura TEXT, brazo TEXT, pecho TEXT, cadera TEXT, pierna TEXT,
+                es_inicial INTEGER DEFAULT 0, comentario_profe TEXT, comentario_fecha DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+            sc.execute("""CREATE TABLE IF NOT EXISTS fichas_medicas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, socio_id INTEGER UNIQUE,
+                fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
+                peso TEXT, altura TEXT, enfermedades TEXT, lesiones TEXT,
+                medicacion TEXT, alergias TEXT, hace_ejercicio TEXT,
+                autorizacion_medica TEXT, observaciones TEXT,
+                declaracion_aceptada INTEGER DEFAULT 0,
+                declaracion_fecha DATETIME, declaracion_ip TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+            sc.execute("""CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, pin TEXT, rol TEXT,
+                permisos TEXT, activo INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+            sc.commit()
+            if not sc.execute("SELECT id FROM usuarios WHERE rol='administrador'").fetchone():
+                permisos_admin = json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True})
+                sc.execute("INSERT INTO usuarios (nombre,pin,rol,permisos,activo) VALUES (?,?,?,?,1)",
+                           ('Administrador','1234','administrador',permisos_admin))
+                sc.commit()
+                print("Usuario admin creado: PIN 1234")
+            for sql, desc in migraciones:
+                try: sc.execute(sql); sc.commit()
+                except Exception: pass
+            sc.close()
 
 migrate_db()
 
@@ -209,6 +282,10 @@ def socio_to_dict(s):
 @app.route('/ficha/<int:sid>')
 def ficha_window(sid):
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'ficha.html')
+
+@app.route('/progreso/<int:sid>')
+def progreso_window(sid):
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'progreso_admin.html')
 
 @app.route('/socio/<int:sid>')
 def pwa_socio(sid):
@@ -554,6 +631,64 @@ def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto
         server.login(gym_email, gym_email_pass)
         server.sendmail(gym_email, destinatario, msg.as_string())
 
+MESES_ES = ['', 'enero','febrero','marzo','abril','mayo','junio',
+            'julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+def enviar_resumenes_mensuales():
+    """Al arrancar el servidor, manda un resumen de progreso a los socios
+    que cargaron mediciones este mes y todavía no recibieron el resumen."""
+    session = Session()
+    try:
+        hoy = date.today()
+        mes_actual = hoy.strftime('%Y-%m')
+        inicio_mes = date(hoy.year, hoy.month, 1)
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_email = cfg.get('gym_email', '')
+        if not gym_email:
+            session.close(); return  # sin email configurado, no hay nada para enviar
+        gym_nombre = cfg.get('gym_nombre', 'Gimnasio')
+        socios = session.query(Socio).filter(Socio.activo == 1).all()
+        for s in socios:
+            if not s.email:
+                continue
+            if s.ultimo_resumen_mes == mes_actual:
+                continue
+            registros_mes = session.query(Progreso).filter(
+                Progreso.socio_id == s.id, Progreso.fecha >= inicio_mes
+            ).order_by(Progreso.fecha.asc()).all()
+            if not registros_mes:
+                continue
+            pesos = [float(r.peso) for r in registros_mes if r.peso]
+            if len(pesos) >= 2 and pesos[-1] != pesos[0]:
+                delta = pesos[-1] - pesos[0]
+                delta_txt = f"{'bajaste' if delta < 0 else 'subiste'} {abs(delta):.1f}kg"
+            elif pesos:
+                delta_txt = f"te mantuviste en {pesos[-1]:.1f}kg"
+            else:
+                delta_txt = "cargaste nuevos datos"
+            mes_nombre = MESES_ES[hoy.month]
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
+              <div style="background:#FF4500;padding:24px;text-align:center">
+                <h2 style="margin:0;color:white;font-size:20px">📈 {gym_nombre}</h2>
+                <p style="margin:6px 0 0;color:#fff9;font-size:13px">Tu resumen de progreso de {mes_nombre}</p>
+              </div>
+              <div style="padding:24px;text-align:center">
+                <p style="font-size:15px">Hola <strong>{s.nombre.split()[0]}</strong>,</p>
+                <p style="color:#ccc;font-size:14px">Este mes {delta_txt} y cargaste <strong>{len(registros_mes)}</strong> registro(s) de progreso.</p>
+                <p style="color:#aaa;font-size:13px">Entrá a tu app para ver el detalle completo y tu gráfico de evolución.</p>
+                <p style="color:#666;font-size:11px;margin-top:20px">Seguí así! 💪</p>
+              </div>
+            </div>"""
+            try:
+                enviar_email(s.email, f'Tu resumen de progreso — {gym_nombre}', html, session)
+                s.ultimo_resumen_mes = mes_actual
+                session.commit()
+            except Exception as e:
+                print(f"⚠️  No se pudo enviar resumen mensual a {s.nombre}: {e}")
+    finally:
+        session.close()
+
 @app.route('/api/pagos/comprobante', methods=['POST'])
 def enviar_comprobante():
     session = Session()
@@ -729,6 +864,90 @@ def guardar_ficha(sid):
         ficha.declaracion_fecha = datetime.now()
         ficha.declaracion_ip = request.remote_addr
     ficha.updated_at = datetime.now()
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+# ── PROGRESO (peso, medidas, evolución) ──────────────────
+@app.route('/api/socios/<int:sid>/progreso', methods=['GET'])
+def get_progreso(sid):
+    session = Session()
+    s = session.query(Socio).get(sid)
+    if not s:
+        session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
+    registros = session.query(Progreso).filter_by(socio_id=sid).order_by(Progreso.fecha.asc(), Progreso.id.asc()).all()
+    result = [{
+        'id': r.id, 'fecha': str(r.fecha), 'peso': r.peso, 'grasa': r.grasa,
+        'cintura': r.cintura, 'brazo': r.brazo, 'pecho': r.pecho,
+        'cadera': r.cadera, 'pierna': r.pierna, 'es_inicial': r.es_inicial or 0,
+        'comentario_profe': r.comentario_profe or '',
+        'comentario_fecha': str(r.comentario_fecha) if r.comentario_fecha else ''
+    } for r in registros]
+    peso_objetivo = s.peso_objetivo
+    objetivo = s.objetivo or ''
+    session.close()
+    return jsonify({'ok': True, 'registros': result, 'peso_objetivo': peso_objetivo, 'objetivo': objetivo})
+
+@app.route('/api/socios/<int:sid>/progreso', methods=['POST'])
+def add_progreso(sid):
+    data = request.json or {}
+    session = Session()
+    s = session.query(Socio).get(sid)
+    if not s:
+        session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
+    if not data.get('peso'):
+        session.close(); return jsonify({'ok': False, 'error': 'El peso es obligatorio'}), 400
+    existe_inicial = session.query(Progreso).filter_by(socio_id=sid, es_inicial=1).first()
+    fecha = date.today()
+    if data.get('fecha'):
+        try: fecha = date.fromisoformat(data['fecha'])
+        except: pass
+    r = Progreso(
+        socio_id=sid, fecha=fecha,
+        peso=str(data.get('peso')) if data.get('peso') else None,
+        grasa=str(data.get('grasa')) if data.get('grasa') else None,
+        cintura=str(data.get('cintura')) if data.get('cintura') else None,
+        brazo=str(data.get('brazo')) if data.get('brazo') else None,
+        pecho=str(data.get('pecho')) if data.get('pecho') else None,
+        cadera=str(data.get('cadera')) if data.get('cadera') else None,
+        pierna=str(data.get('pierna')) if data.get('pierna') else None,
+        es_inicial=0 if existe_inicial else 1
+    )
+    session.add(r)
+    session.commit()
+    rid = r.id
+    session.close()
+    return jsonify({'ok': True, 'id': rid})
+
+@app.route('/api/socios/<int:sid>/progreso/<int:rid>', methods=['DELETE'])
+def borrar_progreso(sid, rid):
+    session = Session()
+    r = session.query(Progreso).get(rid)
+    if not r or r.socio_id != sid:
+        session.close(); return jsonify({'ok': False, 'error': 'Registro no encontrado'}), 404
+    session.delete(r)
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/progreso/objetivo', methods=['POST'])
+def set_peso_objetivo(sid):
+    data = request.json or {}
+    session = Session()
+    s = session.query(Socio).get(sid)
+    if not s:
+        session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
+    s.peso_objetivo = str(data.get('peso_objetivo')) if data.get('peso_objetivo') else None
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/progreso/<int:rid>/comentario', methods=['POST'])
+def comentar_progreso(sid, rid):
+    data = request.json or {}
+    session = Session()
+    r = session.query(Progreso).get(rid)
+    if not r or r.socio_id != sid:
+        session.close(); return jsonify({'ok': False, 'error': 'Registro no encontrado'}), 404
+    r.comentario_profe = data.get('comentario', '')
+    r.comentario_fecha = datetime.now()
     session.commit(); session.close()
     return jsonify({'ok': True})
 
@@ -1143,5 +1362,9 @@ def stream_camara():
     return Response(generar(), mimetype='multipart/x-mixed-replace; boundary=frame')
 # ── ARRANCAR ─────────────────────────────────────────────
 if __name__ == '__main__':
+    try:
+        enviar_resumenes_mensuales()
+    except Exception as e:
+        print(f"⚠️  No se pudieron procesar los resúmenes mensuales: {e}")
     print("🏋️  GymOS backend corriendo en http://localhost:5000")
     app.run(debug=False, port=5001, threaded=True)
