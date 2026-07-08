@@ -1693,8 +1693,8 @@ async function renderMusculosSection() {
         '<div style="display:flex;flex-wrap:wrap;gap:4px">' + labels + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;margin-top:2px">' +
-        '<span onclick="abrirMusculosScreen(' + JSON.stringify(s) + ')" style="cursor:pointer;color:var(--accent);font-size:16px"><i class="ti ti-pencil"></i></span>' +
-        '<span onclick="borrarSesionMusculos(' + s.id + ')" style="cursor:pointer;color:var(--text3);font-size:16px"><i class="ti ti-trash"></i></span>' +
+        '<span class="btn-edit-musculo" data-sesion="' + encodeURIComponent(JSON.stringify(s)) + '" style="cursor:pointer;color:var(--accent);font-size:16px"><i class="ti ti-pencil"></i></span>' +
+        '<span class="btn-del-musculo" data-id="' + s.id + '" style="cursor:pointer;color:var(--text3);font-size:16px"><i class="ti ti-trash"></i></span>' +
       '</div>' +
     '</div>';
   }).join('') : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:12px 0">Todavía no hay sesiones registradas.</div>';
@@ -1724,6 +1724,17 @@ async function renderMusculosSection() {
       '<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin:14px 0 6px">Últimas sesiones</div>' +
       histHTML +
     '</div>';
+
+  // Listeners editar y borrar
+  sec.querySelectorAll('.btn-edit-musculo').forEach(function(el) {
+    el.onclick = function() {
+      const sesion = JSON.parse(decodeURIComponent(this.dataset.sesion));
+      abrirMusculosScreen(sesion);
+    };
+  });
+  sec.querySelectorAll('.btn-del-musculo').forEach(function(el) {
+    el.onclick = function() { borrarSesionMusculos(this.dataset.id); };
+  });
 }
 
 // ── IMC ───────────────────────────────────────────────────
