@@ -1804,7 +1804,71 @@ function recalibrar() {
 }
 
 // ── Sesión ──
+// ── WAKE LOCK ─────────────────────────────────────────────
+let wakeLock = null;
+
+async function activarWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) { console.log('Wake Lock no disponible:', e); }
+}
+
+function liberarWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+// ── BLOQUEO DE NAVEGACIÓN ─────────────────────────────────
+function bloquearNavegacion() {
+  document.querySelectorAll('.nav-btn').forEach(function(btn) {
+    btn.style.opacity = '0.3';
+    btn.style.pointerEvents = 'none';
+  });
+  // Reactivar solo el tab de progreso para que siga visible
+  const navProgreso = document.getElementById('nav-progreso');
+  if (navProgreso) {
+    navProgreso.style.opacity = '1';
+    navProgreso.style.pointerEvents = 'auto';
+  }
+}
+
+function desbloquearNavegacion() {
+  document.querySelectorAll('.nav-btn').forEach(function(btn) {
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+  });
+}
+
 function iniciarPodometro() {
+  // Mostrar aviso antes de arrancar
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px';
+  overlay.innerHTML =
+    '<div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:340px;width:100%">' +
+      '<div style="font-size:36px;text-align:center;margin-bottom:12px">⚡</div>' +
+      '<div style="font-size:17px;font-weight:800;color:var(--text1);text-align:center;margin-bottom:16px">Antes de iniciar la sesión</div>' +
+      '<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:12px">' +
+        '<div style="font-size:13px;color:var(--text2);line-height:1.7">' +
+          '📱 <strong style="color:var(--text1)">La pantalla permanecerá encendida</strong> durante toda la sesión para que el podómetro pueda contar tus pasos correctamente.<br><br>' +
+          '🔋 <strong style="color:var(--text1)">Esto consume más batería</strong> de lo normal. Te recomendamos tener el celular cargado antes de salir a caminar.<br><br>' +
+          '🚫 <strong style="color:var(--text1)">La navegación quedará bloqueada</strong> mientras caminás para evitar toques accidentales. Solo vas a poder tocar <em>Detener y guardar</em>.' +
+        '</div>' +
+      '</div>' +
+      '<button id="btnConfirmarSesion" class="podo-btn start" style="margin-bottom:10px"><i class="ti ti-player-play"></i> Entendido — ¡Arrancar!</button>' +
+      '<button id="btnCancelarSesion" style="width:100%;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:8px">Cancelar</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('btnConfirmarSesion').onclick = function() {
+    document.body.removeChild(overlay);
+    _iniciarSesionReal();
+  };
+  document.getElementById('btnCancelarSesion').onclick = function() {
+    document.body.removeChild(overlay);
+  };
+}
+
+function _iniciarSesionReal() {
   if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
     DeviceMotionEvent.requestPermission().then(function(r) {
       if (r === 'granted') _arrancarSesion();
@@ -1822,7 +1886,9 @@ function _arrancarSesion() {
   podoLastStep = 0;
   podoActivo = true;
   window.addEventListener('devicemotion', onPodoMotion);
-  toast('👟 Sesión iniciada');
+  activarWakeLock();
+  bloquearNavegacion();
+  toast('👟 Sesión iniciada — ¡a caminar!');
   renderPodometro();
 }
 
@@ -1830,6 +1896,8 @@ function detenerPodometro() {
   podoActivo = false;
   clearTimeout(podoTimer);
   window.removeEventListener('devicemotion', onPodoMotion);
+  liberarWakeLock();
+  desbloquearNavegacion();
   if (podoSteps < 5) { toast('⚠️ Muy pocos pasos, sesión descartada'); renderPodometro(); return; }
   const durSeg = Math.floor((Date.now() - podoStartTime) / 1000);
   const cal = calcCalorias(podoSteps, getPesoSocio());
