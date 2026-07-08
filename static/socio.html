@@ -249,6 +249,17 @@
   .imc-badge-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
   .imc-badge-val { font-size: 15px; font-weight: 700; color: var(--text1); margin-top: 3px; }
 
+  /* SESIÓN ACTIVA FULLSCREEN */
+  .podo-session-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg0); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; overflow-y: auto; }
+  .podo-session-steps { font-size: 88px; font-weight: 900; color: var(--accent); line-height: 1; text-align: center; }
+  .podo-session-label { font-size: 16px; color: var(--text3); text-align: center; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+  .podo-session-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; width: 100%; margin: 28px 0; }
+  .podo-session-stat { background: var(--bg2); border-radius: 16px; padding: 14px 10px; text-align: center; }
+  .podo-session-stat-val { font-size: 20px; font-weight: 800; color: var(--text1); }
+  .podo-session-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 4px; }
+  .podo-session-meta { width: 100%; margin-bottom: 28px; }
+  .podo-session-stop { background: var(--red); color: white; border: none; border-radius: 50px; padding: 18px; font-size: 18px; font-weight: 800; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 24px rgba(255,68,68,0.4); }
+
   /* PODÓMETRO */
   .podo-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
   .podo-title { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -1888,8 +1899,77 @@ function _arrancarSesion() {
   window.addEventListener('devicemotion', onPodoMotion);
   activarWakeLock();
   bloquearNavegacion();
+  mostrarPantallaSession();
   toast('👟 Sesión iniciada — ¡a caminar!');
-  renderPodometro();
+}
+
+function mostrarPantallaSession() {
+  // Remover si ya existe
+  const vieja = document.getElementById('podoSessionScreen');
+  if (vieja) vieja.remove();
+
+  const screen = document.createElement('div');
+  screen.id = 'podoSessionScreen';
+  screen.className = 'podo-session-screen';
+  screen.innerHTML =
+    '<div style="width:100%;text-align:center;margin-bottom:8px">' +
+      '<div style="font-size:12px;color:var(--accent);font-weight:700;letter-spacing:1px">● SESIÓN ACTIVA</div>' +
+    '</div>' +
+    '<div class="podo-session-steps" id="ss-pasos">0</div>' +
+    '<div class="podo-session-label">pasos</div>' +
+    '<div class="podo-session-grid">' +
+      '<div class="podo-session-stat"><div class="podo-session-stat-val" id="ss-cal">0</div><div class="podo-session-stat-label">🔥 Cal</div></div>' +
+      '<div class="podo-session-stat"><div class="podo-session-stat-val" id="ss-dist">0 m</div><div class="podo-session-stat-label">📍 Dist</div></div>' +
+      '<div class="podo-session-stat"><div class="podo-session-stat-val" id="ss-dur">0:00</div><div class="podo-session-stat-label">⏱ Tiempo</div></div>' +
+      '<div class="podo-session-stat"><div class="podo-session-stat-val" id="ss-vel">— km/h</div><div class="podo-session-stat-label">⚡ Vel</div></div>' +
+      '<div class="podo-session-stat"><div class="podo-session-stat-val" id="ss-ritmo">—</div><div class="podo-session-stat-label">🏃 Ritmo</div></div>' +
+      '<div class="podo-session-stat"><div class="podo-session-stat-val" id="ss-meta">0%</div><div class="podo-session-stat-label">🎯 Meta</div></div>' +
+    '</div>' +
+    '<div class="podo-session-meta">' +
+      '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px">' +
+        '<span>Meta diaria</span><span id="ss-meta-label">0 / 0 pasos</span>' +
+      '</div>' +
+      '<div style="background:var(--bg3);border-radius:8px;height:10px;overflow:hidden">' +
+        '<div id="ss-meta-barra" style="width:0%;height:100%;background:var(--accent);border-radius:8px;transition:width 0.5s"></div>' +
+      '</div>' +
+    '</div>' +
+    '<button class="podo-session-stop" id="ss-btn-stop"><i class="ti ti-player-stop"></i> Detener y guardar</button>';
+
+  document.body.appendChild(screen);
+  document.getElementById('ss-btn-stop').onclick = detenerPodometro;
+  actualizarPantallaSession();
+}
+
+function actualizarPantallaSession() {
+  if (!podoActivo) return;
+  const peso    = getPesoSocio();
+  const durSeg  = Math.floor((Date.now() - podoStartTime) / 1000);
+  const cal     = calcCalorias(podoSteps, peso);
+  const dist    = calcDistancia(podoSteps, peso);
+  const vel     = calcVelocidad(podoSteps, peso, durSeg);
+  const ritmo   = calcRitmo(podoSteps, peso, durSeg);
+  const meta    = getMetaDiaria();
+  const sesHoy  = (podoSesionesCargadas || []).filter(s => s.fecha === new Date().toISOString().split('T')[0]).reduce((a,s) => a + s.pasos, 0);
+  const totalHoy = sesHoy + podoSteps;
+  const pct     = Math.min(100, Math.round(totalHoy / meta * 100));
+
+  const el = function(id) { return document.getElementById(id); };
+  if (el('ss-pasos'))      el('ss-pasos').textContent      = podoSteps.toLocaleString('es-AR');
+  if (el('ss-cal'))        el('ss-cal').textContent        = cal;
+  if (el('ss-dist'))       el('ss-dist').textContent       = formatDistancia(dist);
+  if (el('ss-dur'))        el('ss-dur').textContent        = formatDuracion(durSeg);
+  if (el('ss-vel'))        el('ss-vel').textContent        = vel.toFixed(1) + ' km/h';
+  if (el('ss-ritmo'))      el('ss-ritmo').textContent      = formatRitmo(ritmo);
+  if (el('ss-meta'))       el('ss-meta').textContent       = pct + '%';
+  if (el('ss-meta-label')) el('ss-meta-label').textContent = totalHoy.toLocaleString('es-AR') + ' / ' + meta.toLocaleString('es-AR');
+  if (el('ss-meta-barra')) el('ss-meta-barra').style.width = pct + '%';
+
+  podoTimer = setTimeout(actualizarPantallaSession, 1000);
+}
+
+function cerrarPantallaSession() {
+  const screen = document.getElementById('podoSessionScreen');
+  if (screen) screen.remove();
 }
 
 function detenerPodometro() {
@@ -1898,6 +1978,7 @@ function detenerPodometro() {
   window.removeEventListener('devicemotion', onPodoMotion);
   liberarWakeLock();
   desbloquearNavegacion();
+  cerrarPantallaSession();
   if (podoSteps < 5) { toast('⚠️ Muy pocos pasos, sesión descartada'); renderPodometro(); return; }
   const durSeg = Math.floor((Date.now() - podoStartTime) / 1000);
   const cal = calcCalorias(podoSteps, getPesoSocio());
