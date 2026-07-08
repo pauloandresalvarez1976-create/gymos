@@ -1,0 +1,25 @@
+{
+  "name": "Mi Membresía — GymOS",
+  "short_name": "GymOS",
+  "description": "Tu app de membresía y progreso en el gimnasio",
+  "start_url": "/socio/",
+  "scope": "/socio/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#FF4500",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

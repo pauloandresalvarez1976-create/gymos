@@ -6,6 +6,10 @@
 <meta name="theme-color" content="#FF4500">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GymOS">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <title>Mi Membresía</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <meta name="mobile-web-app-capable" content="yes">
@@ -16,11 +20,14 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --accent: #FF4500;
-    --bg0: #0a0a0a;
+    --accent2: #cc3700;
+    --accent-bg: #FF450015;
+    --accent-bd: #FF450040;
+    --bg0: #0d0d0d;
     --bg1: #111;
     --bg2: #1a1a1a;
     --bg3: #222;
-    --text1: #f0f0f0;
+    --text1: #fff;
     --text2: #aaa;
     --text3: #666;
     --green: #00FF88;
@@ -28,10 +35,38 @@
     --yellow: #f59e0b;
     --blue: #3b82f6;
   }
+  body[data-theme="b"] {
+    --accent: #9ca3af;
+    --accent2: #6b7280;
+    --accent-bg: #9ca3af18;
+    --accent-bd: #9ca3af35;
+    --bg0: #1f1f1f;
+    --bg1: #272727;
+    --bg2: #2e2e2e;
+    --bg3: #383838;
+    --text1: #f0f0f0;
+    --text2: #c0c0c0;
+    --text3: #888;
+  }
+  body[data-theme="c"] {
+    --accent: #3b82f6;
+    --accent2: #2563eb;
+    --accent-bg: #1d3a5e;
+    --accent-bd: #2d5a8e;
+    --bg0: #0f1923;
+    --bg1: #152030;
+    --bg2: #1a2f44;
+    --bg3: #1e3048;
+    --text1: #e8f0fe;
+    --text2: #7eb8f7;
+    --text3: #4a6a8a;
+  }
+  .tema-swatch { width: 32px; height: 32px; border-radius: 9px; cursor: pointer; border: 2px solid #333; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+  .tema-swatch.active { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); transform: scale(1.12); }
   body { background: var(--bg0); color: var(--text1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
   /* HEADER */
-  .pwa-header { background: linear-gradient(160deg, #FF4500, #cc3300); padding: 32px 16px 24px; text-align: center; position: relative; }
+  .pwa-header { background: linear-gradient(160deg, var(--accent), var(--accent2)); padding: 32px 16px 24px; text-align: center; position: relative; }
   .gym-nombre { font-size: 11px; color: #fff9; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase; }
   .socio-avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid white; object-fit: cover; margin: 0 auto 12px; display: block; background: #fff2; box-shadow: 0 4px 20px #0006; }
   .socio-nombre { font-size: 24px; font-weight: 700; color: white; letter-spacing: -0.5px; }
@@ -116,12 +151,12 @@
   .install-card { background: #111; border-radius: 20px 20px 0 0; padding: 24px; width: 100%; max-width: 480px; border-top: 1px solid #222; }
   .install-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
   .install-sub { font-size: 13px; color: #888; margin-bottom: 20px; }
-  .install-btn { background: #FF4500; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .install-btn:active { background: #cc3300; }
+  .install-btn { background: var(--accent); color: white; border: none; border-radius: 12px; padding: 16px; font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .install-btn:active { background: var(--accent2); }
   .install-skip { background: none; border: none; color: #555; font-size: 13px; width: 100%; margin-top: 12px; cursor: pointer; padding: 8px; }
   .install-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
   .install-step { display: flex; align-items: center; gap: 12px; }
-  .install-step-num { width: 28px; height: 28px; border-radius: 50%; background: #FF4500; color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .install-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .install-step-txt { font-size: 13px; color: #ccc; }
 
   /* PROGRESO */
@@ -171,6 +206,69 @@
   .prog-comentario { margin-top: 8px; background: var(--blue)10; border-left: 2px solid var(--blue); border-radius: 0 8px 8px 0; padding: 8px 10px; font-size: 12px; color: #cde; }
   .prog-comentario-tag { font-size: 10px; color: var(--blue); font-weight: 700; margin-bottom: 2px; }
 
+  .prog-comentario-tag { font-size: 10px; color: var(--blue); font-weight: 700; margin-bottom: 2px; }
+
+  /* LOGROS */
+  .logros-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .logros-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .logro-item { background: var(--bg3); border-radius: 14px; padding: 12px 8px; text-align: center; position: relative; transition: transform 0.2s; }
+  .logro-item.desbloqueado { background: var(--accent-bg); border: 1px solid var(--accent-bd); }
+  .logro-item.bloqueado { opacity: 0.4; filter: grayscale(0.8); }
+  .logro-emoji { font-size: 28px; display: block; margin-bottom: 6px; }
+  .logro-nombre { font-size: 11px; font-weight: 700; color: var(--text1); line-height: 1.3; }
+  .logro-desc { font-size: 10px; color: var(--text3); margin-top: 3px; line-height: 1.3; }
+  .logro-nuevo { position: absolute; top: -4px; right: -4px; background: var(--accent); color: white; font-size: 9px; font-weight: 800; border-radius: 10px; padding: 2px 6px; }
+  .logros-cat-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin: 16px 0 4px; }
+
+  /* RACHA */
+  .racha-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .racha-main { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .racha-fuego { font-size: 48px; line-height: 1; }
+  .racha-numero { font-size: 56px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .racha-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .racha-dias { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .racha-dia { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+  .racha-dia.activo { background: var(--accent); color: white; }
+  .racha-dia.hoy { background: var(--accent); color: white; box-shadow: 0 0 10px var(--accent-bd); }
+  .racha-dia.vacio { background: var(--bg3); color: var(--text3); }
+  .racha-stats { display: flex; gap: 10px; margin-top: 14px; }
+  .racha-stat { flex: 1; background: var(--bg3); border-radius: 12px; padding: 10px 12px; text-align: center; }
+  .racha-stat-val { font-size: 18px; font-weight: 800; color: var(--text1); }
+  .racha-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
+
+  /* IMC */
+  .imc-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .imc-valor { font-size: 56px; font-weight: 900; line-height: 1; }
+  .imc-categoria { font-size: 14px; font-weight: 700; margin-top: 4px; }
+  .imc-barra-wrap { margin: 16px 0 8px; position: relative; }
+  .imc-barra { height: 10px; border-radius: 8px; background: linear-gradient(to right, #3b82f6 0%, #22c55e 25%, #f59e0b 55%, #ef4444 80%, #7f1d1d 100%); position: relative; }
+  .imc-indicator { position: absolute; top: -5px; width: 20px; height: 20px; background: white; border-radius: 50%; border: 3px solid var(--bg0); transform: translateX(-50%); box-shadow: 0 2px 8px rgba(0,0,0,0.4); transition: left 0.5s; }
+  .imc-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 6px; }
+  .imc-detalle { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .imc-badge { flex: 1; min-width: 120px; background: var(--bg3); border-radius: 12px; padding: 10px 12px; }
+  .imc-badge-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+  .imc-badge-val { font-size: 15px; font-weight: 700; color: var(--text1); margin-top: 3px; }
+
+  /* PODÓMETRO */
+  .podo-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .podo-title { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .podo-counter { text-align: center; padding: 10px 0 4px; }
+  .podo-steps { font-size: 64px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .podo-steps-label { font-size: 13px; color: var(--text3); margin-top: 4px; }
+  .podo-stats { display: flex; justify-content: center; gap: 32px; margin: 16px 0; }
+  .podo-stat { text-align: center; }
+  .podo-stat-val { font-size: 20px; font-weight: 700; color: var(--text1); }
+  .podo-stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .podo-btn { border: none; border-radius: 50px; padding: 14px 40px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 4px; }
+  .podo-btn.start { background: var(--accent); color: white; }
+  .podo-btn.stop { background: var(--red); color: white; }
+  .podo-historial-item { background: var(--bg1); border-radius: 14px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--bg3); }
+  .podo-historial-fecha { font-size: 12px; color: var(--text3); }
+  .podo-historial-datos { font-size: 16px; color: var(--accent); font-weight: 800; margin-bottom: 6px; }
+  .podo-historial-sub { display: flex; gap: 10px; flex-wrap: wrap; }
+  .podo-historial-badge { font-size: 12px; color: var(--text2); background: var(--bg3); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
+  .podo-historial-del { color: var(--text3); cursor: pointer; padding: 6px; font-size: 18px; }
+
   /* TOAST */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; }
@@ -209,6 +307,12 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── TEMA (aplicar antes de renderizar para evitar flash de color) ──────────────
+(function() {
+  const t = localStorage.getItem('gymos-tema') || '';
+  if (t) document.body.setAttribute('data-theme', t);
+})();
+
 // ── DATOS PRECARGADOS ──────────────────────────────────────────────────────────
 
 const PLANES_ALIMENTARIOS = {
@@ -488,6 +592,24 @@ function renderApp() {
           </div>
         </div>
 
+        <!-- APARIENCIA -->
+        <div class="section">
+          <div class="section-header" style="cursor:default">
+            <div class="section-icon" style="background:var(--accent)20;color:var(--accent)"><i class="ti ti-palette"></i></div>
+            <div class="section-title">Apariencia</div>
+          </div>
+          <div class="section-body open" style="padding:0 18px 16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+              <div style="font-size:13px;color:var(--text2)">Tema de color</div>
+              <div style="display:flex;gap:10px">
+                <div class="tema-swatch" data-tema="" onclick="aplicarTema('')" title="Original" style="background:#0d0d0d;border-color:#FF4500"></div>
+                <div class="tema-swatch" data-tema="b" onclick="aplicarTema('b')" title="Gris" style="background:#1f1f1f;border-color:#9ca3af"></div>
+                <div class="tema-swatch" data-tema="c" onclick="aplicarTema('c')" title="Slate azul" style="background:#0f1923;border-color:#3b82f6"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- BOTÓN RENOVAR -->
         ${(s.gym_email || s.gym_telefono) ? `
         <button class="btn-renovar" onclick="solicitarRenovacion()">
@@ -574,6 +696,7 @@ function renderApp() {
       </button>
     </div>
   `;
+  aplicarTema(localStorage.getItem('gymos-tema') || '');
 }
 
 function cambiarTab(tab) {
@@ -590,6 +713,19 @@ function toggleSection(id) {
   const chev = document.getElementById(`chev-${id}`);
   body.classList.toggle('open');
   chev.classList.toggle('open');
+}
+
+// ── TEMA ─────────────────────────────────────────────
+function aplicarTema(tema) {
+  if (tema) document.body.setAttribute('data-theme', tema);
+  else document.body.removeAttribute('data-theme');
+  localStorage.setItem('gymos-tema', tema);
+  const colores = { '': '#FF4500', 'b': '#9ca3af', 'c': '#3b82f6' };
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', colores[tema] || '#FF4500');
+  document.querySelectorAll('.tema-swatch').forEach(el => {
+    el.classList.toggle('active', el.dataset.tema === tema);
+  });
 }
 
 // ── PROGRESO ─────────────────────────────────────────────
@@ -715,7 +851,13 @@ function renderProgreso() {
     ${formProgresoHTML()}
     <div class="prog-chart-title">Historial</div>
     <div>${historialHTML}</div>
+    <div id="imcSection"></div>
+    <div id="rachaSection"></div>
+    <div id="logrosSection"></div>
+    <div id="podometroSection"></div>
   `;
+  renderIMC();
+  cargarSesionesPasos();
 }
 
 function metricCardHTML(key, registros) {
@@ -753,14 +895,14 @@ function sparklineSVG(puntos) {
   });
   const path = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
   const areaPath = path + ` L${coords[coords.length-1][0].toFixed(1)},${h-pad} L${coords[0][0].toFixed(1)},${h-pad} Z`;
-  const dots = coords.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="#FF4500"><title>${puntos[i].fecha}: ${puntos[i].val}</title></circle>`).join('');
+  const dots = coords.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="var(--accent)"><title>${puntos[i].fecha}: ${puntos[i].val}</title></circle>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px">
     <defs><linearGradient id="progGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FF4500" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#FF4500" stop-opacity="0"/>
+      <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
     </linearGradient></defs>
     <path d="${areaPath}" fill="url(#progGrad)" stroke="none"/>
-    <path d="${path}" fill="none" stroke="#FF4500" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}
   </svg>`;
 }
@@ -888,20 +1030,45 @@ function toast(msg) {
 
 // PWA Install
 let deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => {
+
+// ── Registro Service Worker ──────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js')
+      .then(function(reg) {
+        console.log('SW registrado:', reg.scope);
+        reg.addEventListener('updatefound', function() {
+          const nw = reg.installing;
+          nw.addEventListener('statechange', function() {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              nw.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      })
+      .catch(function(err) { console.log('SW error:', err); });
+  });
+}
+
+// ── Captura evento instalación ───────────────────────────
+window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredPrompt = e;
-  // Mostrar modal Android si no está instalada
   if (!window.matchMedia('(display-mode: standalone)').matches) {
     setTimeout(mostrarInstall, 1500);
   }
+});
+
+window.addEventListener('appinstalled', function() {
+  deferredPrompt = null;
+  toast('✅ App instalada correctamente');
 });
 
 function mostrarInstall() {
   const overlay = document.getElementById('installOverlay');
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (isStandalone) return; // ya instalada
+  if (isStandalone) return;
   overlay.classList.remove('hidden');
   if (isIOS) {
     document.getElementById('installIOS').style.display = 'block';
@@ -918,6 +1085,9 @@ async function instalarApp() {
     const result = await deferredPrompt.userChoice;
     deferredPrompt = null;
     cerrarInstall();
+  } else {
+    // Si no hay prompt disponible, mostrar instrucciones manuales
+    mostrarInstall();
   }
 }
 
@@ -925,19 +1095,782 @@ function cerrarInstall() {
   document.getElementById('installOverlay').classList.add('hidden');
 }
 
-// Mostrar botón instalar también en el contenido
 function agregarBotonInstalar() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   if (isStandalone) return;
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const btn = document.createElement('button');
   btn.innerHTML = '<i class="ti ti-download"></i> Instalar app en mi celular';
-  btn.style.cssText = 'position:fixed;bottom:80px;right:16px;background:#FF4500;color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:100;display:flex;align-items:center;gap:6px;box-shadow:0 4px 20px rgba(255,69,0,0.4)';
+  btn.style.cssText = 'position:fixed;bottom:80px;right:16px;background:var(--accent);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:100;display:flex;align-items:center;gap:6px;box-shadow:0 4px 20px var(--accent-bd)';
   btn.onclick = mostrarInstall;
   document.body.appendChild(btn);
-  // Ocultar después de 10 segundos
-  setTimeout(() => btn.style.display = 'none', 10000);
+  setTimeout(function() { btn.style.display = 'none'; }, 10000);
 }
+
+// ── LOGROS ────────────────────────────────────────────────
+function renderLogros() {
+  const sec = document.getElementById('logrosSection');
+  if (!sec) return;
+
+  const sesiones  = podoSesionesCargadas || [];
+  const registros = progresoData ? progresoData.registros || [] : [];
+  const s         = socioData || {};
+  const hoy       = new Date();
+
+  // — Datos calculados —
+  const fechasSet = new Set(sesiones.map(s => s.fecha));
+  const totalPasos = sesiones.reduce((a, s) => a + s.pasos, 0);
+  const totalCal   = sesiones.reduce((a, s) => a + s.calorias, 0);
+  const maxSesion  = sesiones.length ? Math.max(...sesiones.map(s => s.pasos)) : 0;
+  const totalSesiones = sesiones.length;
+
+  // Distancia total acumulada en km
+  const alturaStr = socioData && socioData.altura ? socioData.altura : '';
+  const alturaCm  = parseFloat(alturaStr) || 170;
+  const zancada   = (alturaCm / 100) * 0.414;
+  const kmTotales = (totalPasos * zancada) / 1000;
+
+  // Racha actual
+  let rachaActual = 0;
+  let dd = new Date(hoy);
+  while (fechasSet.has(dd.toISOString().split('T')[0])) {
+    rachaActual++;
+    dd.setDate(dd.getDate() - 1);
+  }
+
+  // Racha máxima
+  const fechasOrdenadas = [...fechasSet].sort();
+  let rachaMax = rachaActual, rachaTemp = 1;
+  for (let i = 1; i < fechasOrdenadas.length; i++) {
+    const prev = new Date(fechasOrdenadas[i-1] + 'T00:00:00');
+    const curr = new Date(fechasOrdenadas[i] + 'T00:00:00');
+    if ((curr - prev) / 86400000 === 1) { rachaTemp++; rachaMax = Math.max(rachaMax, rachaTemp); }
+    else rachaTemp = 1;
+  }
+
+  // Meta diaria cumplida (días con pasos >= meta)
+  const meta = parseInt(localStorage.getItem('gymos-podo-meta') || '10000');
+  const diasMetaCumplida = [...fechasSet].filter(f =>
+    sesiones.filter(s => s.fecha === f).reduce((a, s) => a + s.pasos, 0) >= meta
+  ).length;
+
+  // Sesión más temprana / más tardía
+  const horasInicioSesiones = sesiones.map(s => {
+    if (s.created_at) return new Date(s.created_at).getHours();
+    return null;
+  }).filter(h => h !== null);
+  const tieneMadrugadora = horasInicioSesiones.some(h => h < 7);
+  const tieneNocturna    = horasInicioSesiones.some(h => h >= 22);
+
+  // Progreso de peso
+  const pesoInicial = registros.length ? parseFloat(registros[0].peso) : null;
+  const pesoActual  = registros.length ? parseFloat(registros[registros.length-1].peso) : null;
+  const bajoPeso    = pesoInicial && pesoActual ? pesoInicial - pesoActual : 0;
+  const pesoObj     = progresoData && progresoData.peso_objetivo ? parseFloat(progresoData.peso_objetivo) : null;
+  const metaLograda = pesoObj && pesoActual && pesoActual <= pesoObj;
+
+  // IMC normal
+  const imc = pesoActual && alturaCm ? pesoActual / ((alturaCm/100)**2) : null;
+  const imcNormal = imc && imc >= 18.5 && imc < 25;
+
+  // Días como socio
+  const fechaAlta = s.fecha_alta ? new Date(s.fecha_alta) : null;
+  const diasSocio = fechaAlta ? Math.floor((hoy - fechaAlta) / 86400000) : 0;
+
+  // Navidad activa
+  const navidad = sesiones.some(s => s.fecha && s.fecha.endsWith('-12-25'));
+  const anioNuevo = sesiones.some(s => s.fecha && s.fecha.endsWith('-01-01'));
+
+  // Ficha completa
+  const fichaCompleta = !!(s.altura && s.altura !== '');
+
+  // 100 sesiones
+  const tiene100ses = totalSesiones >= 100;
+
+  // — Definición de logros —
+  const categorias = [
+    {
+      titulo: '👟 Actividad',
+      logros: [
+        { emoji: '🥾', nombre: 'Primeros pasos',    desc: 'Completá tu 1° sesión',         ok: totalSesiones >= 1 },
+        { emoji: '🚶', nombre: 'Caminador',          desc: '1.000 pasos en una sesión',      ok: maxSesion >= 1000 },
+        { emoji: '🏃', nombre: 'Trotador',           desc: '5.000 pasos en una sesión',      ok: maxSesion >= 5000 },
+        { emoji: '💨', nombre: 'Velocista',          desc: '10.000 pasos en una sesión',     ok: maxSesion >= 10000 },
+        { emoji: '🌍', nombre: 'Explorador',         desc: '10 km acumulados',               ok: kmTotales >= 10 },
+        { emoji: '🗺️', nombre: 'Viajero',            desc: '50 km acumulados',               ok: kmTotales >= 50 },
+        { emoji: '🚀', nombre: 'Ultra',              desc: '100 km acumulados',              ok: kmTotales >= 100 },
+        { emoji: '🔥', nombre: '100 sesiones',       desc: '100 sesiones completadas',       ok: tiene100ses },
+        { emoji: '⚡', nombre: 'Constante',          desc: '10 sesiones completadas',        ok: totalSesiones >= 10 },
+        { emoji: '🏅', nombre: 'Meta cumplida',      desc: 'Cumpliste la meta diaria',       ok: diasMetaCumplida >= 1 },
+        { emoji: '🎯', nombre: 'Perfeccionista',     desc: 'Meta diaria cumplida 5 veces',   ok: diasMetaCumplida >= 5 },
+        { emoji: '🔥', nombre: 'Quemador',           desc: '1.000 calorías acumuladas',      ok: totalCal >= 1000 },
+      ]
+    },
+    {
+      titulo: '🔥 Rachas',
+      logros: [
+        { emoji: '✨', nombre: 'En racha',           desc: '3 días consecutivos',            ok: rachaMax >= 3 },
+        { emoji: '⚡', nombre: 'Imparable',          desc: '7 días consecutivos',            ok: rachaMax >= 7 },
+        { emoji: '💪', nombre: 'Guerrero',           desc: '14 días consecutivos',           ok: rachaMax >= 14 },
+        { emoji: '🦁', nombre: 'Bestia',             desc: '30 días consecutivos',           ok: rachaMax >= 30 },
+        { emoji: '👑', nombre: 'Leyenda',            desc: '60 días consecutivos',           ok: rachaMax >= 60 },
+      ]
+    },
+    {
+      titulo: '⚖️ Progreso físico',
+      logros: [
+        { emoji: '📏', nombre: 'Ficha completa',     desc: 'Completaste la ficha médica',    ok: fichaCompleta },
+        { emoji: '⚖️', nombre: 'Primera medición',  desc: 'Registraste tu primer peso',     ok: registros.length >= 1 },
+        { emoji: '📉', nombre: 'Bajando',            desc: 'Bajaste 1 kg desde el inicio',   ok: bajoPeso >= 1 },
+        { emoji: '💪', nombre: 'Progreso real',      desc: 'Bajaste 3 kg desde el inicio',   ok: bajoPeso >= 3 },
+        { emoji: '🎖️', nombre: 'Transformación',    desc: 'Bajaste 5 kg desde el inicio',   ok: bajoPeso >= 5 },
+        { emoji: '🏆', nombre: 'Cambio total',       desc: 'Bajaste 10 kg desde el inicio',  ok: bajoPeso >= 10 },
+        { emoji: '🎯', nombre: 'Meta lograda',       desc: 'Alcanzaste tu peso objetivo',    ok: !!metaLograda },
+        { emoji: '💚', nombre: 'IMC saludable',      desc: 'IMC en rango normal (18.5-25)',  ok: !!imcNormal },
+      ]
+    },
+    {
+      titulo: '🗓️ Tiempo como socio',
+      logros: [
+        { emoji: '🌟', nombre: 'Bienvenido',         desc: 'Te uniste al gimnasio',          ok: diasSocio >= 1 },
+        { emoji: '📅', nombre: '1 mes',              desc: '30 días como socio',             ok: diasSocio >= 30 },
+        { emoji: '🎂', nombre: '6 meses',            desc: '180 días como socio',            ok: diasSocio >= 180 },
+        { emoji: '🏛️', nombre: '1 año',              desc: '365 días como socio',            ok: diasSocio >= 365 },
+      ]
+    },
+    {
+      titulo: '🌙 Especiales',
+      logros: [
+        { emoji: '🌅', nombre: 'Madrugador',         desc: 'Sesión antes de las 7am',        ok: tieneMadrugadora },
+        { emoji: '🌙', nombre: 'Nocturno',           desc: 'Sesión después de las 22hs',     ok: tieneNocturna },
+        { emoji: '🎄', nombre: 'Navidad activa',     desc: 'Sesión el 25 de diciembre',      ok: navidad },
+        { emoji: '🎆', nombre: 'Año nuevo activo',   desc: 'Sesión el 1° de enero',          ok: anioNuevo },
+      ]
+    }
+  ];
+
+  // — Calcular stats —
+  const todosLogros = categorias.flatMap(c => c.logros);
+  const desbloqueados = todosLogros.filter(l => l.ok).length;
+  const total = todosLogros.length;
+
+  // Logros nuevos (desbloqueados hoy — guardamos en localStorage cuántos había ayer)
+  const cacheKey = 'gymos-logros-' + socioId;
+  const prevDesbloqueados = parseInt(localStorage.getItem(cacheKey) || '0');
+  const nuevos = Math.max(0, desbloqueados - prevDesbloqueados);
+  localStorage.setItem(cacheKey, desbloqueados);
+
+  // — Render —
+  const pct = Math.round(desbloqueados / total * 100);
+  let html =
+    '<div class="logros-card">' +
+      '<div class="podo-title"><i class="ti ti-award"></i> Logros</div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div style="font-size:13px;color:var(--text2)">' + desbloqueados + ' / ' + total + ' desbloqueados</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--accent)">' + pct + '%</div>' +
+      '</div>' +
+      '<div style="background:var(--bg3);border-radius:8px;height:8px;overflow:hidden;margin-bottom:4px">' +
+        '<div style="width:' + pct + '%;height:100%;background:var(--accent);border-radius:8px;transition:width 0.5s"></div>' +
+      '</div>';
+
+  categorias.forEach(function(cat) {
+    html += '<div class="logros-cat-title">' + cat.titulo + '</div>';
+    html += '<div class="logros-grid">';
+    cat.logros.forEach(function(l, idx) {
+      const cls = l.ok ? 'desbloqueado' : 'bloqueado';
+      const esNuevo = l.ok && nuevos > 0 && idx < nuevos;
+      html +=
+        '<div class="logro-item ' + cls + '">' +
+          (esNuevo ? '<div class="logro-nuevo">¡Nuevo!</div>' : '') +
+          '<span class="logro-emoji">' + l.emoji + '</span>' +
+          '<div class="logro-nombre">' + l.nombre + '</div>' +
+          '<div class="logro-desc">' + l.desc + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+  });
+
+  html += '</div>';
+  sec.innerHTML = html;
+}
+
+// ── RACHA ─────────────────────────────────────────────────
+function renderRacha() {
+  const sec = document.getElementById('rachaSection');
+  if (!sec) return;
+  const sesiones = podoSesionesCargadas || [];
+  if (!sesiones.length) {
+    sec.innerHTML =
+      '<div class="racha-card">' +
+        '<div class="podo-title"><i class="ti ti-flame"></i> Racha de actividad</div>' +
+        '<div style="text-align:center;padding:16px 0;color:var(--text3);font-size:13px">Completá tu primera sesión de podómetro para ver tu racha.</div>' +
+      '</div>';
+    return;
+  }
+
+  // Fechas únicas con actividad
+  const fechasSet = new Set(sesiones.map(s => s.fecha));
+  const hoy = new Date();
+
+  // Calcular racha actual (días consecutivos hacia atrás desde hoy)
+  let rachaActual = 0;
+  let d = new Date(hoy);
+  while (true) {
+    const key = d.toISOString().split('T')[0];
+    if (fechasSet.has(key)) {
+      rachaActual++;
+      d.setDate(d.getDate() - 1);
+    } else break;
+  }
+
+  // Calcular racha máxima histórica
+  const fechasOrdenadas = [...fechasSet].sort();
+  let rachaMax = 0, rachaTemp = 1;
+  for (let i = 1; i < fechasOrdenadas.length; i++) {
+    const prev = new Date(fechasOrdenadas[i-1] + 'T00:00:00');
+    const curr = new Date(fechasOrdenadas[i] + 'T00:00:00');
+    const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+    if (diff === 1) { rachaTemp++; rachaMax = Math.max(rachaMax, rachaTemp); }
+    else { rachaTemp = 1; }
+  }
+  rachaMax = Math.max(rachaMax, rachaActual, 1);
+
+  // Total días activos
+  const totalDias = fechasSet.size;
+
+  // Últimos 14 días para el calendario visual
+  const dias14 = [];
+  for (let i = 13; i >= 0; i--) {
+    const dd = new Date(hoy); dd.setDate(hoy.getDate() - i);
+    const key = dd.toISOString().split('T')[0];
+    const label = dd.toLocaleDateString('es-AR', {weekday:'narrow'});
+    dias14.push({ key, label, activo: fechasSet.has(key), esHoy: i === 0 });
+  }
+
+  const emoji = rachaActual >= 7 ? '🔥' : rachaActual >= 3 ? '⚡' : '👟';
+  const mensaje = rachaActual === 0 ? '¡Arrancá hoy!' :
+                  rachaActual === 1 ? '¡Buen comienzo!' :
+                  rachaActual < 7  ? '¡Seguí así!' :
+                  rachaActual < 30 ? '¡Imparable!' : '¡Leyenda!';
+
+  const diasHTML = dias14.map(d =>
+    '<div class="racha-dia ' + (d.esHoy && d.activo ? 'hoy' : d.activo ? 'activo' : 'vacio') + '">' +
+      d.label +
+    '</div>'
+  ).join('');
+
+  sec.innerHTML =
+    '<div class="racha-card">' +
+      '<div class="podo-title"><i class="ti ti-flame"></i> Racha de actividad</div>' +
+      '<div class="racha-main">' +
+        '<div class="racha-fuego">' + emoji + '</div>' +
+        '<div>' +
+          '<div class="racha-numero">' + rachaActual + '</div>' +
+          '<div class="racha-label">días consecutivos · ' + mensaje + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Últimos 14 días</div>' +
+      '<div class="racha-dias">' + diasHTML + '</div>' +
+      '<div class="racha-stats">' +
+        '<div class="racha-stat"><div class="racha-stat-val">' + rachaActual + '</div><div class="racha-stat-label">Racha actual</div></div>' +
+        '<div class="racha-stat"><div class="racha-stat-val">' + rachaMax + '</div><div class="racha-stat-label">Récord</div></div>' +
+        '<div class="racha-stat"><div class="racha-stat-val">' + totalDias + '</div><div class="racha-stat-label">Días totales</div></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ── IMC ───────────────────────────────────────────────────
+function calcIMC(pesoKg, alturaCm) {
+  if (!pesoKg || !alturaCm || isNaN(pesoKg) || isNaN(alturaCm)) return null;
+  const altM = alturaCm / 100;
+  return pesoKg / (altM * altM);
+}
+
+function categoriaIMC(imc) {
+  if (imc < 18.5) return { label: 'Bajo peso',   color: '#3b82f6' };
+  if (imc < 25)   return { label: 'Normal',       color: '#22c55e' };
+  if (imc < 30)   return { label: 'Sobrepeso',    color: '#f59e0b' };
+  if (imc < 35)   return { label: 'Obesidad I',   color: '#ef4444' };
+  return             { label: 'Obesidad II',  color: '#7f1d1d' };
+}
+
+function imcPct(imc) {
+  // Escala visual: 15 = 0%, 40 = 100%
+  return Math.min(100, Math.max(0, ((imc - 15) / 25) * 100));
+}
+
+function renderIMC() {
+  const sec = document.getElementById('imcSection');
+  if (!sec) return;
+
+  const alturaStr = socioData && socioData.altura ? socioData.altura : '';
+  const alturaCm  = parseFloat(alturaStr);
+  const peso      = getPesoSocio();
+  const pesoObj   = progresoData && progresoData.peso_objetivo ? parseFloat(progresoData.peso_objetivo) : null;
+  const imc       = calcIMC(peso, alturaCm);
+
+  if (!imc) {
+    sec.innerHTML =
+      '<div class="imc-card">' +
+        '<div class="podo-title"><i class="ti ti-scale"></i> IMC</div>' +
+        '<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px">' +
+          'Necesitás cargar tu <strong style="color:var(--text1)">peso</strong> en Progreso' +
+          (isNaN(alturaCm) ? ' y tu <strong style="color:var(--text1)">altura</strong> en la Ficha Médica' : '') +
+          ' para calcular el IMC.' +
+        '</div>' +
+      '</div>';
+    return;
+  }
+
+  const cat     = categoriaIMC(imc);
+  const pct     = imcPct(imc);
+  const imcObj  = pesoObj ? calcIMC(pesoObj, alturaCm) : null;
+  const catObj  = imcObj  ? categoriaIMC(imcObj) : null;
+
+  sec.innerHTML =
+    '<div class="imc-card">' +
+      '<div class="podo-title"><i class="ti ti-scale"></i> IMC — Índice de Masa Corporal</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:12px">' +
+        '<div class="imc-valor" style="color:' + cat.color + '">' + imc.toFixed(1) + '</div>' +
+        '<div style="padding-bottom:8px">' +
+          '<div class="imc-categoria" style="color:' + cat.color + '">' + cat.label + '</div>' +
+          '<div style="font-size:11px;color:var(--text3)">' + peso + ' kg · ' + alturaCm + ' cm</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="imc-barra-wrap">' +
+        '<div class="imc-barra">' +
+          '<div class="imc-indicator" style="left:' + pct + '%"></div>' +
+        '</div>' +
+        '<div class="imc-labels">' +
+          '<span>Bajo<br>peso</span><span>Normal</span><span>Sobre<br>peso</span><span>Obesidad</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="imc-detalle">' +
+        '<div class="imc-badge">' +
+          '<div class="imc-badge-label">Peso actual</div>' +
+          '<div class="imc-badge-val">' + peso + ' kg</div>' +
+        '</div>' +
+        '<div class="imc-badge">' +
+          '<div class="imc-badge-label">Peso ideal (IMC 22)</div>' +
+          '<div class="imc-badge-val">' + (22 * (alturaCm/100) * (alturaCm/100)).toFixed(1) + ' kg</div>' +
+        '</div>' +
+        (imcObj ?
+          '<div class="imc-badge" style="border:1px solid ' + catObj.color + '30">' +
+            '<div class="imc-badge-label">IMC con tu objetivo</div>' +
+            '<div class="imc-badge-val" style="color:' + catObj.color + '">' + imcObj.toFixed(1) + ' · ' + catObj.label + '</div>' +
+          '</div>' : '') +
+      '</div>' +
+    '</div>';
+}
+
+// ── PODÓMETRO ─────────────────────────────────────────────
+let podoActivo = false;
+let podoSteps = 0;
+let podoStartTime = null;
+let podoLastMag = null;
+let podoLastStep = 0;
+let podoSesionesCargadas = null;
+let podoTimer = null;
+
+// Calibración
+let calibrando = false;
+let calibDeltas = [];
+let calibLastMag = null;
+let PASO_UMBRAL = parseFloat(localStorage.getItem('gymos-podo-umbral') || '0');
+let PASO_CALIBRADO = !!localStorage.getItem('gymos-podo-umbral');
+const PASO_COOLDOWN_MS = 350;
+
+function calcCalorias(pasos, pesoKg) {
+  const peso = (pesoKg && !isNaN(pesoKg)) ? pesoKg : 70;
+  return Math.round(pasos * 0.04 * (peso / 70));
+}
+function calcZancada(pesoKg) {
+  // Si hay altura en la ficha médica, usar fórmula estándar: zancada = altura × 0.414
+  const alturaStr = socioData && socioData.altura ? socioData.altura : '';
+  const altura = parseFloat(alturaStr);
+  if (!isNaN(altura) && altura > 100) {
+    // altura en cm → metros × 0.414
+    return (altura / 100) * 0.414;
+  }
+  // Fallback: estimación por peso
+  const peso = (pesoKg && !isNaN(pesoKg)) ? pesoKg : 70;
+  return 0.70 + (peso - 70) * 0.002;
+}
+function calcDistancia(pasos, pesoKg) {
+  return pasos * calcZancada(pesoKg); // metros
+}
+function calcVelocidad(pasos, pesoKg, durSeg) {
+  if (!durSeg || durSeg < 1) return 0;
+  const distKm = calcDistancia(pasos, pesoKg) / 1000;
+  const horas = durSeg / 3600;
+  return distKm / horas; // km/h
+}
+function calcRitmo(pasos, pesoKg, durSeg) {
+  if (!durSeg || !pasos) return null;
+  const distKm = calcDistancia(pasos, pesoKg) / 1000;
+  if (distKm < 0.01) return null;
+  const minutos = durSeg / 60;
+  return minutos / distKm; // min/km
+}
+function formatDistancia(metros) {
+  if (metros >= 1000) return (metros/1000).toFixed(2) + ' km';
+  return Math.round(metros) + ' m';
+}
+function formatRitmo(minKm) {
+  if (!minKm) return '—';
+  const m = Math.floor(minKm);
+  const s = Math.round((minKm - m) * 60);
+  return m + "'" + s.toString().padStart(2,'0') + '" /km';
+}
+function getMetaDiaria() {
+  return parseInt(localStorage.getItem('gymos-podo-meta') || '10000');
+}
+function formatDuracion(seg) {
+  const m = Math.floor(seg / 60), s = seg % 60;
+  return m + ':' + s.toString().padStart(2, '0');
+}
+function formatFecha(str) {
+  return new Date(str + 'T00:00:00').toLocaleDateString('es-AR', {day:'2-digit',month:'short',year:'numeric'});
+}
+function getPesoSocio() {
+  if (progresoData && progresoData.registros && progresoData.registros.length)
+    return parseFloat(progresoData.registros[progresoData.registros.length - 1].peso) || 70;
+  return 70;
+}
+
+// ── Motion handler podómetro ──
+function onPodoMotion(e) {
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+  const mag = Math.sqrt((acc.x||0)**2 + (acc.y||0)**2 + (acc.z||0)**2);
+  if (podoLastMag !== null) {
+    const delta = Math.abs(mag - podoLastMag);
+    const now = Date.now();
+    if (delta > PASO_UMBRAL && (now - podoLastStep) > PASO_COOLDOWN_MS) {
+      podoSteps++;
+      podoLastStep = now;
+    }
+  }
+  podoLastMag = mag;
+}
+
+// ── Motion handler calibración ──
+function onCalibMotion(e) {
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+  const mag = Math.sqrt((acc.x||0)**2 + (acc.y||0)**2 + (acc.z||0)**2);
+  if (calibLastMag !== null) {
+    const delta = Math.abs(mag - calibLastMag);
+    if (delta > 0.3) calibDeltas.push(delta);
+  }
+  calibLastMag = mag;
+  const el = document.getElementById('calibContador');
+  if (el) {
+    const est = Math.min(calibDeltas.filter(d => d > 2).length, 20);
+    el.textContent = est;
+  }
+}
+
+// ── Render ──
+function renderPodometro() {
+  const sec = document.getElementById('podometroSection');
+  if (!sec) return;
+
+  // Pantalla: primera vez sin calibrar
+  if (!PASO_CALIBRADO && !calibrando) {
+    sec.innerHTML =
+      '<div class="podo-card" style="text-align:center">' +
+        '<div class="podo-title" style="justify-content:center"><i class="ti ti-adjustments-horizontal"></i> Calibrar podómetro</div>' +
+        '<div style="font-size:40px;margin:12px 0">🚶</div>' +
+        '<div style="font-size:15px;color:var(--text1);font-weight:600;margin-bottom:8px">Antes de usar el podómetro<br>necesitamos calibrarlo</div>' +
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6">Esto se hace <strong>una sola vez</strong> y ajusta el sensor<br>al acelerómetro de tu celular.</div>' +
+        '<button id="btnIniciarCalib" class="podo-btn start"><i class="ti ti-player-play"></i> Iniciar calibración</button>' +
+      '</div>';
+    document.getElementById('btnIniciarCalib').onclick = iniciarCalibracion;
+    return;
+  }
+
+  // Pantalla: calibrando
+  if (calibrando) {
+    sec.innerHTML =
+      '<div class="podo-card" style="text-align:center">' +
+        '<div class="podo-title" style="justify-content:center"><i class="ti ti-walk"></i> Calibrando...</div>' +
+        '<div style="font-size:56px;font-weight:800;color:var(--accent);line-height:1;margin:16px 0" id="calibContador">0</div>' +
+        '<div style="font-size:14px;color:var(--text2);margin-bottom:8px">pasos detectados</div>' +
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:28px">Caminá exactamente <strong style="color:var(--text1)">20 pasos</strong> y tocá Listo</div>' +
+        '<button id="btnFinalizarCalib" class="podo-btn stop"><i class="ti ti-check"></i> Listo — terminé los 20 pasos</button>' +
+      '</div>';
+    document.getElementById('btnFinalizarCalib').onclick = finalizarCalibracion;
+    return;
+  }
+
+  // Pantalla: podómetro normal
+  const sesiones = podoSesionesCargadas || [];
+  const hoy = new Date().toISOString().split('T')[0];
+  const totalHoy = sesiones.filter(s => s.fecha === hoy).reduce((a, s) => a + s.pasos, 0);
+  const histHTML = sesiones.length
+    ? sesiones.map(s =>
+        '<div class="podo-historial-item">' +
+          '<div style="flex:1">' +
+            '<div class="podo-historial-datos">👟 ' + s.pasos.toLocaleString('es-AR') + ' pasos</div>' +
+            '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">' + formatFecha(s.fecha) + '</div>' +
+            '<div class="podo-historial-sub">' +
+              '<span class="podo-historial-badge">🔥 ' + s.calorias + ' cal</span>' +
+              '<span class="podo-historial-badge">📍 ' + formatDistancia(calcDistancia(s.pasos, getPesoSocio())) + '</span>' +
+              '<span class="podo-historial-badge">⏱ ' + formatDuracion(s.duracion_seg) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="podo-historial-del" data-id="' + s.id + '"><i class="ti ti-trash"></i></div>' +
+        '</div>'
+      ).join('')
+    : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:12px 0">Todavía no hay sesiones registradas.</div>';
+
+  sec.innerHTML =
+    '<div class="podo-card">' +
+      '<div class="podo-title"><i class="ti ti-shoe"></i> Podómetro</div>' +
+      '<div class="podo-counter">' +
+        '<div class="podo-steps" id="podoStepsDisplay">' + podoSteps.toLocaleString('es-AR') + '</div>' +
+        '<div class="podo-steps-label">pasos' + (podoActivo ? ' · <span style="color:var(--accent)">● Sesión activa</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="podo-stats">' +
+        '<div class="podo-stat"><div class="podo-stat-val" id="podoCal">' + calcCalorias(podoSteps, getPesoSocio()) + '</div><div class="podo-stat-label">Calorías</div></div>' +
+        '<div class="podo-stat"><div class="podo-stat-val" id="podoDur">' + (podoActivo ? formatDuracion(Math.floor((Date.now()-podoStartTime)/1000)) : '0:00') + '</div><div class="podo-stat-label">Duración</div></div>' +
+        '<div class="podo-stat"><div class="podo-stat-val" id="podoDist">' + formatDistancia(calcDistancia(podoSteps, getPesoSocio())) + '</div><div class="podo-stat-label">Distancia</div></div>' +
+      '</div>' +
+      '<div class="podo-stats">' +
+        '<div class="podo-stat"><div class="podo-stat-val" id="podoVel">' + (podoActivo ? calcVelocidad(podoSteps, getPesoSocio(), Math.floor((Date.now()-podoStartTime)/1000)).toFixed(1) + ' km/h' : '— km/h') + '</div><div class="podo-stat-label">Velocidad</div></div>' +
+        '<div class="podo-stat"><div class="podo-stat-val" id="podoRitmo">' + (podoActivo ? formatRitmo(calcRitmo(podoSteps, getPesoSocio(), Math.floor((Date.now()-podoStartTime)/1000))) : '—') + '</div><div class="podo-stat-label">Ritmo</div></div>' +
+        '<div class="podo-stat"><div class="podo-stat-val">' + totalHoy.toLocaleString('es-AR') + '</div><div class="podo-stat-label">Hoy total</div></div>' +
+      '</div>' +
+      (function() {
+        var meta = getMetaDiaria();
+        var pct = Math.min(100, Math.round(totalHoy / meta * 100));
+        var color = pct >= 100 ? 'var(--green)' : 'var(--accent)';
+        return '<div style="margin:12px 0 4px">' +
+          '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px">' +
+            '<span>Meta diaria</span>' +
+            '<span id="metaLabel">' + totalHoy.toLocaleString('es-AR') + ' / ' + meta.toLocaleString('es-AR') + ' pasos (' + pct + '%)</span>' +
+          '</div>' +
+          '<div style="background:var(--bg3);border-radius:8px;height:8px;overflow:hidden">' +
+            '<div style="width:' + pct + '%;height:100%;background:' + color + ';border-radius:8px;transition:width 0.5s"></div>' +
+          '</div>' +
+          '<div style="text-align:right;margin-top:6px">' +
+            '<span id="btnEditarMeta" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline">Cambiar meta (' + meta.toLocaleString('es-AR') + ')</span>' +
+          '</div>' +
+        '</div>';
+      })() +
+      '<button id="podoBtnMain" class="podo-btn ' + (podoActivo ? 'stop' : 'start') + '">' +
+        '<i class="ti ti-' + (podoActivo ? 'player-stop' : 'player-play') + '"></i> ' +
+        (podoActivo ? 'Detener y guardar' : 'Iniciar sesión') +
+      '</button>' +
+      '<div style="text-align:center;margin-top:12px">' +
+        '<span id="btnRecalibrar" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline">Recalibrar podómetro</span>' +
+      '</div>' +
+    '</div>' +
+    graficoSemanal(sesiones) +
+    recordPersonal(sesiones) +
+    '<div class="podo-card">' +
+      '<div class="podo-title"><i class="ti ti-history"></i> Últimas sesiones</div>' +
+      histHTML +
+    '</div>';
+
+  document.getElementById('podoBtnMain').onclick = podoActivo ? detenerPodometro : iniciarPodometro;
+  document.getElementById('btnRecalibrar').onclick = recalibrar;
+  var btnMeta = document.getElementById('btnEditarMeta');
+  if (btnMeta) btnMeta.onclick = editarMetaDiaria;
+  sec.querySelectorAll('.podo-historial-del').forEach(el => {
+    el.onclick = function() { borrarSesionPasos(this.dataset.id); };
+  });
+
+  if (podoActivo) actualizarDisplayPodo();
+}
+
+function actualizarDisplayPodo() {
+  if (!podoActivo) return;
+  const elSteps = document.getElementById('podoStepsDisplay');
+  if (!elSteps) return;
+  const peso = getPesoSocio();
+  const durSeg = Math.floor((Date.now() - podoStartTime) / 1000);
+  elSteps.textContent = podoSteps.toLocaleString('es-AR');
+  const elCal  = document.getElementById('podoCal');  if (elCal)  elCal.textContent  = calcCalorias(podoSteps, peso);
+  const elDur  = document.getElementById('podoDur');  if (elDur)  elDur.textContent  = formatDuracion(durSeg);
+  const elDist = document.getElementById('podoDist'); if (elDist) elDist.textContent = formatDistancia(calcDistancia(podoSteps, peso));
+  const elVel  = document.getElementById('podoVel');  if (elVel)  elVel.textContent  = calcVelocidad(podoSteps, peso, durSeg).toFixed(1) + ' km/h';
+  const elRitmo= document.getElementById('podoRitmo');if (elRitmo)elRitmo.textContent= formatRitmo(calcRitmo(podoSteps, peso, durSeg));
+  podoTimer = setTimeout(actualizarDisplayPodo, 1000);
+}
+
+// ── Meta diaria ──
+function editarMetaDiaria() {
+  var actual = getMetaDiaria();
+  var nueva = prompt('Meta diaria de pasos (actual: ' + actual.toLocaleString('es-AR') + '):', actual);
+  if (nueva && !isNaN(parseInt(nueva)) && parseInt(nueva) > 0) {
+    localStorage.setItem('gymos-podo-meta', parseInt(nueva));
+    renderPodometro();
+  }
+}
+
+// ── Gráfico semanal ──
+function graficoSemanal(sesiones) {
+  var dias = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(); d.setDate(d.getDate() - i);
+    var key = d.toISOString().split('T')[0];
+    var label = d.toLocaleDateString('es-AR', {weekday:'short'});
+    var total = sesiones.filter(function(s){ return s.fecha === key; }).reduce(function(a,s){ return a + s.pasos; }, 0);
+    dias.push({label: label, total: total, key: key});
+  }
+  var max = Math.max.apply(null, dias.map(function(d){ return d.total; })) || 1;
+  var meta = getMetaDiaria();
+  var hoy = new Date().toISOString().split('T')[0];
+  var bars = dias.map(function(d) {
+    var pct = Math.min(100, Math.round(d.total / max * 100));
+    var color = d.total >= meta ? 'var(--green)' : d.key === hoy ? 'var(--accent)' : 'var(--bg3)';
+    var border = d.key === hoy ? '2px solid var(--accent)' : '2px solid transparent';
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">' +
+      '<div style="font-size:10px;color:var(--text3)">' + (d.total >= 1000 ? (d.total/1000).toFixed(1)+'k' : d.total || '') + '</div>' +
+      '<div style="width:100%;background:var(--bg1);border-radius:6px 6px 0 0;height:60px;display:flex;align-items:flex-end;padding:0 3px;box-sizing:border-box">' +
+        '<div style="width:100%;height:' + pct + '%;background:' + color + ';border-radius:4px 4px 0 0;min-height:' + (d.total?3:0) + 'px"></div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:' + (d.key===hoy?'var(--accent)':'var(--text3)') + ';font-weight:' + (d.key===hoy?'700':'400') + '">' + d.label + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div style="background:var(--bg2);border-radius:14px;padding:14px 12px 10px;margin-bottom:16px">' +
+    '<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">📊 Últimos 7 días</div>' +
+    '<div style="display:flex;gap:4px;align-items:flex-end">' + bars + '</div>' +
+  '</div>';
+}
+
+// ── Récord personal ──
+function recordPersonal(sesiones) {
+  if (!sesiones.length) return '';
+  var mejor = sesiones.reduce(function(a, b){ return a.pasos > b.pasos ? a : b; });
+  return '<div style="background:var(--bg2);border-radius:14px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:12px">' +
+    '<div style="font-size:28px">🏆</div>' +
+    '<div>' +
+      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Récord personal</div>' +
+      '<div style="font-size:20px;font-weight:800;color:var(--accent)">' + mejor.pasos.toLocaleString('es-AR') + ' pasos</div>' +
+      '<div style="font-size:11px;color:var(--text3)">' + formatFecha(mejor.fecha) + ' · ' + mejor.calorias + ' cal · ' + formatDistancia(calcDistancia(mejor.pasos, getPesoSocio())) + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// ── Calibración ──
+function iniciarCalibracion() {
+  // iOS requiere permiso — Android no
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(function(r) {
+      if (r === 'granted') _arrancarCalibracion();
+      else toast('⚠️ Permiso denegado');
+    }).catch(function() { toast('⚠️ No se pudo solicitar permiso'); });
+    return;
+  }
+  _arrancarCalibracion();
+}
+
+function _arrancarCalibracion() {
+  calibDeltas = [];
+  calibLastMag = null;
+  calibrando = true;
+  window.addEventListener('devicemotion', onCalibMotion);
+  renderPodometro();
+}
+
+function finalizarCalibracion() {
+  window.removeEventListener('devicemotion', onCalibMotion);
+  calibrando = false;
+  if (calibDeltas.length < 5) {
+    toast('⚠️ No se detectó movimiento. Intentá de nuevo.');
+    PASO_CALIBRADO = false;
+    renderPodometro();
+    return;
+  }
+  const sorted = calibDeltas.slice().sort(function(a,b){return a-b;});
+  const p40 = sorted[Math.floor(sorted.length * 0.40)];
+  PASO_UMBRAL = Math.max(1.2, parseFloat(p40.toFixed(2)));
+  localStorage.setItem('gymos-podo-umbral', PASO_UMBRAL);
+  PASO_CALIBRADO = true;
+  toast('✅ Calibrado correctamente');
+  renderPodometro();
+}
+
+function recalibrar() {
+  localStorage.removeItem('gymos-podo-umbral');
+  PASO_CALIBRADO = false;
+  PASO_UMBRAL = 0;
+  renderPodometro();
+}
+
+// ── Sesión ──
+function iniciarPodometro() {
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(function(r) {
+      if (r === 'granted') _arrancarSesion();
+      else toast('⚠️ Permiso denegado');
+    }).catch(function() { toast('⚠️ Error de permiso'); });
+    return;
+  }
+  _arrancarSesion();
+}
+
+function _arrancarSesion() {
+  podoSteps = 0;
+  podoStartTime = Date.now();
+  podoLastMag = null;
+  podoLastStep = 0;
+  podoActivo = true;
+  window.addEventListener('devicemotion', onPodoMotion);
+  toast('👟 Sesión iniciada');
+  renderPodometro();
+}
+
+function detenerPodometro() {
+  podoActivo = false;
+  clearTimeout(podoTimer);
+  window.removeEventListener('devicemotion', onPodoMotion);
+  if (podoSteps < 5) { toast('⚠️ Muy pocos pasos, sesión descartada'); renderPodometro(); return; }
+  const durSeg = Math.floor((Date.now() - podoStartTime) / 1000);
+  const cal = calcCalorias(podoSteps, getPesoSocio());
+  const fecha = new Date().toISOString().split('T')[0];
+  fetch('/api/socios/' + socioId + '/pasos', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pasos: podoSteps, calorias: cal, duracion_seg: durSeg, fecha: fecha})
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (data.ok) {
+      toast('✅ ' + podoSteps.toLocaleString('es-AR') + ' pasos guardados · ' + cal + ' cal');
+      podoSteps = 0;
+      podoSesionesCargadas = null;
+      cargarSesionesPasos();
+    } else { toast('❌ Error al guardar'); renderPodometro(); }
+  }).catch(function() { toast('❌ Sin conexión'); renderPodometro(); });
+}
+
+function cargarSesionesPasos() {
+  fetch('/api/socios/' + socioId + '/pasos')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      podoSesionesCargadas = data.ok ? data.sesiones : [];
+      renderLogros();
+      renderRacha();
+      renderPodometro();
+    }).catch(function() {
+      podoSesionesCargadas = [];
+      renderLogros();
+      renderRacha();
+      renderPodometro();
+    });
+}
+
+function borrarSesionPasos(id) {
+  if (!confirm('¿Borrar esta sesión?')) return;
+  fetch('/api/socios/' + socioId + '/pasos/' + id, {method: 'DELETE'})
+    .then(function() {
+      podoSesionesCargadas = null;
+      cargarSesionesPasos();
+    });
+}
+
 
 init();
 setTimeout(agregarBotonInstalar, 2000);

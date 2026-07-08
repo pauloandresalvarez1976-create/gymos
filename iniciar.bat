@@ -14,5 +14,15 @@ start "GymOS Backend" python app.py
 :: Esperar que arranque
 timeout /t 12 /nobreak >nul
 
+:: Despertar servidor Render (puede tardar ~30-60 seg si estaba dormido)
+echo Despertando servidor en la nube...
+:render_loop
+curl -s -o nul -w "%%{http_code}" https://gymos-o3yw.onrender.com | findstr "200" >nul
+if errorlevel 1 (
+  timeout /t 5 /nobreak >nul
+  goto render_loop
+)
+echo Servidor listo.
+
 :: Abrir Firefox
 start firefox "http://127.0.0.1:5001"

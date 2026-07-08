@@ -291,6 +291,37 @@ def progreso_window(sid):
 def pwa_socio(sid):
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'socio.html')
 
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory(BASE_DIR, 'sw.js', mimetype='application/javascript')
+
+@app.route('/manifest.json')
+def manifest():
+    session = Session()
+    cfg = {c.clave: c.valor for c in session.query(Config).all()}
+    session.close()
+    gym_nombre = cfg.get('gym_nombre', 'GymOS')
+    gym_logo   = cfg.get('gym_logo', '')
+    if gym_logo:
+        icons = [{'src': f'/static/logos/{gym_logo}', 'sizes': 'any', 'type': 'image/png', 'purpose': 'any maskable'}]
+    else:
+        icons = [
+            {'src': '/static/icons/icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any maskable'},
+            {'src': '/static/icons/icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any maskable'}
+        ]
+    import json
+    from flask import Response
+    data = {
+        'name': f'{gym_nombre} — Mi Membresía',
+        'short_name': gym_nombre,
+        'description': f'Tu app de membresía y progreso en {gym_nombre}',
+        'start_url': '/socio/', 'scope': '/socio/',
+        'display': 'standalone', 'orientation': 'portrait',
+        'background_color': '#0d0d0d', 'theme_color': '#FF4500',
+        'icons': icons
+    }
+    return Response(json.dumps(data), mimetype='application/manifest+json')
+
 @app.route('/api/socio/<int:sid>/pwa', methods=['GET'])
 def get_socio_pwa(sid):
     """Datos completos del socio para la PWA."""
@@ -819,26 +850,31 @@ def serve_logo(path):
 @app.route('/api/socios/<int:sid>/ficha', methods=['GET'])
 def get_ficha(sid):
     session = Session()
-    ficha = session.query(FichaMedica).filter_by(socio_id=sid).first()
+    row = session.execute(text("""
+        SELECT socio_id, fecha_nacimiento, sexo, grupo_sanguineo, peso, altura,
+               enfermedades, lesiones, medicacion, alergias, hace_ejercicio,
+               autorizacion_medica, observaciones, declaracion_aceptada, declaracion_fecha
+        FROM fichas_medicas WHERE socio_id=:sid LIMIT 1
+    """), {'sid': sid}).fetchone()
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
     result = {}
-    if ficha:
+    if row:
         result = {
-            'socio_id': ficha.socio_id,
-            'fecha_nacimiento': str(ficha.fecha_nacimiento) if ficha.fecha_nacimiento else '',
-            'sexo': ficha.sexo or '',
-            'grupo_sanguineo': ficha.grupo_sanguineo or '',
-            'peso': ficha.peso or '',
-            'altura': ficha.altura or '',
-            'enfermedades': ficha.enfermedades or '',
-            'lesiones': ficha.lesiones or '',
-            'medicacion': ficha.medicacion or '',
-            'alergias': ficha.alergias or '',
-            'hace_ejercicio': ficha.hace_ejercicio or '',
-            'autorizacion_medica': ficha.autorizacion_medica or '',
-            'observaciones': ficha.observaciones or '',
-            'declaracion_aceptada': ficha.declaracion_aceptada or 0,
-            'declaracion_fecha': str(ficha.declaracion_fecha) if ficha.declaracion_fecha else '',
+            'socio_id': row[0],
+            'fecha_nacimiento': str(row[1]) if row[1] else '',
+            'sexo': row[2] or '',
+            'grupo_sanguineo': row[3] or '',
+            'peso': row[4] or '',
+            'altura': row[5] or '',
+            'enfermedades': row[6] or '',
+            'lesiones': row[7] or '',
+            'medicacion': row[8] or '',
+            'alergias': row[9] or '',
+            'hace_ejercicio': row[10] or '',
+            'autorizacion_medica': row[11] or '',
+            'observaciones': row[12] or '',
+            'declaracion_aceptada': row[13] or 0,
+            'declaracion_fecha': str(row[14]) if row[14] else '',
         }
     session.close()
     return jsonify({'ok': True, 'ficha': result, 'declaracion_texto': cfg.get('declaracion_texto','')})
@@ -863,7 +899,8 @@ def guardar_ficha(sid):
         ficha.declaracion_aceptada = 1
         ficha.declaracion_fecha = datetime.now()
         ficha.declaracion_ip = request.remote_addr
-    ficha.updated_at = datetime.now()
+    try: ficha.updated_at = datetime.now()
+    except: pass
     session.commit(); session.close()
     return jsonify({'ok': True})
 

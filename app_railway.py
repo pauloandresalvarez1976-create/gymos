@@ -153,6 +153,14 @@ def migrate_db():
             es_inicial INTEGER DEFAULT 0,
             comentario_profe TEXT, comentario_fecha TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS pasos (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER NOT NULL,
+            fecha DATE,
+            pasos INTEGER DEFAULT 0,
+            calorias INTEGER DEFAULT 0,
+            duracion_seg INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
             id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
             fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
@@ -249,6 +257,43 @@ def progreso_window(sid):
 def pwa_socio(sid):
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'socio.html')
 
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory(BASE_DIR, 'sw.js', mimetype='application/javascript')
+
+@app.route('/manifest.json')
+def manifest():
+    session = Session()
+    cfg = {c.clave: c.valor for c in session.query(Config).all()}
+    session.close()
+    gym_nombre = cfg.get('gym_nombre', 'GymOS')
+    gym_logo   = cfg.get('gym_logo', '')
+    # Construir lista de íconos
+    if gym_logo:
+        icons = [
+            {'src': f'/static/logos/{gym_logo}', 'sizes': 'any', 'type': 'image/png', 'purpose': 'any maskable'}
+        ]
+    else:
+        icons = [
+            {'src': '/static/icons/icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any maskable'},
+            {'src': '/static/icons/icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any maskable'}
+        ]
+    data = {
+        'name': f'{gym_nombre} — Mi Membresía',
+        'short_name': gym_nombre,
+        'description': f'Tu app de membresía y progreso en {gym_nombre}',
+        'start_url': '/socio/',
+        'scope': '/socio/',
+        'display': 'standalone',
+        'orientation': 'portrait',
+        'background_color': '#0d0d0d',
+        'theme_color': '#FF4500',
+        'icons': icons
+    }
+    from flask import Response
+    import json
+    return Response(json.dumps(data), mimetype='application/manifest+json')
+
 @app.route('/api/socio/<int:sid>/pwa', methods=['GET'])
 def get_socio_pwa(sid):
     """Datos completos del socio para la PWA."""
@@ -259,6 +304,8 @@ def get_socio_pwa(sid):
     pagos = session.query(Pago).filter_by(socio_id=sid).order_by(Pago.fecha.desc()).limit(5).all()
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
     pagos_list = [{'monto': p.monto, 'fecha': str(p.fecha), 'metodo': p.metodo, 'plan': p.plan} for p in pagos]
+    ficha_row = session.execute(text("SELECT altura FROM fichas_medicas WHERE socio_id=:sid LIMIT 1"), {'sid': sid}).fetchone()
+    altura = ficha_row[0] if ficha_row and ficha_row[0] else ''
     result = socio_to_dict(s)
     result['pagos'] = pagos_list
     result['gym_nombre'] = cfg.get('gym_nombre', 'Gimnasio')
@@ -266,6 +313,7 @@ def get_socio_pwa(sid):
     result['gym_email'] = cfg.get('gym_email', '')
     result['gym_logo'] = cfg.get('gym_logo', '')
     result['qr_url'] = f'/qr/socio_{sid}.png'
+    result['altura'] = altura
     session.close()
     return jsonify({'ok': True, 'socio': result})
 
@@ -745,24 +793,48 @@ def get_ficha(sid):
 def guardar_ficha(sid):
     data = request.json
     session = Session()
-    ficha = session.query(FichaMedica).filter_by(socio_id=sid).first()
-    if not ficha:
-        ficha = FichaMedica(socio_id=sid)
-        session.add(ficha)
-    for campo in ['sexo','grupo_sanguineo','peso','altura','enfermedades',
+    try:
+        existe = session.execute(text("SELECT id FROM fichas_medicas WHERE socio_id=:sid LIMIT 1"), {'sid': sid}).fetchone()
+        campos = ['sexo','grupo_sanguineo','peso','altura','enfermedades',
                   'lesiones','medicacion','alergias','hace_ejercicio',
-                  'autorizacion_medica','observaciones']:
-        if campo in data: setattr(ficha, campo, data[campo])
-    if 'fecha_nacimiento' in data and data['fecha_nacimiento']:
-        from datetime import date as dt
-        try: ficha.fecha_nacimiento = dt.fromisoformat(data['fecha_nacimiento'])
-        except: pass
-    if data.get('declaracion_aceptada') and not ficha.declaracion_aceptada:
-        ficha.declaracion_aceptada = 1
-        ficha.declaracion_fecha = datetime.now()
-        ficha.declaracion_ip = request.remote_addr
-    ficha.updated_at = datetime.now()
-    session.commit(); session.close()
+                  'autorizacion_medica','observaciones','fecha_nacimiento']
+        vals = {c: data.get(c, '') for c in campos}
+        vals['sid'] = sid
+        decl_aceptada = 1 if data.get('declaracion_aceptada') else 0
+        decl_fecha = datetime.now() if decl_aceptada else None
+        decl_ip = request.remote_addr if decl_aceptada else None
+        vals['decl_aceptada'] = decl_aceptada
+        vals['decl_fecha'] = decl_fecha
+        vals['decl_ip'] = decl_ip
+        if existe:
+            session.execute(text("""
+                UPDATE fichas_medicas SET
+                    sexo=:sexo, grupo_sanguineo=:grupo_sanguineo, peso=:peso, altura=:altura,
+                    enfermedades=:enfermedades, lesiones=:lesiones, medicacion=:medicacion,
+                    alergias=:alergias, hace_ejercicio=:hace_ejercicio,
+                    autorizacion_medica=:autorizacion_medica, observaciones=:observaciones,
+                    fecha_nacimiento=:fecha_nacimiento,
+                    declaracion_aceptada=:decl_aceptada, declaracion_fecha=:decl_fecha,
+                    declaracion_ip=:decl_ip
+                WHERE socio_id=:sid
+            """), vals)
+        else:
+            session.execute(text("""
+                INSERT INTO fichas_medicas
+                    (socio_id, sexo, grupo_sanguineo, peso, altura, enfermedades, lesiones,
+                     medicacion, alergias, hace_ejercicio, autorizacion_medica, observaciones,
+                     fecha_nacimiento, declaracion_aceptada, declaracion_fecha, declaracion_ip)
+                VALUES
+                    (:sid, :sexo, :grupo_sanguineo, :peso, :altura, :enfermedades, :lesiones,
+                     :medicacion, :alergias, :hace_ejercicio, :autorizacion_medica, :observaciones,
+                     :fecha_nacimiento, :decl_aceptada, :decl_fecha, :decl_ip)
+            """), vals)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        session.close()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    session.close()
     return jsonify({'ok': True})
 
 # ── PROGRESO (peso, medidas, evolución) ──────────────────
@@ -846,6 +918,42 @@ def comentar_progreso(sid, rid):
         session.close(); return jsonify({'ok': False, 'error': 'Registro no encontrado'}), 404
     r.comentario_profe = data.get('comentario', '')
     r.comentario_fecha = datetime.now()
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+# ── PODÓMETRO ─────────────────────────────────────────────
+@app.route('/api/socios/<int:sid>/pasos', methods=['GET'])
+def get_pasos(sid):
+    session = Session()
+    rows = session.execute(text(
+        "SELECT id, fecha, pasos, calorias, duracion_seg FROM pasos WHERE socio_id=:sid ORDER BY fecha DESC, id DESC LIMIT 30"
+    ), {'sid': sid}).fetchall()
+    session.close()
+    return jsonify({'ok': True, 'sesiones': [
+        {'id': r[0], 'fecha': str(r[1]), 'pasos': r[2], 'calorias': r[3], 'duracion_seg': r[4]}
+        for r in rows
+    ]})
+
+@app.route('/api/socios/<int:sid>/pasos', methods=['POST'])
+def add_pasos(sid):
+    data = request.json or {}
+    pasos = int(data.get('pasos', 0))
+    calorias = int(data.get('calorias', 0))
+    duracion_seg = int(data.get('duracion_seg', 0))
+    fecha = data.get('fecha', date.today().isoformat())
+    if pasos < 1:
+        return jsonify({'ok': False, 'error': 'Sin pasos registrados'}), 400
+    session = Session()
+    session.execute(text(
+        "INSERT INTO pasos (socio_id, fecha, pasos, calorias, duracion_seg) VALUES (:sid, :f, :p, :c, :d)"
+    ), {'sid': sid, 'f': fecha, 'p': pasos, 'c': calorias, 'd': duracion_seg})
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/pasos/<int:rid>', methods=['DELETE'])
+def borrar_pasos(sid, rid):
+    session = Session()
+    session.execute(text("DELETE FROM pasos WHERE id=:id AND socio_id=:sid"), {'id': rid, 'sid': sid})
     session.commit(); session.close()
     return jsonify({'ok': True})
 
