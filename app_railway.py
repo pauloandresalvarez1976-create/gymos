@@ -161,6 +161,12 @@ def migrate_db():
             calorias INTEGER DEFAULT 0,
             duracion_seg INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS musculos_sesion (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER NOT NULL,
+            fecha DATE,
+            musculos TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
             id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
             fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
@@ -963,6 +969,54 @@ def borrar_pasos(sid, rid):
     session.execute(text("DELETE FROM pasos WHERE id=:id AND socio_id=:sid"), {'id': rid, 'sid': sid})
     session.commit(); session.close()
     return jsonify({'ok': True})
+
+# ── MÚSCULOS TRABAJADOS ──────────────────────────────────
+@app.route('/api/socios/<int:sid>/musculos', methods=['GET'])
+def get_musculos(sid):
+    session = Session()
+    rows = session.execute(text(
+        "SELECT id, fecha, musculos FROM musculos_sesion WHERE socio_id=:sid ORDER BY fecha DESC, id DESC LIMIT 60"
+    ), {'sid': sid}).fetchall()
+    session.close()
+    return jsonify({'ok': True, 'sesiones': [
+        {'id': r[0], 'fecha': str(r[1]), 'musculos': r[2].split(',') if r[2] else []}
+        for r in rows
+    ]})
+
+@app.route('/api/socios/<int:sid>/musculos', methods=['POST'])
+def add_musculos(sid):
+    data = request.json or {}
+    musculos = data.get('musculos', [])
+    fecha = data.get('fecha', date.today().isoformat())
+    if not musculos:
+        return jsonify({'ok': False, 'error': 'Sin músculos seleccionados'}), 400
+    session = Session()
+    session.execute(text(
+        "INSERT INTO musculos_sesion (socio_id, fecha, musculos) VALUES (:sid, :f, :m)"
+    ), {'sid': sid, 'f': fecha, 'm': ','.join(musculos)})
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/musculos/<int:rid>', methods=['DELETE'])
+def borrar_musculos(sid, rid):
+    session = Session()
+    session.execute(text("DELETE FROM musculos_sesion WHERE id=:id AND socio_id=:sid"), {'id': rid, 'sid': sid})
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/musculos/historial', methods=['GET'])
+def get_musculos_historial(sid):
+    """Para el admin — frecuencia de cada músculo"""
+    session = Session()
+    rows = session.execute(text(
+        "SELECT musculos FROM musculos_sesion WHERE socio_id=:sid"
+    ), {'sid': sid}).fetchall()
+    session.close()
+    frecuencia = {}
+    for r in rows:
+        for m in (r[0].split(',') if r[0] else []):
+            frecuencia[m] = frecuencia.get(m, 0) + 1
+    return jsonify({'ok': True, 'frecuencia': frecuencia})
 
 # ── ENVIAR APP AL SOCIO ──────────────────────────────────
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
