@@ -263,26 +263,33 @@ def service_worker():
 
 @app.route('/manifest.json')
 def manifest():
+    return manifest_data(None)
+
+@app.route('/manifest/<int:sid>.json')
+def manifest_socio(sid):
+    return manifest_data(sid)
+
+def manifest_data(sid):
     session = Session()
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
     session.close()
     gym_nombre = cfg.get('gym_nombre', 'GymOS')
     gym_logo   = cfg.get('gym_logo', '')
-    # Construir lista de íconos
     if gym_logo:
         icons = [
             {'src': f'/static/logos/{gym_logo}', 'sizes': 'any', 'type': 'image/png', 'purpose': 'any maskable'}
         ]
     else:
         icons = [
-            {'src': '/static/icons/icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any maskable'},
-            {'src': '/static/icons/icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any maskable'}
+            {'src': '/static/icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any maskable'},
+            {'src': '/static/icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any maskable'}
         ]
+    start_url = f'/socio/{sid}' if sid else '/socio/'
     data = {
         'name': f'{gym_nombre} — Mi Membresía',
         'short_name': gym_nombre,
         'description': f'Tu app de membresía y progreso en {gym_nombre}',
-        'start_url': '/socio/',
+        'start_url': start_url,
         'scope': '/socio/',
         'display': 'standalone',
         'orientation': 'portrait',

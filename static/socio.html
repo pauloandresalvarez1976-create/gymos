@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymOS">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" id="manifestLink" href="/manifest.json">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <title>Mi Membresía</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
@@ -475,6 +475,8 @@ const RUTINAS = {
 
 // ── APP ────────────────────────────────────────────────────────────────────────
 const socioId = window.location.pathname.split('/').pop();
+// Apuntar manifest al del socio específico para que start_url sea correcto
+document.getElementById('manifestLink').href = '/manifest/' + socioId + '.json';
 let socioData = null;
 let tabActual = 'inicio';
 let progresoData = null;
