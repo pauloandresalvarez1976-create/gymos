@@ -167,6 +167,12 @@ def migrate_db():
             fecha DATE,
             musculos TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS hidratacion (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER NOT NULL,
+            fecha DATE,
+            ml INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
             id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
             fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
@@ -1017,6 +1023,43 @@ def get_musculos_historial(sid):
         for m in (r[0].split(',') if r[0] else []):
             frecuencia[m] = frecuencia.get(m, 0) + 1
     return jsonify({'ok': True, 'frecuencia': frecuencia})
+
+# ── HIDRATACIÓN ──────────────────────────────────────────────
+@app.route('/api/socios/<int:sid>/hidratacion', methods=['GET'])
+def get_hidratacion(sid):
+    """Devuelve los registros de hidratación de los últimos 30 días"""
+    session = Session()
+    rows = session.execute(text(
+        "SELECT id, fecha, ml FROM hidratacion WHERE socio_id=:sid ORDER BY fecha DESC LIMIT 30"
+    ), {'sid': sid}).fetchall()
+    session.close()
+    return jsonify({'ok': True, 'registros': [
+        {'id': r[0], 'fecha': str(r[1]), 'ml': r[2]} for r in rows
+    ]})
+
+@app.route('/api/socios/<int:sid>/hidratacion', methods=['POST'])
+def set_hidratacion(sid):
+    """Upsert: actualiza el registro del día o lo crea"""
+    data = request.json
+    fecha = data.get('fecha', date.today().isoformat())
+    ml = int(data.get('ml', 0))
+    if ml < 0:
+        ml = 0
+    session = Session()
+    existing = session.execute(text(
+        "SELECT id FROM hidratacion WHERE socio_id=:sid AND fecha=:f"
+    ), {'sid': sid, 'f': fecha}).fetchone()
+    if existing:
+        session.execute(text(
+            "UPDATE hidratacion SET ml=:ml WHERE id=:id"
+        ), {'ml': ml, 'id': existing[0]})
+    else:
+        session.execute(text(
+            "INSERT INTO hidratacion (socio_id, fecha, ml) VALUES (:sid, :f, :ml)"
+        ), {'sid': sid, 'f': fecha, 'ml': ml})
+    session.commit(); session.close()
+    return jsonify({'ok': True, 'ml': ml})
+
 
 # ── ENVIAR APP AL SOCIO ──────────────────────────────────
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])

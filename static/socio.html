@@ -297,6 +297,23 @@
   .podo-historial-badge { font-size: 12px; color: var(--text2); background: var(--bg3); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
   .podo-historial-del { color: var(--text3); cursor: pointer; padding: 6px; font-size: 18px; }
 
+  /* HIDRATACIÓN */
+  .hidra-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .hidra-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .hidra-counter { text-align: center; padding: 10px 0 4px; }
+  .hidra-litros { font-size: 64px; font-weight: 800; color: var(--blue); line-height: 1; }
+  .hidra-litros.ok { color: var(--green); }
+  .hidra-meta-label { font-size: 13px; color: var(--text3); margin-top: 4px; }
+  .hidra-vasos { display: flex; justify-content: center; gap: 6px; margin: 14px 0; flex-wrap: wrap; }
+  .hidra-vaso { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: transform 0.15s; }
+  .hidra-vaso.lleno { background: var(--blue); box-shadow: 0 2px 8px rgba(59,130,246,0.35); }
+  .hidra-vaso.vacio { background: var(--bg3); }
+  .hidra-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 14px 0; }
+  .hidra-btn { background: var(--bg3); border: none; border-radius: 14px; padding: 12px 8px; font-size: 13px; font-weight: 700; color: var(--text1); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: background 0.15s; }
+  .hidra-btn:active { background: var(--blue); color: white; }
+  .hidra-btn-icon { font-size: 20px; }
+  .hidra-btn-del { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; text-decoration: underline; display: block; text-align: center; margin: 4px auto 12px; }
+
   /* TOAST */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; }
@@ -885,6 +902,7 @@ function renderProgreso() {
     <div id="rachaSection"></div>
     <div id="logrosSection"></div>
     <div id="musculosSection"></div>
+    <div id="hidratacionSection"></div>
     <div id="podometroSection"></div>
   `;
   renderIMC();
@@ -2350,12 +2368,14 @@ function cargarSesionesPasos() {
       renderLogros();
       renderRacha();
       renderMusculosSection();
+      cargarHidratacion();
       renderPodometro();
     }).catch(function() {
       podoSesionesCargadas = [];
       renderLogros();
       renderRacha();
       renderMusculosSection();
+      cargarHidratacion();
       renderPodometro();
     });
 }
@@ -2369,6 +2389,153 @@ function borrarSesionPasos(id) {
     });
 }
 
+
+// ── HIDRATACIÓN ────────────────────────────────────────────
+const HIDRA_META_KEY = 'gymos-hidra-meta-' + socioId;
+let hidraRegistros = null; // cache: array de {id, fecha, ml}
+
+function getHidraMeta() {
+  return parseInt(localStorage.getItem(HIDRA_META_KEY) || '2000');
+}
+function setHidraMeta(ml) {
+  localStorage.setItem(HIDRA_META_KEY, ml);
+}
+
+function getHidraHoyMl() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const reg = (hidraRegistros || []).find(r => r.fecha === hoy);
+  return reg ? reg.ml : 0;
+}
+
+async function cargarHidratacion() {
+  try {
+    const res = await fetch('/api/socios/' + socioId + '/hidratacion');
+    const data = await res.json();
+    hidraRegistros = data.ok ? data.registros : [];
+  } catch { hidraRegistros = []; }
+  renderHidratacion();
+}
+
+async function hidraGuardar(nuevoMl) {
+  const hoy = new Date().toISOString().split('T')[0];
+  const ml = Math.max(0, nuevoMl);
+  try {
+    await fetch('/api/socios/' + socioId + '/hidratacion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha: hoy, ml })
+    });
+    // Actualizar cache local
+    const idx = (hidraRegistros || []).findIndex(r => r.fecha === hoy);
+    if (idx >= 0) hidraRegistros[idx].ml = ml;
+    else { hidraRegistros = hidraRegistros || []; hidraRegistros.unshift({ fecha: hoy, ml }); }
+    renderHidratacion();
+  } catch { toast('❌ Sin conexión'); }
+}
+
+function hidraAgregar(ml) {
+  const actual = getHidraHoyMl();
+  const meta = getHidraMeta();
+  const nuevo = actual + ml;
+  hidraGuardar(nuevo);
+  if (nuevo >= meta && actual < meta) toast('💧 ¡Meta de hidratación cumplida!');
+}
+
+function hidraRestar() {
+  const actual = getHidraHoyMl();
+  if (actual <= 0) return;
+  hidraGuardar(Math.max(0, actual - 250));
+}
+
+function hidraEditarMeta() {
+  const actual = getHidraMeta();
+  const nueva = prompt('Meta diaria de hidratación (ml):\n(1 vaso = 250ml, 8 vasos = 2000ml)', actual);
+  if (nueva && !isNaN(parseInt(nueva)) && parseInt(nueva) > 0) {
+    setHidraMeta(parseInt(nueva));
+    renderHidratacion();
+  }
+}
+
+function renderHidratacion() {
+  const sec = document.getElementById('hidratacionSection');
+  if (!sec) return;
+
+  const ml = getHidraHoyMl();
+  const meta = getHidraMeta();
+  const litros = (ml / 1000).toFixed(1);
+  const pct = Math.min(100, Math.round(ml / meta * 100));
+  const vasosCompletados = Math.floor(ml / 250);
+  const vasosTotal = Math.round(meta / 250);
+  const cumplida = ml >= meta;
+  const color = cumplida ? 'var(--green)' : 'var(--blue)';
+
+  // Vasos visuales (máximo 12)
+  const vasosVis = Math.min(vasosTotal, 12);
+  let vasosHTML = '';
+  for (let i = 0; i < vasosVis; i++) {
+    const lleno = i < vasosCompletados;
+    vasosHTML += '<div class="hidra-vaso ' + (lleno ? 'lleno' : 'vacio') + '">' + (lleno ? '💧' : '○') + '</div>';
+  }
+
+  // Gráfico últimos 7 días desde hidraRegistros
+  const dias7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('es-AR', { weekday: 'short' });
+    const reg = (hidraRegistros || []).find(r => r.fecha === key);
+    dias7.push({ key, label, val: reg ? reg.ml : 0, esHoy: i === 0 });
+  }
+  const maxVal = Math.max(...dias7.map(d => d.val), meta, 1);
+
+  const bars = dias7.map(function(d) {
+    const pctBar = Math.min(100, Math.round(d.val / maxVal * 100));
+    const barColor = d.val >= meta ? 'var(--green)' : d.esHoy ? 'var(--blue)' : 'var(--bg3)';
+    const label = d.val >= 1000 ? (d.val / 1000).toFixed(1) + 'L' : (d.val ? d.val + '' : '');
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">' +
+      '<div style="font-size:9px;color:var(--text3);min-height:14px">' + label + '</div>' +
+      '<div style="width:100%;background:var(--bg1);border-radius:6px 6px 0 0;height:50px;display:flex;align-items:flex-end;padding:0 3px;box-sizing:border-box">' +
+        '<div style="width:100%;height:' + pctBar + '%;background:' + barColor + ';border-radius:4px 4px 0 0;min-height:' + (d.val ? 3 : 0) + 'px"></div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:' + (d.esHoy ? 'var(--blue)' : 'var(--text3)') + ';font-weight:' + (d.esHoy ? '700' : '400') + '">' + d.label + '</div>' +
+    '</div>';
+  }).join('');
+
+  sec.innerHTML =
+    '<div class="hidra-card">' +
+      '<div class="hidra-titulo"><i class="ti ti-droplet"></i> Hidratación diaria</div>' +
+      '<div class="hidra-counter">' +
+        '<div class="hidra-litros' + (cumplida ? ' ok' : '') + '">' + litros + 'L</div>' +
+        '<div class="hidra-meta-label">de ' + (meta / 1000).toFixed(1) + 'L · ' + pct + '%</div>' +
+      '</div>' +
+      '<div style="margin:14px 0 8px">' +
+        '<div style="background:var(--bg3);border-radius:8px;height:10px;overflow:hidden">' +
+          '<div style="width:' + pct + '%;height:100%;background:' + color + ';border-radius:8px;transition:width 0.4s"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="hidra-vasos">' + vasosHTML + '</div>' +
+      '<div class="hidra-btns">' +
+        '<button class="hidra-btn" id="hidraBtn250"><span class="hidra-btn-icon">💧</span>+250 ml<span style="font-size:10px;color:var(--text3)">1 vaso</span></button>' +
+        '<button class="hidra-btn" id="hidraBtn500"><span class="hidra-btn-icon">🥤</span>+500 ml<span style="font-size:10px;color:var(--text3)">2 vasos</span></button>' +
+        '<button class="hidra-btn" id="hidraBtn750"><span class="hidra-btn-icon">🍶</span>+750 ml<span style="font-size:10px;color:var(--text3)">botella</span></button>' +
+      '</div>' +
+      '<button class="hidra-btn-del" id="hidraBtnDeshacer">↩ Deshacer último vaso</button>' +
+      '<div style="text-align:right">' +
+        '<span id="hidraBtnMeta" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline">Cambiar meta (' + (meta/1000).toFixed(1) + 'L / ' + vasosTotal + ' vasos)</span>' +
+      '</div>' +
+      '<div style="margin-top:18px">' +
+        '<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">📊 Últimos 7 días</div>' +
+        '<div style="display:flex;gap:4px;align-items:flex-end">' + bars + '</div>' +
+      '</div>' +
+    '</div>';
+
+  // Listeners (anti-bug Android Chrome)
+  document.getElementById('hidraBtn250').onclick = function() { hidraAgregar(250); };
+  document.getElementById('hidraBtn500').onclick = function() { hidraAgregar(500); };
+  document.getElementById('hidraBtn750').onclick = function() { hidraAgregar(750); };
+  document.getElementById('hidraBtnDeshacer').onclick = hidraRestar;
+  document.getElementById('hidraBtnMeta').onclick = hidraEditarMeta;
+}
 
 init();
 setTimeout(agregarBotonInstalar, 2000);
