@@ -5,3 +5,4 @@ python-dateutil
 qrcode[pil]
 pillow
 psycopg2-binary
+requests
