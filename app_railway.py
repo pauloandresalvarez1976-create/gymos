@@ -1193,8 +1193,50 @@ def borrar_foto_progreso(sid, fid):
     return jsonify({'ok': True})
 
 
-@app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
-def enviar_app_socio(sid):
+# ── DESERCIÓN TEMPRANA ───────────────────────────────────────
+@app.route('/api/desercion', methods=['GET'])
+def get_desercion():
+    """Socios activos sin ninguna actividad en los últimos N días"""
+    dias = int(request.args.get('dias', 14))
+    session = Session()
+    socios = session.execute(text(
+        "SELECT id, nombre, telefono, objetivo FROM socios WHERE activo=true ORDER BY nombre"
+    )).fetchall()
+
+    resultado = []
+    for s in socios:
+        sid = s[0]
+        # Última actividad: máximo entre pasos, musculos y entrenamientos
+        ultima = session.execute(text("""
+            SELECT MAX(ultima) FROM (
+                SELECT MAX(fecha) as ultima FROM pasos WHERE socio_id=:sid
+                UNION ALL
+                SELECT MAX(fecha) as ultima FROM musculos_sesion WHERE socio_id=:sid
+                UNION ALL
+                SELECT MAX(fecha) as ultima FROM entrenamientos WHERE socio_id=:sid
+            ) t
+        """), {'sid': sid}).scalar()
+
+        if ultima is None:
+            dias_inactivo = 9999  # nunca registró actividad
+        else:
+            dias_inactivo = (date.today() - ultima).days
+
+        if dias_inactivo >= dias:
+            resultado.append({
+                'id': sid,
+                'nombre': s[1],
+                'telefono': s[2] or '',
+                'objetivo': s[3] or '',
+                'dias_inactivo': dias_inactivo,
+                'ultima_actividad': str(ultima) if ultima else None
+            })
+
+    session.close()
+    resultado.sort(key=lambda x: x['dias_inactivo'], reverse=True)
+    return jsonify({'ok': True, 'socios': resultado})
+
+@app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])def enviar_app_socio(sid):
     data = request.json
     email  = data.get('email','')
     nombre = data.get('nombre','Socio')

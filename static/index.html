@@ -412,6 +412,28 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .nav-badge { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #FF4444; border-radius: 50%; display: none; box-shadow: 0 0 6px #FF444480; }
 .nav-badge.show { display: block; }
 
+/* ── DESERCIÓN ── */
+.deser-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.deser-filtros { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.deser-filtro-btn { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 12px; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+.deser-filtro-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+.deser-stats { display: flex; gap: 10px; }
+.deser-stat { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px 18px; flex: 1; text-align: center; }
+.deser-stat-val { font-size: 28px; font-weight: 600; color: #f59e0b; }
+.deser-stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.deser-lista { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+.deser-lista-head { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; padding: 10px 16px; background: var(--bg2); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.deser-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; padding: 12px 16px; border-top: 0.5px solid var(--bg2); align-items: center; transition: background 0.1s; }
+.deser-row:hover { background: var(--bg2); }
+.deser-nombre { font-size: 13px; color: var(--text1); }
+.deser-tel { font-size: 12px; color: var(--text2); }
+.deser-dias-val { font-size: 13px; font-weight: 700; }
+.deser-dias-val.critico { color: #FF4444; }
+.deser-dias-val.alerta { color: #f59e0b; }
+.deser-btn-wa { background: #25D36620; border: 0.5px solid #25D36640; color: #25D366; border-radius: 8px; padding: 6px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.deser-btn-wa:hover { background: #25D36635; }
+.deser-empty { padding: 40px; text-align: center; color: var(--text3); font-size: 13px; }
+
 /* ── QR ── */
 
 .btn-scan-qr { background: var(--accent)15; border: 0.5px solid var(--accent)40; color: var(--accent); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
@@ -589,6 +611,10 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
     <div class="nav-item" id="nav-vencimientos" onclick="showScreen('vencimientos')">
       <i class="ti ti-bell"></i><div class="tip">Vencimientos</div>
       <div class="nav-badge" id="navBadgeVenc"></div>
+    </div>
+    <div class="nav-item" id="nav-desercion" onclick="showScreen('desercion')">
+      <i class="ti ti-user-off"></i><div class="tip">Deserción</div>
+      <div class="nav-badge" id="navBadgeDeser"></div>
     </div>
     <div class="nav-sep"></div>
     <div class="nav-item" id="nav-config" onclick="showScreen('config')">
@@ -1069,6 +1095,34 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       </div>
     </div>
 
+    <!-- DESERCIÓN -->
+    <div class="screen" id="screen-desercion">
+      <div class="page-head">
+        <div class="page-title">Alerta de Deserción</div>
+        <button class="btn-sec" onclick="cargarDesercion()" style="font-size:11px"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+      <div class="deser-body">
+        <div class="deser-filtros">
+          <span style="font-size:12px;color:var(--text3)">Sin actividad hace más de:</span>
+          <button class="deser-filtro-btn" data-dias="7" onclick="setFiltroDeser(7)">7 días</button>
+          <button class="deser-filtro-btn active" data-dias="14" onclick="setFiltroDeser(14)">14 días</button>
+          <button class="deser-filtro-btn" data-dias="21" onclick="setFiltroDeser(21)">21 días</button>
+          <button class="deser-filtro-btn" data-dias="30" onclick="setFiltroDeser(30)">30 días</button>
+        </div>
+        <div class="deser-stats">
+          <div class="deser-stat"><div class="deser-stat-val" id="deserTotal">-</div><div class="deser-stat-lbl">En riesgo</div></div>
+          <div class="deser-stat"><div class="deser-stat-val" id="deserCritico" style="color:#FF4444">-</div><div class="deser-stat-lbl">+30 días</div></div>
+          <div class="deser-stat"><div class="deser-stat-val" id="deserNunca" style="color:var(--text3)">-</div><div class="deser-stat-lbl">Nunca activos</div></div>
+        </div>
+        <div class="deser-lista">
+          <div class="deser-lista-head">
+            <span>Socio</span><span>Teléfono</span><span>Sin actividad</span><span>WhatsApp</span>
+          </div>
+          <div id="deserLista"><div class="deser-empty">Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- CONFIG -->
     <div class="screen" id="screen-config">
       <div class="page-head">
@@ -1280,9 +1334,9 @@ let loginUsuarioId = null;
 let loginPin = '';
 
 const PERMISOS_DEFAULT = {
-  administrador: {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,config:true},
-  encargado:     {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,config:false},
-  recepcionista: {ingreso:true,socios:true,nuevo:false,cuotas:true,agenda:false,reportes:false,vencimientos:true,config:false},
+  administrador: {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,desercion:true,config:true},
+  encargado:     {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,desercion:true,config:false},
+  recepcionista: {ingreso:true,socios:true,nuevo:false,cuotas:true,agenda:false,reportes:false,vencimientos:true,desercion:false,config:false},
 };
 
 async function mostrarLogin() {
@@ -1377,7 +1431,7 @@ async function verificarPin() {
 }
 
 function aplicarPermisos(permisos) {
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
   pantallas.forEach(p => {
     const nav = document.getElementById(`nav-${p}`);
     if (nav) nav.style.display = permisos[p] ? '' : 'none';
@@ -1388,7 +1442,7 @@ function cerrarSesionDesdeLogin() {
   // Si hay sesión activa, cerrarla y quedarse en login
   usuarioActual = null;
   document.getElementById('headerUsuario').textContent = '';
-  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'].forEach(p => {
+  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'].forEach(p => {
     const nav = document.getElementById(`nav-${p}`);
     if (nav) nav.style.display = '';
   });
@@ -1399,7 +1453,7 @@ function cerrarSesionDesdeLogin() {
 function cerrarSesion() {
   usuarioActual = null;
   // Restaurar todos los nav items
-  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'].forEach(p => {
+  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'].forEach(p => {
     const nav = document.getElementById(`nav-${p}`);
     if (nav) nav.style.display = '';
   });
@@ -1444,7 +1498,7 @@ function editarUsuario(id, nombre, rol, permisos) {
   document.getElementById('usuarioNombre').value = nombre;
   document.getElementById('usuarioPin').value = '';
   document.getElementById('usuarioRol').value = rol;
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
   pantallas.forEach(p => {
     const el = document.getElementById(`perm-${p}`);
     if (el) el.checked = permisos[p] || false;
@@ -1455,7 +1509,7 @@ function editarUsuario(id, nombre, rol, permisos) {
 function aplicarPermisosDefault() {
   const rol = document.getElementById('usuarioRol').value;
   const def = PERMISOS_DEFAULT[rol] || {};
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
   pantallas.forEach(p => {
     const el = document.getElementById(`perm-${p}`);
     if (el) el.checked = def[p] || false;
@@ -1473,7 +1527,7 @@ async function guardarUsuario() {
   const rol    = document.getElementById('usuarioRol').value;
   if (!nombre) { toast('Ingresá un nombre', 'bad'); return; }
   if (!id && !pin) { toast('Ingresá un PIN', 'bad'); return; }
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
   const permisos = {};
   pantallas.forEach(p => { permisos[p] = document.getElementById(`perm-${p}`)?.checked || false; });
   const body = {nombre, pin, rol, permisos};
@@ -1515,6 +1569,7 @@ function showScreen(name) {
   if (name === 'agenda') cargarAgenda();
   if (name === 'config') { cargarConfig(); cargarUsuariosConfig(); }
   if (name === 'vencimientos') cargarVencimientos();
+  if (name === 'desercion') cargarDesercion();
   // ficha no carga automático — se carga via abrirFicha()
   if (name === 'ingreso') cargarHistorial();
 }
@@ -2632,6 +2687,71 @@ cargarHistorial();
 
 // Fecha por defecto en formulario
 document.getElementById('fFecha').value = new Date().toISOString().split('T')[0];
+
+// ── DESERCIÓN TEMPRANA ────────────────────────────────────
+let deserDias = 14;
+
+function setFiltroDeser(dias) {
+  deserDias = dias;
+  document.querySelectorAll('.deser-filtro-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.dias) === dias);
+  });
+  cargarDesercion();
+}
+
+async function cargarDesercion() {
+  document.getElementById('deserLista').innerHTML = '<div class="deser-empty">Cargando...</div>';
+  try {
+    const res = await fetch(API + '/api/desercion?dias=' + deserDias);
+    const data = await res.json();
+    if (!data.ok) { document.getElementById('deserLista').innerHTML = '<div class="deser-empty">Error al cargar</div>'; return; }
+    renderDesercion(data.socios);
+  } catch(e) {
+    document.getElementById('deserLista').innerHTML = '<div class="deser-empty">Sin conexión</div>';
+  }
+}
+
+function renderDesercion(socios) {
+  const total = socios.length;
+  const criticos = socios.filter(s => s.dias_inactivo >= 30).length;
+  const nunca = socios.filter(s => s.ultima_actividad === null).length;
+
+  document.getElementById('deserTotal').textContent = total;
+  document.getElementById('deserCritico').textContent = criticos;
+  document.getElementById('deserNunca').textContent = nunca;
+
+  // Badge en nav
+  const badge = document.getElementById('navBadgeDeser');
+  if (badge) badge.style.display = total > 0 ? 'block' : 'none';
+
+  if (total === 0) {
+    document.getElementById('deserLista').innerHTML =
+      '<div class="deser-empty">✅ Ningún socio en riesgo con el filtro actual</div>';
+    return;
+  }
+
+  let html = '';
+  socios.forEach(function(s) {
+    const diasStr = s.dias_inactivo >= 9999 ? 'Nunca' : s.dias_inactivo + ' días';
+    const cls = s.dias_inactivo >= 30 ? 'critico' : 'alerta';
+    const tel = s.telefono ? s.telefono.replace(/\D/g, '') : '';
+    const waMsg = encodeURIComponent('Hola ' + s.nombre + '! 👋 Te extrañamos en el gimnasio. ¿Todo bien? Acordate que tu membresía sigue activa y te esperamos cuando quieras 💪');
+    const waLink = tel ? 'https://wa.me/54' + tel.replace(/^0/, '') + '?text=' + waMsg : '';
+
+    html += '<div class="deser-row">' +
+      '<div class="deser-nombre">' + s.nombre + '</div>' +
+      '<div class="deser-tel">' + (s.telefono || '-') + '</div>' +
+      '<div class="deser-dias-val ' + cls + '">' + diasStr + '</div>' +
+      '<div>' +
+        (waLink ?
+          '<a href="' + waLink + '" target="_blank" class="deser-btn-wa"><i class="ti ti-brand-whatsapp"></i> Escribir</a>' :
+          '<span style="font-size:11px;color:var(--text3)">Sin tel.</span>'
+        ) +
+      '</div>' +
+    '</div>';
+  });
+  document.getElementById('deserLista').innerHTML = html;
+}
 </script>
 </body>
 </html>
