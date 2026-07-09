@@ -183,6 +183,12 @@ def migrate_db():
             series_total INTEGER DEFAULT 0,
             duracion_seg INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS fotos_progreso (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER NOT NULL,
+            fecha DATE,
+            storage_path TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
             id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
             fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
@@ -1112,7 +1118,43 @@ def borrar_entrenamiento(sid, rid):
     session.commit(); session.close()
     return jsonify({'ok': True})
 
-# ── ENVIAR APP AL SOCIO ──────────────────────────────────
+# ── FOTOS PROGRESO ───────────────────────────────────────────
+@app.route('/api/socios/<int:sid>/fotos_progreso', methods=['GET'])
+def get_fotos_progreso(sid):
+    session = Session()
+    rows = session.execute(text(
+        "SELECT id, fecha, storage_path FROM fotos_progreso WHERE socio_id=:sid ORDER BY fecha DESC"
+    ), {'sid': sid}).fetchall()
+    session.close()
+    return jsonify({'ok': True, 'fotos': [
+        {'id': r[0], 'fecha': str(r[1]), 'storage_path': r[2]} for r in rows
+    ]})
+
+@app.route('/api/socios/<int:sid>/fotos_progreso', methods=['POST'])
+def add_foto_progreso(sid):
+    data = request.json
+    fecha = data.get('fecha', date.today().isoformat())
+    storage_path = data.get('storage_path', '')
+    session = Session()
+    session.execute(text(
+        "INSERT INTO fotos_progreso (socio_id, fecha, storage_path) VALUES (:sid, :f, :sp)"
+    ), {'sid': sid, 'f': fecha, 'sp': storage_path})
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/fotos_progreso/<int:fid>', methods=['DELETE'])
+def borrar_foto_progreso(sid, fid):
+    session = Session()
+    row = session.execute(text(
+        "SELECT storage_path FROM fotos_progreso WHERE id=:id AND socio_id=:sid"
+    ), {'id': fid, 'sid': sid}).fetchone()
+    if row:
+        session.execute(text("DELETE FROM fotos_progreso WHERE id=:id AND socio_id=:sid"), {'id': fid, 'sid': sid})
+        session.commit()
+    session.close()
+    return jsonify({'ok': True, 'storage_path': row[0] if row else None})
+
+
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
 def enviar_app_socio(sid):
     data = request.json

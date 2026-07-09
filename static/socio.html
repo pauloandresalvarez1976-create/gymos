@@ -334,6 +334,23 @@
   .entren-dia-nombre { font-size: 14px; font-weight: 700; color: var(--text1); }
   .entren-dia-ejercicios { font-size: 12px; color: var(--text3); margin-top: 3px; }
 
+  /* FOTOS PROGRESO */
+  .fotos-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .fotos-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+  .fotos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .fotos-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; cursor: pointer; background: var(--bg3); }
+  .fotos-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fotos-item-fecha { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; font-size: 9px; font-weight: 700; padding: 12px 6px 5px; text-align: center; }
+  .fotos-btn-subir { background: var(--bg3); border: 2px dashed var(--bg1); border-radius: 12px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 11px; color: var(--text3); font-weight: 600; }
+  .fotos-btn-subir i { font-size: 24px; }
+  /* Lightbox fotos */
+  .fotos-lightbox { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); z-index: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .fotos-lightbox img { max-width: 100%; max-height: 75vh; border-radius: 16px; object-fit: contain; }
+  .fotos-lightbox-fecha { color: white; font-size: 14px; font-weight: 700; margin-top: 16px; }
+  .fotos-lightbox-btns { display: flex; gap: 12px; margin-top: 16px; }
+  .fotos-lightbox-cerrar { background: var(--bg2); color: var(--text1); border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .fotos-lightbox-borrar { background: var(--red); color: white; border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
   /* HIDRATACIÓN */
   .hidra-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
   .hidra-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -945,6 +962,7 @@ function renderProgreso() {
     <div id="rachaSection"></div>
     <div id="logrosSection"></div>
     <div id="musculosSection"></div>
+    <div id="fotosProgresoSection"></div>
     <div id="hidratacionSection"></div>
     <div id="podometroSection"></div>
   `;
@@ -2411,6 +2429,7 @@ function cargarSesionesPasos() {
       renderLogros();
       renderRacha();
       renderMusculosSection();
+      cargarFotosProgreso();
       cargarHidratacion();
       renderPodometro();
     }).catch(function() {
@@ -2418,6 +2437,7 @@ function cargarSesionesPasos() {
       renderLogros();
       renderRacha();
       renderMusculosSection();
+      cargarFotosProgreso();
       cargarHidratacion();
       renderPodometro();
     });
@@ -2760,6 +2780,166 @@ function renderEntrenScreen() {
   if (btnSaltar) btnSaltar.onclick = saltarEjercicio;
   const btnSaltarDescanso = document.getElementById('entrenBtnSaltarDescanso');
   if (btnSaltarDescanso) btnSaltarDescanso.onclick = saltarDescanso;
+}
+
+// ── FOTOS PROGRESO ────────────────────────────────────────
+const SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-L6QL93Tkzrrs-nW1BsnRg_2iGO_9bX';
+const FOTOS_BUCKET = 'fotos-progreso';
+let fotosData = [];
+
+async function cargarFotosProgreso() {
+  try {
+    const res = await fetch('/api/socios/' + socioId + '/fotos_progreso');
+    const data = await res.json();
+    fotosData = data.ok ? data.fotos : [];
+  } catch { fotosData = []; }
+  renderFotosProgreso();
+}
+
+// Comprime la imagen a max 800px y calidad 0.75 → ~200-400KB
+function comprimirImagen(file, maxPx, calidad) {
+  return new Promise(function(resolve) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', calidad || 0.75);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function subirFotoProgreso(file) {
+  if (!file) return;
+  toast('⏳ Subiendo foto...');
+  try {
+    // Comprimir antes de subir
+    const blob = await comprimirImagen(file, 800, 0.75);
+    const fecha = new Date().toISOString().split('T')[0];
+    const nombreArchivo = socioId + '/' + fecha + '_' + Date.now() + '.jpg';
+
+    // Subir a Supabase Storage directo desde el browser
+    const uploadRes = await fetch(
+      SUPABASE_URL + '/storage/v1/object/' + FOTOS_BUCKET + '/' + nombreArchivo,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'image/jpeg',
+          'x-upsert': 'true'
+        },
+        body: blob
+      }
+    );
+    if (!uploadRes.ok) { toast('❌ Error al subir foto'); return; }
+
+    // Guardar path en nuestra DB
+    await fetch('/api/socios/' + socioId + '/fotos_progreso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha, storage_path: nombreArchivo })
+    });
+
+    toast('✅ Foto guardada');
+    await cargarFotosProgreso();
+  } catch(e) { toast('❌ Error: ' + e.message); }
+}
+
+async function borrarFotoProgreso(fid, storagePath) {
+  if (!confirm('¿Borrar esta foto?')) return;
+  // Borrar de Storage
+  try {
+    await fetch(
+      SUPABASE_URL + '/storage/v1/object/' + FOTOS_BUCKET + '/' + storagePath,
+      { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+    );
+  } catch(e) {}
+  // Borrar de DB
+  await fetch('/api/socios/' + socioId + '/fotos_progreso/' + fid, { method: 'DELETE' });
+  cerrarLightbox();
+  await cargarFotosProgreso();
+  toast('🗑 Foto eliminada');
+}
+
+function fotoUrl(storagePath) {
+  return SUPABASE_URL + '/storage/v1/object/public/' + FOTOS_BUCKET + '/' + storagePath;
+}
+
+function abrirLightbox(foto) {
+  const lb = document.createElement('div');
+  lb.className = 'fotos-lightbox';
+  lb.id = 'fotosLightbox';
+  const fechaLabel = new Date(foto.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+  lb.innerHTML =
+    '<img src="' + fotoUrl(foto.storage_path) + '" alt="Foto progreso">' +
+    '<div class="fotos-lightbox-fecha">📅 ' + fechaLabel + '</div>' +
+    '<div class="fotos-lightbox-btns">' +
+      '<button class="fotos-lightbox-cerrar" id="lbCerrar">Cerrar</button>' +
+      '<button class="fotos-lightbox-borrar" id="lbBorrar">🗑 Borrar</button>' +
+    '</div>';
+  document.body.appendChild(lb);
+  document.getElementById('lbCerrar').onclick = cerrarLightbox;
+  document.getElementById('lbBorrar').onclick = function() { borrarFotoProgreso(foto.id, foto.storage_path); };
+}
+
+function cerrarLightbox() {
+  const lb = document.getElementById('fotosLightbox');
+  if (lb) lb.remove();
+}
+
+function renderFotosProgreso() {
+  const sec = document.getElementById('fotosProgresoSection');
+  if (!sec) return;
+
+  // Input file oculto
+  let fotosHTML = '<div class="fotos-grid">';
+
+  // Botón subir
+  fotosHTML += '<div class="fotos-btn-subir" id="fotosSubirBtn"><i class="ti ti-camera"></i>Agregar foto</div>';
+
+  // Fotos existentes
+  fotosData.forEach(function(f, idx) {
+    const fechaLabel = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+    fotosHTML += '<div class="fotos-item" id="fotoItem' + idx + '">' +
+      '<img src="' + fotoUrl(f.storage_path) + '" alt="Foto" loading="lazy">' +
+      '<div class="fotos-item-fecha">' + fechaLabel + '</div>' +
+    '</div>';
+  });
+
+  fotosHTML += '</div>';
+
+  sec.innerHTML =
+    '<div class="fotos-card">' +
+      '<div class="fotos-titulo">' +
+        '<span><i class="ti ti-camera"></i> Fotos de progreso</span>' +
+        '<span style="font-size:11px;color:var(--text3);font-weight:400">' + fotosData.length + ' foto' + (fotosData.length !== 1 ? 's' : '') + '</span>' +
+      '</div>' +
+      '<input type="file" id="fotosFileInput" accept="image/*" capture="environment" style="display:none">' +
+      fotosHTML +
+    '</div>';
+
+  // Listeners
+  document.getElementById('fotosSubirBtn').onclick = function() {
+    document.getElementById('fotosFileInput').click();
+  };
+  document.getElementById('fotosFileInput').onchange = function(e) {
+    if (e.target.files && e.target.files[0]) subirFotoProgreso(e.target.files[0]);
+  };
+  fotosData.forEach(function(f, idx) {
+    const el = document.getElementById('fotoItem' + idx);
+    if (el) el.onclick = function() { abrirLightbox(f); };
+  });
 }
 
 // ── HIDRATACIÓN ────────────────────────────────────────────
