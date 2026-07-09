@@ -173,6 +173,16 @@ def migrate_db():
             fecha DATE,
             ml INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS entrenamientos (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER NOT NULL,
+            fecha DATE,
+            rutina_nombre TEXT,
+            dia_nombre TEXT,
+            ejercicios_total INTEGER DEFAULT 0,
+            series_total INTEGER DEFAULT 0,
+            duracion_seg INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
             id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
             fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
@@ -1060,6 +1070,47 @@ def set_hidratacion(sid):
     session.commit(); session.close()
     return jsonify({'ok': True, 'ml': ml})
 
+# ── ENTRENAMIENTOS ───────────────────────────────────────────
+@app.route('/api/socios/<int:sid>/entrenamientos', methods=['GET'])
+def get_entrenamientos(sid):
+    session = Session()
+    rows = session.execute(text(
+        """SELECT id, fecha, rutina_nombre, dia_nombre, ejercicios_total, series_total, duracion_seg
+           FROM entrenamientos WHERE socio_id=:sid ORDER BY fecha DESC, id DESC LIMIT 30"""
+    ), {'sid': sid}).fetchall()
+    session.close()
+    return jsonify({'ok': True, 'entrenamientos': [
+        {'id': r[0], 'fecha': str(r[1]), 'rutina_nombre': r[2], 'dia_nombre': r[3],
+         'ejercicios_total': r[4], 'series_total': r[5], 'duracion_seg': r[6]}
+        for r in rows
+    ]})
+
+@app.route('/api/socios/<int:sid>/entrenamientos', methods=['POST'])
+def add_entrenamiento(sid):
+    data = request.json
+    fecha = data.get('fecha', date.today().isoformat())
+    session = Session()
+    session.execute(text(
+        """INSERT INTO entrenamientos
+           (socio_id, fecha, rutina_nombre, dia_nombre, ejercicios_total, series_total, duracion_seg)
+           VALUES (:sid, :f, :rn, :dn, :et, :st, :ds)"""
+    ), {
+        'sid': sid, 'f': fecha,
+        'rn': data.get('rutina_nombre', ''),
+        'dn': data.get('dia_nombre', ''),
+        'et': int(data.get('ejercicios_total', 0)),
+        'st': int(data.get('series_total', 0)),
+        'ds': int(data.get('duracion_seg', 0))
+    })
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/socios/<int:sid>/entrenamientos/<int:rid>', methods=['DELETE'])
+def borrar_entrenamiento(sid, rid):
+    session = Session()
+    session.execute(text("DELETE FROM entrenamientos WHERE id=:id AND socio_id=:sid"), {'id': rid, 'sid': sid})
+    session.commit(); session.close()
+    return jsonify({'ok': True})
 
 # ── ENVIAR APP AL SOCIO ──────────────────────────────────
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])

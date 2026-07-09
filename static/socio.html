@@ -297,6 +297,43 @@
   .podo-historial-badge { font-size: 12px; color: var(--text2); background: var(--bg3); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
   .podo-historial-del { color: var(--text3); cursor: pointer; padding: 6px; font-size: 18px; }
 
+  /* ENTRENAMIENTO GUIADO */
+  .entren-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg0); z-index: 500; display: flex; flex-direction: column; overflow: hidden; }
+  .entren-header { padding: 20px 20px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid var(--bg3); }
+  .entren-progreso-bar-wrap { padding: 0 20px 12px; flex-shrink: 0; }
+  .entren-progreso-bar { background: var(--bg3); border-radius: 8px; height: 6px; overflow: hidden; }
+  .entren-progreso-fill { background: var(--accent); height: 100%; border-radius: 8px; transition: width 0.4s; }
+  .entren-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .entren-ejercicio-card { background: var(--bg2); border-radius: 20px; padding: 24px 20px; text-align: center; }
+  .entren-ejercicio-num { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .entren-ejercicio-nombre { font-size: 24px; font-weight: 800; color: var(--text1); line-height: 1.2; margin-bottom: 8px; }
+  .entren-ejercicio-series { font-size: 15px; color: var(--accent); font-weight: 700; background: var(--accent-bg); padding: 6px 16px; border-radius: 20px; display: inline-block; }
+  .entren-series-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .entren-serie-dot { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--bg3); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--text3); transition: all 0.2s; }
+  .entren-serie-dot.completada { background: var(--accent); border-color: var(--accent); color: white; }
+  .entren-serie-dot.actual { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .entren-descanso { background: var(--bg2); border-radius: 20px; padding: 20px; text-align: center; }
+  .entren-descanso-titulo { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .entren-timer { font-size: 72px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .entren-timer.urgente { color: var(--red); }
+  .entren-footer { padding: 16px 20px 32px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+  .entren-btn-serie { background: var(--accent); color: white; border: none; border-radius: 16px; padding: 18px; font-size: 17px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .entren-btn-serie:active { background: var(--accent2); }
+  .entren-btn-saltar { background: var(--bg2); color: var(--text2); border: none; border-radius: 14px; padding: 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .entren-btn-terminar { background: none; border: none; color: var(--text3); font-size: 13px; cursor: pointer; padding: 8px; text-decoration: underline; }
+  .entren-resumen { background: var(--bg2); border-radius: 20px; padding: 24px 20px; text-align: center; }
+  .entren-resumen-emoji { font-size: 56px; margin-bottom: 12px; }
+  .entren-resumen-titulo { font-size: 22px; font-weight: 800; margin-bottom: 16px; }
+  .entren-resumen-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .entren-resumen-stat { background: var(--bg3); border-radius: 14px; padding: 12px 8px; }
+  .entren-resumen-val { font-size: 20px; font-weight: 800; color: var(--accent); }
+  .entren-resumen-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+  /* Selector de día */
+  .entren-dia-card { background: var(--bg2); border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
+  .entren-dia-card.seleccionado { border-color: var(--accent); background: var(--accent-bg); }
+  .entren-dia-nombre { font-size: 14px; font-weight: 700; color: var(--text1); }
+  .entren-dia-ejercicios { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
   /* HIDRATACIÓN */
   .hidra-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
   .hidra-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -699,9 +736,12 @@ function renderApp() {
         ${rutina ? `
           <div class="section" style="border:none;background:transparent">
             <div class="section-body open" style="padding:0">
-              <div style="margin-bottom:16px">
+              <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
                 <div style="font-size:16px;font-weight:700">${rutina.nombre}</div>
               </div>
+              <button id="btnIniciarEntren" style="background:var(--accent);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:700;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px">
+                <i class="ti ti-player-play"></i> Iniciar entrenamiento guiado
+              </button>
               ${rutina.dias.map(d => `
                 <div class="dia-bloque">
                   <div class="dia-titulo">${d.dia}</div>
@@ -744,6 +784,9 @@ function renderApp() {
     </div>
   `;
   aplicarTema(localStorage.getItem('gymos-tema') || '');
+  // Listener botón entrenamiento (anti-bug Android)
+  const btnEntren = document.getElementById('btnIniciarEntren');
+  if (btnEntren) btnEntren.onclick = function() { abrirSelectorDia(); };
 }
 
 function cambiarTab(tab) {
@@ -2389,6 +2432,335 @@ function borrarSesionPasos(id) {
     });
 }
 
+
+// ── MODO ENTRENAMIENTO GUIADO ─────────────────────────────
+let entrenState = null; // estado global de la sesión activa
+let entrenTimer = null;
+let entrenStartTime = null;
+let entrenDescansoTimer = null;
+
+// Parsea "4 × 8-10 reps" → { series: 4, desc: "8-10 reps" }
+function parsearSeries(str) {
+  const m = str.match(/(\d+)\s*[×x]\s*(.+)/);
+  if (m) return { series: parseInt(m[1]), desc: m[2].trim() };
+  return { series: 1, desc: str };
+}
+
+function getDescansoDefault() {
+  return parseInt(localStorage.getItem('gymos-entren-descanso') || '60');
+}
+
+// ── Beep via Web Audio ──
+function beep(frecuencia, duracion, volumen) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = frecuencia || 880;
+    gain.gain.value = volumen || 0.3;
+    osc.start();
+    osc.stop(ctx.currentTime + (duracion || 0.15));
+  } catch(e) {}
+}
+
+function beepFinal() {
+  // 3 beeps ascendentes
+  setTimeout(() => beep(660, 0.1, 0.3), 0);
+  setTimeout(() => beep(880, 0.1, 0.3), 150);
+  setTimeout(() => beep(1100, 0.2, 0.4), 300);
+}
+
+// ── Selector de día ──
+function abrirSelectorDia() {
+  const rutina = socioData && socioData.objetivo ? RUTINAS[socioData.objetivo] : null;
+  if (!rutina) { toast('⚠️ Sin rutina asignada'); return; }
+
+  const screen = document.createElement('div');
+  screen.id = 'entrenSelectorScreen';
+  screen.className = 'entren-screen';
+
+  let diasHTML = rutina.dias.map((d, i) =>
+    '<div class="entren-dia-card" data-idx="' + i + '" id="entrenDia' + i + '">' +
+      '<div>' +
+        '<div class="entren-dia-nombre">' + d.dia + '</div>' +
+        '<div class="entren-dia-ejercicios">' + d.ejercicios.length + ' ejercicios</div>' +
+      '</div>' +
+      '<i class="ti ti-chevron-right" style="color:var(--text3)"></i>' +
+    '</div>'
+  ).join('');
+
+  screen.innerHTML =
+    '<div class="entren-header">' +
+      '<div style="font-size:17px;font-weight:800"><i class="ti ti-barbell"></i> Elegí el día</div>' +
+      '<button onclick="cerrarEntrenScreen()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer"><i class="ti ti-x"></i></button>' +
+    '</div>' +
+    '<div class="entren-body">' +
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:4px">' + rutina.nombre + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' + diasHTML + '</div>' +
+      '<div style="margin-top:16px;padding:14px;background:var(--bg2);border-radius:14px">' +
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">⏱ Descanso entre series</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          [30,45,60,90,120].map(s =>
+            '<button class="entren-btn-descanso-opt" data-seg="' + s + '" style="background:var(--bg3);border:2px solid ' + (getDescansoDefault()===s?'var(--accent)':'transparent') + ';border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--text1);cursor:pointer">' + s + 's</button>'
+          ).join('') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(screen);
+
+  // Listeners días
+  rutina.dias.forEach(function(d, i) {
+    document.getElementById('entrenDia' + i).onclick = function() {
+      cerrarEntrenScreen();
+      iniciarEntrenamiento(rutina, i);
+    };
+  });
+
+  // Listeners descanso
+  screen.querySelectorAll('.entren-btn-descanso-opt').forEach(function(btn) {
+    btn.onclick = function() {
+      localStorage.setItem('gymos-entren-descanso', this.dataset.seg);
+      screen.querySelectorAll('.entren-btn-descanso-opt').forEach(b => b.style.borderColor = 'transparent');
+      this.style.borderColor = 'var(--accent)';
+    };
+  });
+}
+
+function cerrarEntrenScreen() {
+  ['entrenSelectorScreen','entrenMainScreen'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+  clearInterval(entrenTimer);
+  clearTimeout(entrenDescansoTimer);
+}
+
+// ── Iniciar entrenamiento ──
+function iniciarEntrenamiento(rutina, diaIdx) {
+  const dia = rutina.dias[diaIdx];
+  const ejercicios = dia.ejercicios.map(function(e) {
+    const p = parsearSeries(e.s);
+    return { nombre: e.n, seriesTotal: p.series, seriesDesc: p.desc, seriesHechas: 0 };
+  });
+
+  entrenState = {
+    rutina_nombre: rutina.nombre,
+    dia_nombre: dia.dia,
+    ejercicios: ejercicios,
+    ejercicioIdx: 0,
+    fase: 'serie',        // 'serie' | 'descanso' | 'fin'
+    seriesHechasTotales: 0,
+    descansoSeg: 0,
+    descansoTotal: getDescansoDefault(),
+  };
+  entrenStartTime = Date.now();
+
+  const screen = document.createElement('div');
+  screen.id = 'entrenMainScreen';
+  screen.className = 'entren-screen';
+  document.body.appendChild(screen);
+
+  renderEntrenScreen();
+  entrenTimer = setInterval(tickEntren, 1000);
+}
+
+function tickEntren() {
+  if (!entrenState) return;
+  if (entrenState.fase === 'descanso') {
+    entrenState.descansoSeg--;
+    if (entrenState.descansoSeg <= 0) {
+      entrenState.fase = 'serie';
+      beepFinal();
+      toast('¡A la siguiente serie!');
+    }
+    renderEntrenScreen();
+  }
+}
+
+function serieCompletada() {
+  if (!entrenState || entrenState.fase !== 'serie') return;
+  beep(880, 0.1, 0.3);
+  const ej = entrenState.ejercicios[entrenState.ejercicioIdx];
+  ej.seriesHechas++;
+  entrenState.seriesHechasTotales++;
+
+  if (ej.seriesHechas >= ej.seriesTotal) {
+    // Ejercicio completo → siguiente ejercicio
+    entrenState.ejercicioIdx++;
+    if (entrenState.ejercicioIdx >= entrenState.ejercicios.length) {
+      // ¡Fin del entrenamiento!
+      entrenState.fase = 'fin';
+      clearInterval(entrenTimer);
+      beepFinal();
+      renderEntrenScreen();
+      guardarEntrenamiento();
+      return;
+    }
+    entrenState.fase = 'descanso';
+    entrenState.descansoSeg = entrenState.descansoTotal;
+    toast('✅ Ejercicio completado — descansá');
+  } else {
+    // Serie hecha → descanso
+    entrenState.fase = 'descanso';
+    entrenState.descansoSeg = entrenState.descansoTotal;
+  }
+  renderEntrenScreen();
+}
+
+function saltarDescanso() {
+  if (!entrenState) return;
+  entrenState.descansoSeg = 0;
+  entrenState.fase = 'serie';
+  renderEntrenScreen();
+}
+
+function saltarEjercicio() {
+  if (!entrenState) return;
+  const ej = entrenState.ejercicios[entrenState.ejercicioIdx];
+  // Marcar series restantes como hechas
+  entrenState.seriesHechasTotales += (ej.seriesTotal - ej.seriesHechas);
+  ej.seriesHechas = ej.seriesTotal;
+  entrenState.ejercicioIdx++;
+  if (entrenState.ejercicioIdx >= entrenState.ejercicios.length) {
+    entrenState.fase = 'fin';
+    clearInterval(entrenTimer);
+    beepFinal();
+    renderEntrenScreen();
+    guardarEntrenamiento();
+    return;
+  }
+  entrenState.fase = 'serie';
+  renderEntrenScreen();
+}
+
+function terminarAntesEntren() {
+  if (!confirm('¿Terminar el entrenamiento ahora?')) return;
+  entrenState.fase = 'fin';
+  clearInterval(entrenTimer);
+  renderEntrenScreen();
+  guardarEntrenamiento();
+}
+
+async function guardarEntrenamiento() {
+  if (!entrenState) return;
+  const durSeg = Math.floor((Date.now() - entrenStartTime) / 1000);
+  try {
+    await fetch('/api/socios/' + socioId + '/entrenamientos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fecha: new Date().toISOString().split('T')[0],
+        rutina_nombre: entrenState.rutina_nombre,
+        dia_nombre: entrenState.dia_nombre,
+        ejercicios_total: entrenState.ejercicios.length,
+        series_total: entrenState.seriesHechasTotales,
+        duracion_seg: durSeg
+      })
+    });
+  } catch(e) { console.log('No se pudo guardar el entrenamiento:', e); }
+}
+
+function renderEntrenScreen() {
+  const screen = document.getElementById('entrenMainScreen');
+  if (!screen || !entrenState) return;
+  const s = entrenState;
+
+  if (s.fase === 'fin') {
+    const durSeg = Math.floor((Date.now() - entrenStartTime) / 1000);
+    const dur = formatDuracion(durSeg);
+    screen.innerHTML =
+      '<div class="entren-header">' +
+        '<div style="font-size:15px;font-weight:700;color:var(--accent)">Entrenamiento finalizado</div>' +
+      '</div>' +
+      '<div class="entren-body" style="justify-content:center;align-items:center">' +
+        '<div class="entren-resumen">' +
+          '<div class="entren-resumen-emoji">🏆</div>' +
+          '<div class="entren-resumen-titulo">¡Excelente trabajo!</div>' +
+          '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">' + s.dia_nombre + '</div>' +
+          '<div class="entren-resumen-stats">' +
+            '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + s.ejercicios.length + '</div><div class="entren-resumen-label">Ejercicios</div></div>' +
+            '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + s.seriesHechasTotales + '</div><div class="entren-resumen-label">Series</div></div>' +
+            '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + dur + '</div><div class="entren-resumen-label">Duración</div></div>' +
+          '</div>' +
+          '<button onclick="cerrarEntrenScreen()" style="background:var(--accent);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:700;width:100%;cursor:pointer">Cerrar</button>' +
+        '</div>' +
+      '</div>';
+    return;
+  }
+
+  const totalEj = s.ejercicios.length;
+  const idxActual = s.ejercicioIdx;
+  const pctProgreso = Math.round(idxActual / totalEj * 100);
+  const ej = s.ejercicios[idxActual];
+
+  // Dots de series
+  let dotsHTML = '';
+  for (let i = 0; i < ej.seriesTotal; i++) {
+    const cls = i < ej.seriesHechas ? 'completada' : i === ej.seriesHechas ? 'actual' : '';
+    dotsHTML += '<div class="entren-serie-dot ' + cls + '">' + (i + 1) + '</div>';
+  }
+
+  const esFase = s.fase === 'serie';
+
+  screen.innerHTML =
+    '<div class="entren-header">' +
+      '<div>' +
+        '<div style="font-size:12px;color:var(--text3)">' + s.rutina_nombre + '</div>' +
+        '<div style="font-size:14px;font-weight:700">' + s.dia_nombre + '</div>' +
+      '</div>' +
+      '<button onclick="terminarAntesEntren()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Terminar</button>' +
+    '</div>' +
+    '<div class="entren-progreso-bar-wrap">' +
+      '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px">' +
+        '<span>Ejercicio ' + (idxActual + 1) + ' de ' + totalEj + '</span>' +
+        '<span>' + pctProgreso + '%</span>' +
+      '</div>' +
+      '<div class="entren-progreso-bar"><div class="entren-progreso-fill" style="width:' + pctProgreso + '%"></div></div>' +
+    '</div>' +
+    '<div class="entren-body">' +
+      // Card ejercicio actual
+      '<div class="entren-ejercicio-card">' +
+        '<div class="entren-ejercicio-num">Ejercicio ' + (idxActual + 1) + ' / ' + totalEj + '</div>' +
+        '<div class="entren-ejercicio-nombre">' + ej.nombre + '</div>' +
+        '<div class="entren-ejercicio-series">' + ej.seriesTotal + ' × ' + ej.seriesDesc + '</div>' +
+        '<div class="entren-series-grid">' + dotsHTML + '</div>' +
+      '</div>' +
+      // Descanso o siguiente
+      (s.fase === 'descanso' ?
+        '<div class="entren-descanso">' +
+          '<div class="entren-descanso-titulo">⏱ Descansando...</div>' +
+          '<div class="entren-timer' + (s.descansoSeg <= 5 ? ' urgente' : '') + '">' + s.descansoSeg + '</div>' +
+          '<div style="font-size:12px;color:var(--text3);margin-top:6px">Serie ' + (ej.seriesHechas + 1) + ' de ' + ej.seriesTotal + ' a continuación</div>' +
+        '</div>' : '') +
+      // Ejercicio siguiente (preview)
+      (idxActual + 1 < totalEj ?
+        '<div style="background:var(--bg2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">' +
+          '<div>' +
+            '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">A continuación</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:3px">' + s.ejercicios[idxActual + 1].nombre + '</div>' +
+          '</div>' +
+          '<i class="ti ti-chevron-right" style="color:var(--text3)"></i>' +
+        '</div>' : '') +
+    '</div>' +
+    '<div class="entren-footer">' +
+      (esFase ?
+        '<button class="entren-btn-serie" id="entrenBtnSerie"><i class="ti ti-check"></i> Serie ' + (ej.seriesHechas + 1) + ' completada</button>' +
+        '<button class="entren-btn-saltar" id="entrenBtnSaltar">Saltar ejercicio</button>' :
+        '<button class="entren-btn-serie" id="entrenBtnSaltarDescanso"><i class="ti ti-player-skip-forward"></i> Saltar descanso</button>'
+      ) +
+    '</div>';
+
+  // Listeners (anti-bug Android)
+  const btnSerie = document.getElementById('entrenBtnSerie');
+  if (btnSerie) btnSerie.onclick = serieCompletada;
+  const btnSaltar = document.getElementById('entrenBtnSaltar');
+  if (btnSaltar) btnSaltar.onclick = saltarEjercicio;
+  const btnSaltarDescanso = document.getElementById('entrenBtnSaltarDescanso');
+  if (btnSaltarDescanso) btnSaltarDescanso.onclick = saltarDescanso;
+}
 
 // ── HIDRATACIÓN ────────────────────────────────────────────
 const HIDRA_META_KEY = 'gymos-hidra-meta-' + socioId;
