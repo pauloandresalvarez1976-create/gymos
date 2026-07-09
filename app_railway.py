@@ -1200,7 +1200,7 @@ def get_desercion():
     dias = int(request.args.get('dias', 14))
     session = Session()
     socios = session.execute(text(
-        "SELECT id, nombre, telefono, objetivo FROM socios WHERE activo=true ORDER BY nombre"
+        "SELECT id, nombre, telefono, objetivo, email FROM socios WHERE activo=true ORDER BY nombre"
     )).fetchall()
 
     resultado = []
@@ -1228,6 +1228,7 @@ def get_desercion():
                 'nombre': s[1],
                 'telefono': s[2] or '',
                 'objetivo': s[3] or '',
+                'email': s[4] or '',
                 'dias_inactivo': dias_inactivo,
                 'ultima_actividad': str(ultima) if ultima else None
             })
@@ -1236,7 +1237,52 @@ def get_desercion():
     resultado.sort(key=lambda x: x['dias_inactivo'], reverse=True)
     return jsonify({'ok': True, 'socios': resultado})
 
-@app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])def enviar_app_socio(sid):
+@app.route('/api/desercion/email', methods=['POST'])
+def enviar_email_desercion():
+    """Envía email de reactivación a un socio inactivo"""
+    data = request.json
+    email_destino = data.get('email', '')
+    nombre = data.get('nombre', 'Socio')
+    dias = data.get('dias_inactivo', 0)
+    if not email_destino:
+        return jsonify({'ok': False, 'error': 'Sin email'}), 400
+
+    session = Session()
+    cfg = {c.clave: c.valor for c in session.query(Config).all()}
+    session.close()
+
+    gym_nombre = cfg.get('nombre', 'Tu Gimnasio')
+    dias_str = 'un tiempo' if dias >= 9999 else str(dias) + ' días'
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
+      <div style="background:#FF4500;padding:24px;text-align:center">
+        <h2 style="color:white;margin:0">💪 {gym_nombre}</h2>
+      </div>
+      <div style="padding:28px">
+        <h3 style="color:#FF4500">¡Te extrañamos, {nombre}!</h3>
+        <p style="color:#ccc;line-height:1.6">Hace {dias_str} que no te vemos por el gimnasio y queríamos saber cómo estás.</p>
+        <p style="color:#ccc;line-height:1.6">Tu membresía sigue activa y tu lugar te espera. ¡Volver a la rutina es más fácil de lo que creés!</p>
+        <div style="background:#1a1a1a;border-radius:8px;padding:16px;margin:20px 0;border-left:3px solid #FF4500">
+          <p style="color:#FF4500;margin:0;font-weight:bold">💡 Recordá que tenés acceso a:</p>
+          <ul style="color:#ccc;margin:8px 0 0 0">
+            <li>Tu plan de entrenamiento personalizado</li>
+            <li>Seguimiento de tu progreso</li>
+            <li>Registro de hidratación y actividad</li>
+          </ul>
+        </div>
+        <p style="color:#999;font-size:12px;margin-top:24px">Cualquier consulta respondé este mail o contactanos directamente. ¡Te esperamos! 🏋️</p>
+      </div>
+    </div>
+    """
+    try:
+        enviar_email(email_destino, f'¡Te extrañamos en {gym_nombre}! 💪', html, None)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
+def enviar_app_socio(sid):
     data = request.json
     email  = data.get('email','')
     nombre = data.get('nombre','Socio')

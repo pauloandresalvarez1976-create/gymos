@@ -430,8 +430,8 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .deser-dias-val { font-size: 13px; font-weight: 700; }
 .deser-dias-val.critico { color: #FF4444; }
 .deser-dias-val.alerta { color: #f59e0b; }
-.deser-btn-wa { background: #25D36620; border: 0.5px solid #25D36640; color: #25D366; border-radius: 8px; padding: 6px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-.deser-btn-wa:hover { background: #25D36635; }
+.deser-btn-email { background: var(--accent)20; border: 0.5px solid var(--accent)40; color: var(--accent); border-radius: 8px; padding: 6px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.deser-btn-email:hover { background: var(--accent)35; }
 .deser-empty { padding: 40px; text-align: center; color: var(--text3); font-size: 13px; }
 
 /* ── QR ── */
@@ -1116,7 +1116,7 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
         </div>
         <div class="deser-lista">
           <div class="deser-lista-head">
-            <span>Socio</span><span>Teléfono</span><span>Sin actividad</span><span>WhatsApp</span>
+            <span>Socio</span><span>Email</span><span>Sin actividad</span><span>Acción</span>
           </div>
           <div id="deserLista"><div class="deser-empty">Cargando...</div></div>
         </div>
@@ -2720,7 +2720,6 @@ function renderDesercion(socios) {
   document.getElementById('deserCritico').textContent = criticos;
   document.getElementById('deserNunca').textContent = nunca;
 
-  // Badge en nav
   const badge = document.getElementById('navBadgeDeser');
   if (badge) badge.style.display = total > 0 ? 'block' : 'none';
 
@@ -2731,26 +2730,50 @@ function renderDesercion(socios) {
   }
 
   let html = '';
-  socios.forEach(function(s) {
+  socios.forEach(function(s, idx) {
     const diasStr = s.dias_inactivo >= 9999 ? 'Nunca' : s.dias_inactivo + ' días';
     const cls = s.dias_inactivo >= 30 ? 'critico' : 'alerta';
-    const tel = s.telefono ? s.telefono.replace(/\D/g, '') : '';
-    const waMsg = encodeURIComponent('Hola ' + s.nombre + '! 👋 Te extrañamos en el gimnasio. ¿Todo bien? Acordate que tu membresía sigue activa y te esperamos cuando quieras 💪');
-    const waLink = tel ? 'https://wa.me/54' + tel.replace(/^0/, '') + '?text=' + waMsg : '';
-
     html += '<div class="deser-row">' +
       '<div class="deser-nombre">' + s.nombre + '</div>' +
-      '<div class="deser-tel">' + (s.telefono || '-') + '</div>' +
+      '<div class="deser-tel" style="font-size:11px">' + (s.email || '-') + '</div>' +
       '<div class="deser-dias-val ' + cls + '">' + diasStr + '</div>' +
       '<div>' +
-        (waLink ?
-          '<a href="' + waLink + '" target="_blank" class="deser-btn-wa"><i class="ti ti-brand-whatsapp"></i> Escribir</a>' :
-          '<span style="font-size:11px;color:var(--text3)">Sin tel.</span>'
+        (s.email ?
+          '<button class="deser-btn-email" id="deserEmailBtn' + idx + '"><i class="ti ti-mail"></i> Enviar</button>' :
+          '<span style="font-size:11px;color:var(--text3)">Sin email</span>'
         ) +
       '</div>' +
     '</div>';
   });
   document.getElementById('deserLista').innerHTML = html;
+
+  // Listeners de email
+  socios.forEach(function(s, idx) {
+    const btn = document.getElementById('deserEmailBtn' + idx);
+    if (!btn) return;
+    btn.onclick = async function() {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Enviando...';
+      try {
+        const res = await fetch(API + '/api/desercion/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: s.email, nombre: s.nombre, dias_inactivo: s.dias_inactivo })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          btn.innerHTML = '<i class="ti ti-check"></i> Enviado';
+          btn.style.color = '#00FF88';
+        } else {
+          btn.innerHTML = '<i class="ti ti-x"></i> Error';
+          btn.disabled = false;
+        }
+      } catch(e) {
+        btn.innerHTML = '<i class="ti ti-x"></i> Error';
+        btn.disabled = false;
+      }
+    };
+  });
 }
 </script>
 </body>
