@@ -3,10 +3,15 @@ from flask_cors import CORS
 from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import date, datetime
-import os, base64, json, io, smtplib
+import os, base64, json, io, smtplib, requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import qrcode
+
+# Supabase Storage
+SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
+SUPABASE_SECRET = os.environ.get('SUPABASE_SECRET', '')
+FOTOS_BUCKET = 'fotos-progreso'
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
@@ -1130,17 +1135,45 @@ def get_fotos_progreso(sid):
         {'id': r[0], 'fecha': str(r[1]), 'storage_path': r[2]} for r in rows
     ]})
 
-@app.route('/api/socios/<int:sid>/fotos_progreso', methods=['POST'])
-def add_foto_progreso(sid):
+@app.route('/api/socios/<int:sid>/fotos_progreso/upload', methods=['POST'])
+def upload_foto_progreso(sid):
+    """Recibe imagen base64 del frontend, la sube a Supabase Storage, guarda el path en DB"""
     data = request.json
+    imagen_b64 = data.get('imagen_b64', '')
     fecha = data.get('fecha', date.today().isoformat())
-    storage_path = data.get('storage_path', '')
+    if not imagen_b64:
+        return jsonify({'ok': False, 'error': 'Sin imagen'}), 400
+
+    # Decodificar base64
+    if ',' in imagen_b64:
+        imagen_b64 = imagen_b64.split(',')[1]
+    imagen_bytes = base64.b64decode(imagen_b64)
+
+    # Path en Storage: socio_id/fecha_timestamp.jpg
+    import time
+    nombre_archivo = str(sid) + '/' + fecha + '_' + str(int(time.time())) + '.jpg'
+    storage_url = SUPABASE_URL + '/storage/v1/object/' + FOTOS_BUCKET + '/' + nombre_archivo
+
+    # Subir a Supabase Storage
+    headers = {
+        'Authorization': 'Bearer ' + SUPABASE_SECRET,
+        'Content-Type': 'image/jpeg',
+        'x-upsert': 'true'
+    }
+    try:
+        resp = requests.post(storage_url, headers=headers, data=imagen_bytes, timeout=30)
+        if resp.status_code not in (200, 201):
+            return jsonify({'ok': False, 'error': resp.text}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+    # Guardar path en DB
     session = Session()
     session.execute(text(
         "INSERT INTO fotos_progreso (socio_id, fecha, storage_path) VALUES (:sid, :f, :sp)"
-    ), {'sid': sid, 'f': fecha, 'sp': storage_path})
+    ), {'sid': sid, 'f': fecha, 'sp': nombre_archivo})
     session.commit(); session.close()
-    return jsonify({'ok': True})
+    return jsonify({'ok': True, 'storage_path': nombre_archivo})
 
 @app.route('/api/socios/<int:sid>/fotos_progreso/<int:fid>', methods=['DELETE'])
 def borrar_foto_progreso(sid, fid):
@@ -1149,10 +1182,15 @@ def borrar_foto_progreso(sid, fid):
         "SELECT storage_path FROM fotos_progreso WHERE id=:id AND socio_id=:sid"
     ), {'id': fid, 'sid': sid}).fetchone()
     if row:
+        # Borrar de Supabase Storage
+        storage_url = SUPABASE_URL + '/storage/v1/object/' + FOTOS_BUCKET + '/' + row[0]
+        try:
+            requests.delete(storage_url, headers={'Authorization': 'Bearer ' + SUPABASE_SECRET}, timeout=10)
+        except: pass
         session.execute(text("DELETE FROM fotos_progreso WHERE id=:id AND socio_id=:sid"), {'id': fid, 'sid': sid})
         session.commit()
     session.close()
-    return jsonify({'ok': True, 'storage_path': row[0] if row else None})
+    return jsonify({'ok': True})
 
 
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])

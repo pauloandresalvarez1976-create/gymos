@@ -2784,7 +2784,6 @@ function renderEntrenScreen() {
 
 // ── FOTOS PROGRESO ────────────────────────────────────────
 const SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_-L6QL93Tkzrrs-nW1BsnRg_2iGO_9bX';
 const FOTOS_BUCKET = 'fotos-progreso';
 let fotosData = [];
 
@@ -2822,35 +2821,23 @@ function comprimirImagen(file, maxPx, calidad) {
 
 async function subirFotoProgreso(file) {
   if (!file) return;
-  toast('⏳ Subiendo foto...');
+  toast('⏳ Comprimiendo foto...');
   try {
-    // Comprimir antes de subir
     const blob = await comprimirImagen(file, 800, 0.75);
+    const base64 = await new Promise(function(resolve) {
+      const reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.readAsDataURL(blob);
+    });
     const fecha = new Date().toISOString().split('T')[0];
-    const nombreArchivo = socioId + '/' + fecha + '_' + Date.now() + '.jpg';
-
-    // Subir a Supabase Storage directo desde el browser
-    const uploadRes = await fetch(
-      SUPABASE_URL + '/storage/v1/object/' + FOTOS_BUCKET + '/' + nombreArchivo,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Content-Type': 'image/jpeg',
-          'x-upsert': 'true'
-        },
-        body: blob
-      }
-    );
-    if (!uploadRes.ok) { toast('❌ Error al subir foto'); return; }
-
-    // Guardar path en nuestra DB
-    await fetch('/api/socios/' + socioId + '/fotos_progreso', {
+    toast('⏳ Subiendo foto...');
+    const res = await fetch('/api/socios/' + socioId + '/fotos_progreso/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fecha, storage_path: nombreArchivo })
+      body: JSON.stringify({ imagen_b64: base64, fecha })
     });
-
+    const data = await res.json();
+    if (!data.ok) { toast('❌ Error: ' + (data.error || 'desconocido')); return; }
     toast('✅ Foto guardada');
     await cargarFotosProgreso();
   } catch(e) { toast('❌ Error: ' + e.message); }
@@ -2858,14 +2845,6 @@ async function subirFotoProgreso(file) {
 
 async function borrarFotoProgreso(fid, storagePath) {
   if (!confirm('¿Borrar esta foto?')) return;
-  // Borrar de Storage
-  try {
-    await fetch(
-      SUPABASE_URL + '/storage/v1/object/' + FOTOS_BUCKET + '/' + storagePath,
-      { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-    );
-  } catch(e) {}
-  // Borrar de DB
   await fetch('/api/socios/' + socioId + '/fotos_progreso/' + fid, { method: 'DELETE' });
   cerrarLightbox();
   await cargarFotosProgreso();
