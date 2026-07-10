@@ -351,6 +351,21 @@
   .fotos-lightbox-cerrar { background: var(--bg2); color: var(--text1); border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
   .fotos-lightbox-borrar { background: var(--red); color: white; border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
 
+  /* COMPARATIVA ANÓNIMA */
+  .comp-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  .comp-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .comp-subtitulo { font-size: 11px; color: var(--text3); margin-bottom: 18px; }
+  .comp-metrica { margin-bottom: 18px; }
+  .comp-metrica-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .comp-metrica-label { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .comp-metrica-valor { font-size: 11px; color: var(--text3); }
+  .comp-barra-wrap { background: var(--bg3); border-radius: 8px; height: 10px; overflow: visible; position: relative; }
+  .comp-barra-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; position: relative; }
+  .comp-barra-marker { position: absolute; right: -1px; top: -3px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--bg2); }
+  .comp-percentil { font-size: 12px; font-weight: 700; margin-top: 5px; }
+  .comp-mensaje { font-size: 12px; color: var(--text3); margin-top: 4px; font-style: italic; }
+  .comp-loading { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; }
+
   /* HIDRATACIÓN */
   .hidra-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
   .hidra-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -963,6 +978,7 @@ function renderProgreso() {
     <div id="logrosSection"></div>
     <div id="musculosSection"></div>
     <div id="fotosProgresoSection"></div>
+    <div id="comparativaSection"></div>
     <div id="hidratacionSection"></div>
     <div id="podometroSection"></div>
   `;
@@ -2430,6 +2446,7 @@ function cargarSesionesPasos() {
       renderRacha();
       renderMusculosSection();
       cargarFotosProgreso();
+      cargarComparativa();
       cargarHidratacion();
       renderPodometro();
     }).catch(function() {
@@ -2438,6 +2455,7 @@ function cargarSesionesPasos() {
       renderRacha();
       renderMusculosSection();
       cargarFotosProgreso();
+      cargarComparativa();
       cargarHidratacion();
       renderPodometro();
     });
@@ -2780,6 +2798,91 @@ function renderEntrenScreen() {
   if (btnSaltar) btnSaltar.onclick = saltarEjercicio;
   const btnSaltarDescanso = document.getElementById('entrenBtnSaltarDescanso');
   if (btnSaltarDescanso) btnSaltarDescanso.onclick = saltarDescanso;
+}
+
+// ── COMPARATIVA ANÓNIMA ──────────────────────────────────
+async function cargarComparativa() {
+  const sec = document.getElementById('comparativaSection');
+  if (!sec) return;
+  sec.innerHTML = '<div class="comp-card"><div class="comp-loading">📊 Calculando tu posición...</div></div>';
+  try {
+    const res = await fetch('/api/socios/' + socioId + '/comparativa');
+    const data = await res.json();
+    if (data.ok) renderComparativa(data.comparativa);
+    else sec.innerHTML = '';
+  } catch(e) { sec.innerHTML = ''; }
+}
+
+function compColor(pct) {
+  if (pct >= 75) return 'var(--green)';
+  if (pct >= 40) return 'var(--blue)';
+  return '#f59e0b';
+}
+
+function compMensaje(pct, label) {
+  if (pct >= 90) return '🔥 ¡Estás entre los mejores del gimnasio!';
+  if (pct >= 75) return '💪 ¡Muy por encima del promedio!';
+  if (pct >= 50) return '👍 Por encima de la mitad del gimnasio.';
+  if (pct >= 25) return '📈 Podés mejorar, ¡vamos!';
+  return '🚀 ¡Arrancá y superá al resto!';
+}
+
+function renderComparativa(comp) {
+  const sec = document.getElementById('comparativaSection');
+  if (!sec) return;
+
+  const metricas = [
+    { key: 'pasos', icon: '👟', unidad: ' pasos' },
+    { key: 'entrenamientos', icon: '🏋️', unidad: ' sesiones' },
+    { key: 'hidratacion', icon: '💧', unidad: 'L/día' },
+    { key: 'actividad', icon: '📅', unidad: ' días' }
+  ];
+
+  let metricasHTML = '';
+  metricas.forEach(function(m) {
+    const d = comp[m.key];
+    if (!d || d.total_socios < 2) return; // no mostrar si no hay suficientes datos
+    const pct = d.percentil;
+    const color = compColor(pct);
+    const msg = compMensaje(pct);
+    metricasHTML +=
+      '<div class="comp-metrica">' +
+        '<div class="comp-metrica-header">' +
+          '<div class="comp-metrica-label">' + m.icon + ' ' + d.label + '</div>' +
+          '<div class="comp-metrica-valor">' + d.valor + m.unidad + '</div>' +
+        '</div>' +
+        '<div class="comp-barra-wrap">' +
+          '<div class="comp-barra-fill" style="width:' + pct + '%;background:' + color + '">' +
+            '<div class="comp-barra-marker" style="background:' + color + '"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="comp-percentil" style="color:' + color + '">Top ' + (100 - pct) + '%</div>' +
+        '<div class="comp-mensaje">' + msg + '</div>' +
+      '</div>';
+  });
+
+  if (!metricasHTML) {
+    sec.innerHTML = '';
+    return;
+  }
+
+  // Promedio general de percentiles
+  const vals = ['pasos','entrenamientos','hidratacion','actividad']
+    .filter(k => comp[k] && comp[k].total_socios >= 2)
+    .map(k => comp[k].percentil);
+  const promedio = vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length) : 0;
+
+  sec.innerHTML =
+    '<div class="comp-card">' +
+      '<div class="comp-titulo"><i class="ti ti-chart-bar"></i> Tu posición en el gimnasio</div>' +
+      '<div class="comp-subtitulo">Comparativa anónima con los demás socios · Sin revelar identidades</div>' +
+      metricasHTML +
+      '<div style="border-top:1px solid var(--bg3);margin-top:8px;padding-top:14px;text-align:center">' +
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Promedio general</div>' +
+        '<div style="font-size:28px;font-weight:800;color:' + compColor(promedio) + '">Top ' + (100 - promedio) + '%</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">del gimnasio en todas las métricas</div>' +
+      '</div>' +
+    '</div>';
 }
 
 // ── FOTOS PROGRESO ────────────────────────────────────────

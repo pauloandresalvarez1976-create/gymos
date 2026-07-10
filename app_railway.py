@@ -1281,9 +1281,117 @@ def enviar_email_desercion():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# ── COMPARATIVA ANÓNIMA ──────────────────────────────────────
+@app.route('/api/socios/<int:sid>/comparativa', methods=['GET'])
+def get_comparativa(sid):
+    """Percentil del socio vs el resto en pasos, entrenamientos y progreso"""
+    session = Session()
+    hoy = date.today()
+    hace7 = hoy - __import__('datetime').timedelta(days=7)
+    hace30 = hoy - __import__('datetime').timedelta(days=30)
+
+    resultado = {}
+
+    # ── Pasos últimos 7 días ──
+    pasos_socio = session.execute(text(
+        "SELECT COALESCE(SUM(pasos),0) FROM pasos WHERE socio_id=:sid AND fecha>=:f"
+    ), {'sid': sid, 'f': hace7}).scalar() or 0
+
+    todos_pasos = session.execute(text(
+        "SELECT socio_id, COALESCE(SUM(pasos),0) as total FROM pasos WHERE fecha>=:f GROUP BY socio_id"
+    ), {'f': hace7}).fetchall()
+    vals_pasos = [r[1] for r in todos_pasos]
+    if len(vals_pasos) > 1:
+        menores = sum(1 for v in vals_pasos if v < pasos_socio)
+        pct_pasos = round(menores / (len(vals_pasos) - 1) * 100) if len(vals_pasos) > 1 else 50
+    else:
+        pct_pasos = 50
+    resultado['pasos'] = {
+        'valor': int(pasos_socio),
+        'percentil': pct_pasos,
+        'total_socios': len(vals_pasos),
+        'label': 'Pasos esta semana'
+    }
+
+    # ── Entrenamientos últimos 30 días ──
+    entrenos_socio = session.execute(text(
+        "SELECT COUNT(*) FROM entrenamientos WHERE socio_id=:sid AND fecha>=:f"
+    ), {'sid': sid, 'f': hace30}).scalar() or 0
+
+    todos_entrenos = session.execute(text(
+        "SELECT socio_id, COUNT(*) as total FROM entrenamientos WHERE fecha>=:f GROUP BY socio_id"
+    ), {'f': hace30}).fetchall()
+    vals_entrenos = [r[1] for r in todos_entrenos]
+    if not any(r[0] == sid for r in todos_entrenos):
+        vals_entrenos.append(0)
+    if len(vals_entrenos) > 1:
+        menores = sum(1 for v in vals_entrenos if v < entrenos_socio)
+        pct_entrenos = round(menores / (len(vals_entrenos) - 1) * 100) if len(vals_entrenos) > 1 else 50
+    else:
+        pct_entrenos = 50
+    resultado['entrenamientos'] = {
+        'valor': int(entrenos_socio),
+        'percentil': pct_entrenos,
+        'total_socios': len(vals_entrenos),
+        'label': 'Entrenamientos este mes'
+    }
+
+    # ── Hidratación últimos 7 días ──
+    hidra_socio = session.execute(text(
+        "SELECT COALESCE(AVG(ml),0) FROM hidratacion WHERE socio_id=:sid AND fecha>=:f"
+    ), {'sid': sid, 'f': hace7}).scalar() or 0
+
+    todos_hidra = session.execute(text(
+        "SELECT socio_id, COALESCE(AVG(ml),0) as prom FROM hidratacion WHERE fecha>=:f GROUP BY socio_id"
+    ), {'f': hace7}).fetchall()
+    vals_hidra = [r[1] for r in todos_hidra]
+    if len(vals_hidra) > 1:
+        menores = sum(1 for v in vals_hidra if v < hidra_socio)
+        pct_hidra = round(menores / (len(vals_hidra) - 1) * 100) if len(vals_hidra) > 1 else 50
+    else:
+        pct_hidra = 50
+    resultado['hidratacion'] = {
+        'valor': round(float(hidra_socio) / 1000, 1),
+        'percentil': pct_hidra,
+        'total_socios': len(vals_hidra),
+        'label': 'Hidratación diaria promedio'
+    }
+
+    # ── Racha de actividad (días consecutivos con cualquier actividad) ──
+    sesiones_socio = session.execute(text(
+        "SELECT DISTINCT fecha FROM pasos WHERE socio_id=:sid AND pasos>0 AND fecha>=:f"
+        " UNION SELECT DISTINCT fecha FROM musculos_sesion WHERE socio_id=:sid AND fecha>=:f"
+        " UNION SELECT DISTINCT fecha FROM entrenamientos WHERE socio_id=:sid AND fecha>=:f"
+    ), {'sid': sid, 'f': hace30}).fetchall()
+    racha_socio = len(sesiones_socio)
+
+    todas_rachas = session.execute(text("""
+        SELECT socio_id, COUNT(DISTINCT fecha) as dias FROM (
+            SELECT socio_id, fecha FROM pasos WHERE pasos>0 AND fecha>=:f
+            UNION SELECT socio_id, fecha FROM musculos_sesion WHERE fecha>=:f
+            UNION SELECT socio_id, fecha FROM entrenamientos WHERE fecha>=:f
+        ) t GROUP BY socio_id
+    """), {'f': hace30}).fetchall()
+    vals_racha = [r[1] for r in todas_rachas]
+    if not vals_racha:
+        vals_racha = [0]
+    if len(vals_racha) > 1:
+        menores = sum(1 for v in vals_racha if v < racha_socio)
+        pct_racha = round(menores / (len(vals_racha) - 1) * 100) if len(vals_racha) > 1 else 50
+    else:
+        pct_racha = 50
+    resultado['actividad'] = {
+        'valor': racha_socio,
+        'percentil': pct_racha,
+        'total_socios': len(vals_racha),
+        'label': 'Días activo este mes'
+    }
+
+    session.close()
+    return jsonify({'ok': True, 'comparativa': resultado})
+
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
-def enviar_app_socio(sid):
-    data = request.json
+def enviar_app_socio(sid):    data = request.json
     email  = data.get('email','')
     nombre = data.get('nombre','Socio')
     link   = data.get('link','')
