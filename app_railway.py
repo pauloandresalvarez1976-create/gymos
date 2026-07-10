@@ -59,7 +59,8 @@ class Socio(Base):
     fecha_congelado = Column(Date, nullable=True)
     dias_congelados = Column(Integer, nullable=True)
     peso_objetivo   = Column(String(10), nullable=True)
-    ultimo_resumen_mes = Column(String(7), nullable=True)  # 'YYYY-MM'
+    ultimo_resumen_mes  = Column(String(7), nullable=True)  # 'YYYY-MM'
+    ultimo_cumple_anio  = Column(Integer, nullable=True)     # año del último cumple enviado
     created_at     = Column(DateTime, default=datetime.now)
 
 class FichaMedica(Base):
@@ -220,6 +221,7 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivo TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS peso_objetivo TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_mes TEXT",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_cumple_anio INTEGER",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ]
@@ -259,6 +261,9 @@ def init_config():
     session.commit(); session.close()
 
 init_config()
+
+import threading
+threading.Thread(target=enviar_emails_cumpleanos, daemon=True).start()
 
 def socio_to_dict(s):
     hoy  = date.today()
@@ -717,6 +722,62 @@ def enviar_resumenes_mensuales():
                 session.commit()
             except Exception as e:
                 print(f"⚠️  No se pudo enviar resumen mensual a {s.nombre}: {e}")
+    finally:
+        session.close()
+
+def enviar_emails_cumpleanos():
+    """Al arrancar, manda email de cumpleaños a socios que cumplen hoy y no lo recibieron este año"""
+    session = Session()
+    try:
+        hoy = date.today()
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_email = cfg.get('gym_email', '')
+        if not gym_email:
+            session.close(); return
+        gym_nombre = cfg.get('gym_nombre', 'Tu Gimnasio')
+
+        socios = session.query(Socio).filter(Socio.activo == True).all()
+        for s in socios:
+            if not s.email:
+                continue
+            # Obtener fecha de nacimiento de la ficha médica
+            ficha = session.execute(text(
+                "SELECT fecha_nacimiento FROM fichas_medicas WHERE socio_id=:sid ORDER BY id DESC LIMIT 1"
+            ), {'sid': s.id}).fetchone()
+            if not ficha or not ficha[0]:
+                continue
+            fn = ficha[0] if isinstance(ficha[0], date) else date.fromisoformat(str(ficha[0]))
+            if fn.month != hoy.month or fn.day != hoy.day:
+                continue
+            if s.ultimo_cumple_anio == hoy.year:
+                continue  # ya se mandó este año
+
+            nombre_corto = s.nombre.split()[0]
+            edad = hoy.year - fn.year
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#FF4500,#ff7043);padding:32px;text-align:center">
+                <div style="font-size:48px;margin-bottom:8px">🎂</div>
+                <h2 style="color:white;margin:0;font-size:22px">¡Feliz Cumpleaños, {nombre_corto}!</h2>
+                <p style="color:#fff9;margin:8px 0 0;font-size:13px">{gym_nombre} te desea lo mejor</p>
+              </div>
+              <div style="padding:28px;text-align:center">
+                <p style="font-size:16px;margin-bottom:8px">Hoy cumplís <strong style="color:#FF4500">{edad} años</strong> 🎉</p>
+                <p style="color:#ccc;font-size:14px;line-height:1.6">Que este nuevo año esté lleno de salud, energía y logros. ¡Seguí entrenando fuerte!</p>
+                <div style="background:#1a1a1a;border-radius:12px;padding:16px;margin:20px 0;border:1px solid #FF450040">
+                  <p style="color:#FF4500;margin:0;font-weight:700">🎁 Regalo de cumpleaños</p>
+                  <p style="color:#ccc;margin:8px 0 0;font-size:13px">Pasate por el gimnasio hoy y recibí tu regalo especial de cumpleaños de parte de todo el equipo.</p>
+                </div>
+                <p style="color:#666;font-size:12px;margin-top:20px">Con cariño, el equipo de {gym_nombre} 💪</p>
+              </div>
+            </div>"""
+            try:
+                enviar_email(s.email, f'🎂 ¡Feliz Cumpleaños {nombre_corto}! — {gym_nombre}', html, session)
+                s.ultimo_cumple_anio = hoy.year
+                session.commit()
+                print(f"🎂 Cumpleaños enviado a {s.nombre}")
+            except Exception as e:
+                print(f"⚠️  No se pudo enviar cumpleaños a {s.nombre}: {e}")
     finally:
         session.close()
 
