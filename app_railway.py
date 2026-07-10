@@ -262,9 +262,6 @@ def init_config():
 
 init_config()
 
-import threading
-threading.Thread(target=enviar_emails_cumpleanos, daemon=True).start()
-
 def socio_to_dict(s):
     hoy  = date.today()
     venc = s.fecha_venc
@@ -1714,6 +1711,9 @@ def set_config():
     session.commit(); session.close(); return jsonify({'ok': True})
 
 # ── ARRANCAR ─────────────────────────────────────────────
+import threading
+threading.Thread(target=enviar_emails_cumpleanos, daemon=True).start()
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
