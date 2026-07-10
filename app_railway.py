@@ -1391,7 +1391,8 @@ def get_comparativa(sid):
     return jsonify({'ok': True, 'comparativa': resultado})
 
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
-def enviar_app_socio(sid):    data = request.json
+def enviar_app_socio(sid):
+    data = request.json
     email  = data.get('email','')
     nombre = data.get('nombre','Socio')
     link   = data.get('link','')
