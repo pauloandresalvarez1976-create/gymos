@@ -351,6 +351,18 @@
   .fotos-lightbox-cerrar { background: var(--bg2); color: var(--text1); border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
   .fotos-lightbox-borrar { background: var(--red); color: white; border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
 
+  /* COUNTDOWN META PESO */
+  .countdown-card { background: var(--bg2); border-radius: 16px; padding: 16px 18px; margin-top: 14px; }
+  .countdown-titulo { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .countdown-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .countdown-stat { background: var(--bg3); border-radius: 12px; padding: 12px 8px; text-align: center; }
+  .countdown-val { font-size: 22px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .countdown-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .countdown-fecha { text-align: center; margin-top: 12px; font-size: 12px; color: var(--text2); }
+  .countdown-fecha span { color: var(--accent); font-weight: 700; }
+  .countdown-ok { text-align: center; padding: 16px; font-size: 22px; }
+  .countdown-ritmo { text-align: center; font-size: 11px; color: var(--text3); margin-top: 6px; }
+
   /* MOTIVACIÓN DIARIA */
   .motiv-card { background: linear-gradient(135deg, var(--accent)18, var(--bg2)); border: 1px solid var(--accent)30; border-radius: 18px; padding: 18px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
   .motiv-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: var(--accent)15; border-radius: 50%; }
@@ -983,10 +995,62 @@ function renderProgreso() {
     const total = Math.abs(pesoInicial - objPeso) || 1;
     const avance = Math.abs(pesoInicial - pesoActual);
     const pct = Math.max(0, Math.min(100, (avance / total) * 100));
-    const falta = Math.abs(pesoActual - objPeso).toFixed(1);
+    const falta = (pesoActual - objPeso);
+    const faltaAbs = Math.abs(falta).toFixed(1);
+    const yaLlegó = Math.abs(falta) < 0.5;
+
+    // Calcular ritmo semanal con los últimos registros de peso
+    let countdownHTML = '';
+    if (yaLlegó) {
+      countdownHTML = `<div class="countdown-card"><div class="countdown-ok">🎉 ¡Llegaste a tu meta de ${objPeso}kg!</div></div>`;
+    } else if (registros.length >= 2) {
+      const pesosConFecha = registros.filter(r => r.peso).map(r => ({ fecha: new Date(r.fecha), val: parseFloat(r.peso) }));
+      let ritmoSemanal = 0;
+      if (pesosConFecha.length >= 2) {
+        const primero = pesosConFecha[0];
+        const ultimo2 = pesosConFecha[pesosConFecha.length - 1];
+        const semanas = Math.max(1, (ultimo2.fecha - primero.fecha) / (7 * 24 * 3600 * 1000));
+        ritmoSemanal = (primero.val - ultimo2.val) / semanas; // positivo = bajando
+        if (falta > 0) ritmoSemanal = -ritmoSemanal; // subiendo de peso
+      }
+      const ritmoAbs = Math.abs(ritmoSemanal).toFixed(2);
+      let fechaEstimada = '—';
+      let semanasRestantes = 0;
+      if (Math.abs(ritmoSemanal) > 0.01) {
+        semanasRestantes = Math.ceil(Math.abs(falta) / Math.abs(ritmoSemanal));
+        const fechaMeta = new Date();
+        fechaMeta.setDate(fechaMeta.getDate() + semanasRestantes * 7);
+        fechaEstimada = fechaMeta.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+      const direccion = falta > 0 ? 'bajar' : 'ganar';
+      countdownHTML = `
+        <div class="countdown-card">
+          <div class="countdown-titulo"><i class="ti ti-target"></i> Countdown a tu meta</div>
+          <div class="countdown-grid">
+            <div class="countdown-stat">
+              <div class="countdown-val">${faltaAbs}</div>
+              <div class="countdown-label">kg para la meta</div>
+            </div>
+            <div class="countdown-stat">
+              <div class="countdown-val">${ritmoAbs > 0 ? ritmoAbs : '?'}</div>
+              <div class="countdown-label">kg/semana</div>
+            </div>
+            <div class="countdown-stat">
+              <div class="countdown-val">${semanasRestantes > 0 ? semanasRestantes : '?'}</div>
+              <div class="countdown-label">semanas</div>
+            </div>
+          </div>
+          ${fechaEstimada !== '—' ? `<div class="countdown-fecha">Meta estimada: <span>${fechaEstimada}</span></div>` : ''}
+          <div class="countdown-ritmo">${ritmoAbs > 0 ? `Al ritmo actual, necesitás ${direccion} ${faltaAbs}kg` : 'Registrá más mediciones para calcular el ritmo'}</div>
+        </div>`;
+    } else {
+      countdownHTML = `<div class="countdown-card"><div class="countdown-ritmo" style="padding:10px 0;text-align:center">Registrá al menos 2 mediciones para ver el countdown 📊</div></div>`;
+    }
+
     objetivoHTML = `
       <div class="prog-progressbar-track"><div class="prog-progressbar-fill" style="width:${pct}%"></div></div>
-      <div class="prog-objetivo-txt">Te faltan ${falta}kg para tu objetivo de ${objPeso}kg</div>`;
+      <div class="prog-objetivo-txt">Te ${falta > 0 ? 'faltan' : 'sobran'} ${faltaAbs}kg para tu objetivo de ${objPeso}kg</div>
+      ${countdownHTML}`;
   } else {
     objetivoHTML = `<div class="prog-objetivo-edit" onclick="editarObjetivoPeso()">+ Definir peso objetivo</div>`;
   }
