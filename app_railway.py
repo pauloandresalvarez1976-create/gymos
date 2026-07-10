@@ -61,6 +61,7 @@ class Socio(Base):
     peso_objetivo   = Column(String(10), nullable=True)
     ultimo_resumen_mes  = Column(String(7), nullable=True)  # 'YYYY-MM'
     ultimo_cumple_anio  = Column(Integer, nullable=True)     # año del último cumple enviado
+    ultimo_resumen_sem  = Column(String(8), nullable=True)   # 'YYYY-Www'
     created_at     = Column(DateTime, default=datetime.now)
 
 class FichaMedica(Base):
@@ -222,6 +223,7 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS peso_objetivo TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_mes TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_cumple_anio INTEGER",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_sem TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ]
@@ -1710,9 +1712,117 @@ def set_config():
         else: session.add(Config(clave=clave, valor=valor))
     session.commit(); session.close(); return jsonify({'ok': True})
 
+def enviar_resumenes_semanales():
+    """Al arrancar los lunes, manda resumen semanal a socios con actividad la semana anterior"""
+    from datetime import timedelta
+    session = Session()
+    try:
+        hoy = date.today()
+        # Solo enviar los lunes
+        if hoy.weekday() != 0:
+            session.close(); return
+        semana_actual = hoy.strftime('%Y-W%W')
+        # Semana anterior: lunes a domingo
+        lunes_anterior = hoy - timedelta(days=7)
+        domingo_anterior = hoy - timedelta(days=1)
+
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_email = cfg.get('gym_email', '')
+        if not gym_email:
+            session.close(); return
+        gym_nombre = cfg.get('gym_nombre', 'Tu Gimnasio')
+
+        socios = session.query(Socio).filter(Socio.activo == True).all()
+        for s in socios:
+            if not s.email:
+                continue
+            if s.ultimo_resumen_sem == semana_actual:
+                continue
+
+            # Pasos de la semana
+            pasos_sem = session.execute(text(
+                "SELECT COALESCE(SUM(pasos),0) FROM pasos WHERE socio_id=:sid AND fecha>=:ini AND fecha<=:fin"
+            ), {'sid': s.id, 'ini': lunes_anterior, 'fin': domingo_anterior}).scalar() or 0
+
+            # Entrenamientos de la semana
+            entrenos_sem = session.execute(text(
+                "SELECT COUNT(*) FROM entrenamientos WHERE socio_id=:sid AND fecha>=:ini AND fecha<=:fin"
+            ), {'sid': s.id, 'ini': lunes_anterior, 'fin': domingo_anterior}).scalar() or 0
+
+            # Hidratación promedio de la semana
+            hidra_prom = session.execute(text(
+                "SELECT COALESCE(AVG(ml),0) FROM hidratacion WHERE socio_id=:sid AND fecha>=:ini AND fecha<=:fin"
+            ), {'sid': s.id, 'ini': lunes_anterior, 'fin': domingo_anterior}).scalar() or 0
+            hidra_l = round(float(hidra_prom) / 1000, 1)
+
+            # Días activos
+            dias_activos = session.execute(text("""
+                SELECT COUNT(DISTINCT fecha) FROM (
+                    SELECT fecha FROM pasos WHERE socio_id=:sid AND pasos>0 AND fecha>=:ini AND fecha<=:fin
+                    UNION SELECT fecha FROM musculos_sesion WHERE socio_id=:sid AND fecha>=:ini AND fecha<=:fin
+                    UNION SELECT fecha FROM entrenamientos WHERE socio_id=:sid AND fecha>=:ini AND fecha<=:fin
+                ) t
+            """), {'sid': s.id, 'ini': lunes_anterior, 'fin': domingo_anterior}).scalar() or 0
+
+            # No mandar si no tuvo ninguna actividad
+            if pasos_sem == 0 and entrenos_sem == 0 and hidra_prom == 0:
+                continue
+
+            nombre_corto = s.nombre.split()[0]
+            fecha_ini_str = lunes_anterior.strftime('%d/%m')
+            fecha_fin_str = domingo_anterior.strftime('%d/%m')
+
+            # Emoji motivacional según días activos
+            emoji_dias = '🔥' if dias_activos >= 5 else '💪' if dias_activos >= 3 else '👍'
+
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
+              <div style="background:#FF4500;padding:24px;text-align:center">
+                <h2 style="color:white;margin:0;font-size:18px">📊 Tu semana en {gym_nombre}</h2>
+                <p style="color:#fff9;margin:6px 0 0;font-size:12px">{fecha_ini_str} al {fecha_fin_str}</p>
+              </div>
+              <div style="padding:24px">
+                <p style="font-size:15px;margin-bottom:16px">Hola <strong>{nombre_corto}</strong>, {emoji_dias} ¡Acá va tu resumen semanal!</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+                  <div style="background:#1a1a1a;border-radius:10px;padding:14px;text-align:center">
+                    <div style="font-size:28px;font-weight:800;color:#FF4500">{int(pasos_sem):,}</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">PASOS TOTALES</div>
+                  </div>
+                  <div style="background:#1a1a1a;border-radius:10px;padding:14px;text-align:center">
+                    <div style="font-size:28px;font-weight:800;color:#FF4500">{entrenos_sem}</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">ENTRENAMIENTOS</div>
+                  </div>
+                  <div style="background:#1a1a1a;border-radius:10px;padding:14px;text-align:center">
+                    <div style="font-size:28px;font-weight:800;color:#3b82f6">{hidra_l}L</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">HIDRATACIÓN/DÍA</div>
+                  </div>
+                  <div style="background:#1a1a1a;border-radius:10px;padding:14px;text-align:center">
+                    <div style="font-size:28px;font-weight:800;color:#00FF88">{dias_activos}/7</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">DÍAS ACTIVO</div>
+                  </div>
+                </div>
+                <p style="color:#aaa;font-size:13px;line-height:1.6">
+                  {'¡Semana increíble! Estás en racha, seguí así.' if dias_activos >= 5
+                   else '¡Buena semana! Esta semana intentá sumar un día más.' if dias_activos >= 3
+                   else 'Esta semana podemos mejorar. ¡Aparecer es el primer paso!'}
+                </p>
+                <p style="color:#555;font-size:11px;margin-top:20px">Entrá a tu app para ver el detalle completo 💪</p>
+              </div>
+            </div>"""
+            try:
+                enviar_email(s.email, f'📊 Tu resumen semanal — {gym_nombre}', html, session)
+                s.ultimo_resumen_sem = semana_actual
+                session.commit()
+                print(f"📊 Resumen semanal enviado a {s.nombre}")
+            except Exception as e:
+                print(f"⚠️  No se pudo enviar resumen semanal a {s.nombre}: {e}")
+    finally:
+        session.close()
+
 # ── ARRANCAR ─────────────────────────────────────────────
 import threading
 threading.Thread(target=enviar_emails_cumpleanos, daemon=True).start()
+threading.Thread(target=enviar_resumenes_semanales, daemon=True).start()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
