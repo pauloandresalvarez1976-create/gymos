@@ -351,6 +351,14 @@
   .fotos-lightbox-cerrar { background: var(--bg2); color: var(--text1); border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
   .fotos-lightbox-borrar { background: var(--red); color: white; border: none; border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
 
+  /* MOTIVACIÓN DIARIA */
+  .motiv-card { background: linear-gradient(135deg, var(--accent)18, var(--bg2)); border: 1px solid var(--accent)30; border-radius: 18px; padding: 18px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
+  .motiv-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: var(--accent)15; border-radius: 50%; }
+  .motiv-dia { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; }
+  .motiv-frase { font-size: 15px; font-weight: 700; color: var(--text1); line-height: 1.4; margin-bottom: 6px; }
+  .motiv-autor { font-size: 11px; color: var(--text3); font-style: italic; }
+  .motiv-emoji { font-size: 32px; position: absolute; top: 16px; right: 20px; }
+
   /* COMPARATIVA ANÓNIMA */
   .comp-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
   .comp-titulo { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
@@ -624,6 +632,74 @@ async function init() {
   }
 }
 
+// ── MOTIVACIÓN DIARIA ────────────────────────────────────
+const MOTIVACION = {
+  musculacion: [
+    { frase: 'El músculo no se construye en el gym, se construye en la recuperación. Entrená duro, descansá mejor.', autor: 'Principio de entrenamiento', emoji: '💪' },
+    { frase: 'Cada repetición que hacés cuando querés parar es la que te hace crecer.', autor: 'Cultura del hierro', emoji: '🏋️' },
+    { frase: 'No se trata de ser el más grande. Se trata de ser mejor que ayer.', autor: 'Mentalidad de progreso', emoji: '📈' },
+    { frase: 'El dolor de hoy es la fuerza de mañana. Seguí empujando.', autor: 'Filosofía del gimnasio', emoji: '🔥' },
+    { frase: 'Los resultados vienen de la consistencia, no de la perfección.', autor: 'Entrenamiento inteligente', emoji: '⚡' },
+    { frase: 'Tu cuerpo puede hacerlo. Es tu mente la que tenés que convencer.', autor: 'Mentalidad atlética', emoji: '🧠' },
+    { frase: 'Un día que no entrenás no te hace débil. Dos seguidos empiezan a costarte.', autor: 'Disciplina del deportista', emoji: '📅' },
+  ],
+  perdida_peso: [
+    { frase: 'No estás perdiendo peso. Estás ganando vida, energía y confianza.', autor: 'Cambio de perspectiva', emoji: '✨' },
+    { frase: 'Cada decisión saludable que tomás hoy cambia quién sos mañana.', autor: 'Hábitos que transforman', emoji: '🌱' },
+    { frase: 'El progreso no siempre se ve en la balanza. A veces se siente en cómo subís las escaleras.', autor: 'Progreso real', emoji: '🚶' },
+    { frase: 'No rompiste la racha. Empezaste de nuevo. Eso también es fuerza.', autor: 'Resiliencia', emoji: '💫' },
+    { frase: 'Tu cuerpo cambia más lento de lo que querés, pero más rápido de lo que creés.', autor: 'Paciencia activa', emoji: '⏳' },
+    { frase: 'Un paso, una decisión, un día a la vez. Así se llega lejos.', autor: 'Constancia', emoji: '👣' },
+    { frase: 'No te compares con nadie. Tu única competencia sos vos de ayer.', autor: 'Progreso personal', emoji: '🏆' },
+  ],
+  fitness: [
+    { frase: 'El fitness no es una temporada. Es un estilo de vida que elegís cada día.', autor: 'Filosofía fitness', emoji: '🌟' },
+    { frase: 'Moverse bien hoy es invertir en cómo vas a vivir mañana.', autor: 'Salud preventiva', emoji: '💚' },
+    { frase: 'No hace falta ser extremo. Hace falta ser constante.', autor: 'Balance inteligente', emoji: '⚖️' },
+    { frase: 'Cada vez que aparecés, ganás. El primer paso siempre es el más difícil.', autor: 'Presencia', emoji: '🎯' },
+    { frase: 'Tu cuerpo es el único lugar donde tenés que vivir toda la vida. Cuidalo.', autor: 'Inversión en uno mismo', emoji: '🏠' },
+    { frase: 'No buscás la perfección. Buscás sentirte bien en tu propio cuerpo.', autor: 'Bienestar real', emoji: '🌈' },
+    { frase: 'El mejor entrenamiento es el que hacés. Cualquiera que hagas cuenta.', autor: 'Acción sobre perfección', emoji: '✅' },
+  ],
+  definicion: [
+    { frase: 'La definición es el resultado de meses de trabajo invisible. Seguí confiando en el proceso.', autor: 'Proceso de cambio', emoji: '🎨' },
+    { frase: 'Cada comida medida y cada sesión completada es un ladrillo de tu mejor versión.', autor: 'Construcción diaria', emoji: '🧱' },
+    { frase: 'La constancia hace lo que el talento no puede hacer solo.', autor: 'Disciplina ganadora', emoji: '🔑' },
+    { frase: 'El cuerpo que querés ya existe. Lo estás revelando con cada decisión.', autor: 'Transformación', emoji: '🦋' },
+    { frase: 'Cuando querés rendirte, pensá por qué empezaste.', autor: 'Motivación de raíz', emoji: '🌊' },
+    { frase: 'La grilla de comidas, el agua, el descanso. Los detalles hacen la diferencia.', autor: 'Precisión atlética', emoji: '📋' },
+    { frase: 'Un déficit de calorías no es castigo. Es una inversión con fecha de retorno.', autor: 'Mentalidad de atleta', emoji: '💡' },
+  ]
+};
+
+const MOTIVACION_DEFAULT = [
+  { frase: 'Cada día que aparecés es un día que ganás. Seguí así.', autor: 'GymOS', emoji: '💪' },
+  { frase: 'El primer paso siempre es aparecer. Ya lo hiciste.', autor: 'GymOS', emoji: '🚀' },
+  { frase: 'No importa el ritmo. Lo que importa es no parar.', autor: 'GymOS', emoji: '🔥' },
+  { frase: 'Pequeños progresos seguidos hacen grandes resultados.', autor: 'GymOS', emoji: '📈' },
+  { frase: 'Tu versión de hoy supera a la de ayer. Eso es todo lo que importa.', autor: 'GymOS', emoji: '⭐' },
+  { frase: 'El esfuerzo de hoy es el resultado de mañana.', autor: 'GymOS', emoji: '🎯' },
+  { frase: 'Cuando el cuerpo dice basta, la mente decide. Vos podés.', autor: 'GymOS', emoji: '🧠' },
+];
+
+function renderMotivacionHTML(objetivo) {
+  const frases = MOTIVACION[objetivo] || MOTIVACION_DEFAULT;
+  // Rotar por día del año para que sea distinta cada día
+  const diaAnio = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const idx = diaAnio % frases.length;
+  const m = frases[idx];
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const hoy = dias[new Date().getDay()];
+  const fecha = new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+
+  return `<div class="motiv-card">
+    <div class="motiv-emoji">${m.emoji}</div>
+    <div class="motiv-dia">${hoy} ${fecha}</div>
+    <div class="motiv-frase">"${m.frase}"</div>
+    <div class="motiv-autor">— ${m.autor}</div>
+  </div>`;
+}
+
 function renderApp() {
   const s = socioData;
   const hoy = new Date();
@@ -670,6 +746,9 @@ function renderApp() {
 
       <!-- TAB INICIO -->
       <div class="tab-content active" id="tab-inicio">
+
+        <!-- MOTIVACIÓN DIARIA -->
+        ${renderMotivacionHTML(s.objetivo)}
 
         <!-- QR -->
         <div class="section">
