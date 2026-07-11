@@ -1144,9 +1144,26 @@ function renderApp() {
               <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
                 <div style="font-size:16px;font-weight:700">${rutina.nombre}</div>
               </div>
-              <button id="btnIniciarEntren" style="background:var(--accent);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:700;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px">
-                <i class="ti ti-player-play"></i> Iniciar entrenamiento guiado
-              </button>
+              <div class="hub-grid" style="margin-bottom:18px;grid-template-columns:1fr">
+                <div class="flip-card" id="flip-entrenamiento" style="aspect-ratio:unset;height:110px" onclick="toggleFlip(this,event)">
+                  <div class="flip-card-inner">
+                    <div class="flip-front" style="flex-direction:row;align-items:center;gap:16px;padding:20px 22px">
+                      <div class="flip-front-icon" style="font-size:36px;flex-shrink:0"><i class="ti ti-player-play"></i></div>
+                      <div>
+                        <div class="flip-front-title" style="font-size:16px">Iniciar entrenamiento guiado</div>
+                        <div class="flip-front-hint">Timer · Beeps · Resumen final</div>
+                      </div>
+                    </div>
+                    <div class="flip-back" style="flex-direction:row;align-items:center;gap:14px;padding:18px 20px;text-align:left">
+                      <div class="flip-back-icon" style="font-size:28px;flex-shrink:0"><i class="ti ti-player-play"></i></div>
+                      <div style="flex:1">
+                        <div class="flip-back-text" style="margin-bottom:10px">Seguí tu rutina paso a paso con timer de descanso y beeps de aviso.</div>
+                        <button class="flip-back-btn" id="btnIniciarEntren" onclick="event.stopPropagation()"><i class="ti ti-player-play"></i> ¡Arrancar!</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               ${rutina.dias.map(d => `
                 <div class="dia-bloque">
                   <div class="dia-titulo">${d.dia}</div>
