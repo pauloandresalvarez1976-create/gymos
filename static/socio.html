@@ -451,12 +451,77 @@
   /* TOAST */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; }
+  /* ===== HUB DE MÓDULOS — TARJETAS GIRATORIAS ===== */
+  .hub-title { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin: 18px 4px 10px; }
+  .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; perspective: 1200px; }
+  .flip-card { aspect-ratio: 1 / 0.95; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
+  .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+  .flip-front, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 18px; display: flex; flex-direction: column; overflow: hidden; }
+  .flip-front {
+    background: linear-gradient(150deg, var(--accent), var(--accent2));
+    padding: 16px 14px; justify-content: space-between;
+    box-shadow: 0 6px 24px -6px var(--accent-bd), 0 0 0 1px var(--accent-bd), inset 0 1px 0 #ffffff25;
+    animation: hubGlow 3.2s ease-in-out infinite;
+  }
+  .flip-card:nth-child(2n) .flip-front { animation-delay: 0.6s; }
+  .flip-card:nth-child(3n) .flip-front { animation-delay: 1.1s; }
+  @keyframes hubGlow {
+    0%, 100% { box-shadow: 0 6px 24px -6px var(--accent-bd), 0 0 0 1px var(--accent-bd), inset 0 1px 0 #ffffff25; }
+    50% { box-shadow: 0 10px 34px -4px var(--accent), 0 0 0 1px var(--accent-bd), inset 0 1px 0 #ffffff35; }
+  }
+  .flip-front::after {
+    content: ''; position: absolute; top: -40%; right: -30%; width: 90px; height: 90px; border-radius: 50%;
+    background: radial-gradient(circle, #ffffff30, transparent 70%); pointer-events: none;
+  }
+  .flip-front-icon { font-size: 26px; color: #fff; text-shadow: 0 2px 8px #0004; }
+  .flip-front-title { font-size: 14px; font-weight: 700; color: #fff; margin-top: 10px; letter-spacing: -0.2px; }
+  .flip-front-hint { font-size: 10px; color: #ffffffb0; margin-top: 2px; }
+  .flip-back {
+    background: var(--bg2); border: 1px solid var(--accent-bd); transform: rotateY(180deg);
+    padding: 14px; justify-content: center; align-items: center; text-align: center; gap: 10px;
+    box-shadow: 0 6px 24px -6px #0007;
+  }
+  .flip-back-icon { font-size: 22px; color: var(--accent); }
+  .flip-back-text { font-size: 11.5px; color: var(--text2); line-height: 1.35; }
+  .flip-back-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 8px 16px;
+    font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+
+  /* OVERLAY DE MÓDULO */
+  .modulo-overlay {
+    position: fixed; inset: 0; background: var(--bg0); z-index: 500; transform: translateY(100%);
+    transition: transform 0.32s cubic-bezier(0.4, 0.1, 0.2, 1); display: flex; flex-direction: column;
+  }
+  .modulo-overlay.open { transform: translateY(0); }
+  .modulo-overlay-header {
+    display: flex; align-items: center; gap: 12px; padding: 16px 14px; background: var(--bg1);
+    border-bottom: 0.5px solid #1e1e1e; flex-shrink: 0;
+  }
+  .modulo-overlay-back {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--bg3); border: none; color: var(--text1);
+    display: flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; flex-shrink: 0;
+  }
+  .modulo-overlay-title { font-size: 15px; font-weight: 700; }
+  .modulo-overlay-body { flex: 1; overflow-y: auto; padding: 14px 12px 40px; }
+  .modulo-overlay-body > div { display: none; }
+  .modulo-overlay-body > div.modulo-activo { display: block; }
 </style>
 </head>
 <body>
 
 <div id="app">
   <div class="loading">Cargando tu membresía...</div>
+</div>
+
+<!-- OVERLAY DE MÓDULO (tarjetas giratorias) -->
+<div class="modulo-overlay" id="moduloOverlay">
+  <div class="modulo-overlay-header">
+    <button class="modulo-overlay-back" onclick="cerrarModulo()"><i class="ti ti-arrow-left"></i></button>
+    <div class="modulo-overlay-title" id="moduloOverlayTitle"></div>
+  </div>
+  <div class="modulo-overlay-body" id="moduloOverlayBody"></div>
 </div>
 
 <!-- INSTALL MODAL -->
@@ -1373,6 +1438,29 @@ function renderProgreso() {
     ${formProgresoHTML()}
     <div class="prog-chart-title">Historial</div>
     <div>${historialHTML}</div>
+    <div class="hub-title">Tus módulos</div>
+    <div class="hub-grid">
+      ${MODULOS_HUB.map(m => `
+        <div class="flip-card" id="flip-${m.key}" onclick="toggleFlip(this, event)">
+          <div class="flip-card-inner">
+            <div class="flip-front">
+              <div class="flip-front-icon"><i class="ti ${m.icono}"></i></div>
+              <div>
+                <div class="flip-front-title">${m.titulo}</div>
+                <div class="flip-front-hint">${m.hint}</div>
+              </div>
+            </div>
+            <div class="flip-back">
+              <div class="flip-back-icon"><i class="ti ${m.icono}"></i></div>
+              <div class="flip-back-text">${m.desc}</div>
+              <button class="flip-back-btn" data-key="${m.key}" data-titulo="${m.titulo}" onclick="event.stopPropagation();abrirModulo(this.dataset.key,this.dataset.titulo)"><i class="ti ti-arrow-right"></i> Abrir</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+
+  document.getElementById('moduloOverlayBody').innerHTML = `
     <div id="imcSection"></div>
     <div id="rachaSection"></div>
     <div id="logrosSection"></div>
@@ -1384,6 +1472,35 @@ function renderProgreso() {
   `;
   renderIMC();
   cargarSesionesPasos();
+}
+
+const MODULOS_HUB = [
+  { key: 'podometro',    icono: 'ti-shoe',       titulo: 'Podómetro',        hint: 'Pasos de hoy',        desc: 'Pasos, calorías, distancia y tu gráfico semanal.' },
+  { key: 'hidratacion',  icono: 'ti-droplet',    titulo: 'Hidratación',      hint: 'Tomá agua',           desc: 'Registrá tus vasos de agua y seguí tu meta diaria.' },
+  { key: 'logros',       icono: 'ti-award',      titulo: 'Logros',           hint: '33 insignias',        desc: 'Desbloqueá logros en 5 categorías por tu constancia.' },
+  { key: 'racha',        icono: 'ti-flame',      titulo: 'Racha',            hint: 'Días seguidos',       desc: 'Tu racha de actividad consecutiva en el gimnasio.' },
+  { key: 'fotos',        icono: 'ti-camera',     titulo: 'Fotos',            hint: 'Tu evolución',        desc: 'Guardá fotos de tu progreso físico en el tiempo.' },
+  { key: 'musculos',     icono: 'ti-body-scan',  titulo: 'Músculos',         hint: 'Zonas trabajadas',    desc: 'Marcá qué músculos entrenaste en cada sesión.' },
+  { key: 'comparativa',  icono: 'ti-chart-bar',  titulo: 'Comparativa',      hint: 'Vs. el gimnasio',     desc: 'Tu posición anónima frente al resto de los socios.' },
+  { key: 'imc',          icono: 'ti-scale',      titulo: 'IMC',              hint: 'Índice corporal',     desc: 'Tu índice de masa corporal calculado automáticamente.' },
+];
+
+function toggleFlip(card, ev) {
+  if (ev) ev.stopPropagation();
+  card.classList.toggle('flipped');
+}
+
+function abrirModulo(key, titulo) {
+  const map = { podometro:'podometroSection', hidratacion:'hidratacionSection', logros:'logrosSection', racha:'rachaSection', fotos:'fotosProgresoSection', musculos:'musculosSection', comparativa:'comparativaSection', imc:'imcSection' };
+  document.querySelectorAll('.modulo-overlay-body > div').forEach(d => d.classList.remove('modulo-activo'));
+  const target = document.getElementById(map[key]);
+  if (target) target.classList.add('modulo-activo');
+  document.getElementById('moduloOverlayTitle').textContent = titulo;
+  document.getElementById('moduloOverlay').classList.add('open');
+}
+
+function cerrarModulo() {
+  document.getElementById('moduloOverlay').classList.remove('open');
 }
 
 function metricCardHTML(key, registros) {
