@@ -380,6 +380,15 @@
   .countdown-ok { text-align: center; padding: 16px; font-size: 22px; }
   .countdown-ritmo { text-align: center; font-size: 11px; color: var(--text3); margin-top: 6px; }
 
+  /* CLIMA */
+  .clima-card { background: var(--bg2); border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; display: flex; align-items: center; gap: 14px; }
+  .clima-icono { font-size: 40px; flex-shrink: 0; }
+  .clima-info { flex: 1; }
+  .clima-temp { font-size: 22px; font-weight: 800; color: var(--text1); line-height: 1; }
+  .clima-desc { font-size: 12px; color: var(--text3); margin-top: 2px; text-transform: capitalize; }
+  .clima-consejo { font-size: 12px; color: var(--text2); margin-top: 8px; line-height: 1.4; background: var(--bg3); border-radius: 10px; padding: 8px 10px; }
+  .clima-loading { font-size: 12px; color: var(--text3); text-align: center; padding: 16px; }
+
   /* MOTIVACIÓN DIARIA */
   .motiv-card { background: linear-gradient(135deg, var(--accent)18, var(--bg2)); border: 1px solid var(--accent)30; border-radius: 18px; padding: 18px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
   .motiv-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: var(--accent)15; border-radius: 50%; }
@@ -661,6 +670,112 @@ async function init() {
   }
 }
 
+// ── CLIMA + CONSEJO DEL DÍA ──────────────────────────────
+function climaIcono(codigo) {
+  if (codigo === 0) return '☀️';
+  if (codigo <= 2) return '⛅';
+  if (codigo <= 3) return '☁️';
+  if (codigo <= 49) return '🌫️';
+  if (codigo <= 59) return '🌦️';
+  if (codigo <= 69) return '🌧️';
+  if (codigo <= 79) return '🌨️';
+  if (codigo <= 84) return '🌧️';
+  if (codigo <= 94) return '⛈️';
+  return '🌩️';
+}
+
+function climaDesc(codigo) {
+  if (codigo === 0) return 'Despejado';
+  if (codigo <= 2) return 'Parcialmente nublado';
+  if (codigo <= 3) return 'Nublado';
+  if (codigo <= 49) return 'Niebla';
+  if (codigo <= 59) return 'Llovizna';
+  if (codigo <= 69) return 'Lluvia';
+  if (codigo <= 79) return 'Nieve';
+  if (codigo <= 84) return 'Lluvia intensa';
+  if (codigo <= 94) return 'Tormenta';
+  return 'Tormenta eléctrica';
+}
+
+function climaConsejo(codigo, temp, objetivo) {
+  const llueve = codigo >= 50 && codigo <= 84;
+  const tormenta = codigo >= 85;
+  const frio = temp < 10;
+  const calor = temp > 30;
+  const muyCalor = temp > 35;
+
+  if (tormenta) return '⛈️ Día de tormenta — ideal para quedarte en el gym y entrenar adentro.';
+  if (llueve) {
+    return '🌧️ Está lloviendo — perfecto día para entrenar en el gimnasio. No busques excusas.';
+  }
+  if (muyCalor) return '🥵 Calor extremo — hidratate cada 20 minutos y evitá entrenar al aire libre entre las 12 y 17hs.';
+  if (calor) return '☀️ Día caluroso — hidratate bien antes, durante y después del entrenamiento.';
+  if (frio) {
+    if (objetivo === 'musculacion' || objetivo === 'definicion') return '🥶 Día frío — hacé un calentamiento de 10 minutos antes de cargar peso. Los músculos fríos se lesionan más.';
+    return '🥶 Día frío — calentá bien antes de arrancar. El frío puede ayudar a quemar más calorías.';
+  }
+  // Día ideal
+  if (codigo === 0) return '☀️ ¡Día perfecto para entrenar! Podés combinar gym con actividad al aire libre.';
+  return '👍 Buen día para entrenar. No dejes pasar la oportunidad.';
+}
+
+async function cargarClima() {
+  const sec = document.getElementById('climaWidget');
+  if (!sec) return;
+
+  // Chequear caché (válido por 1 hora)
+  const cache = JSON.parse(localStorage.getItem('gymos-clima') || '{}');
+  if (cache.ts && Date.now() - cache.ts < 3600000 && cache.data) {
+    renderClima(cache.data);
+    return;
+  }
+
+  sec.innerHTML = '<div class="clima-card"><div class="clima-loading">📍 Obteniendo clima...</div></div>';
+
+  if (!navigator.geolocation) {
+    sec.innerHTML = '';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async function(pos) {
+    const lat = pos.coords.latitude.toFixed(4);
+    const lon = pos.coords.longitude.toFixed(4);
+    try {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+        '&current=temperature_2m,weathercode&timezone=auto&forecast_days=1';
+      const res = await fetch(url);
+      const data = await res.json();
+      const temp = Math.round(data.current.temperature_2m);
+      const codigo = data.current.weathercode;
+      const climaData = { temp, codigo, lat, lon };
+      localStorage.setItem('gymos-clima', JSON.stringify({ ts: Date.now(), data: climaData }));
+      renderClima(climaData);
+    } catch(e) { sec.innerHTML = ''; }
+  }, function() {
+    // Usuario rechazó ubicación — no mostrar nada
+    sec.innerHTML = '';
+  }, { timeout: 8000 });
+}
+
+function renderClima(d) {
+  const sec = document.getElementById('climaWidget');
+  if (!sec) return;
+  const objetivo = socioData ? socioData.objetivo : '';
+  const icono = climaIcono(d.codigo);
+  const desc = climaDesc(d.codigo);
+  const consejo = climaConsejo(d.codigo, d.temp, objetivo);
+
+  sec.innerHTML =
+    '<div class="clima-card">' +
+      '<div class="clima-icono">' + icono + '</div>' +
+      '<div class="clima-info">' +
+        '<div class="clima-temp">' + d.temp + '°C</div>' +
+        '<div class="clima-desc">' + desc + '</div>' +
+        '<div class="clima-consejo">' + consejo + '</div>' +
+      '</div>' +
+    '</div>';
+}
+
 // ── MOTIVACIÓN DIARIA ────────────────────────────────────
 const MOTIVACION = {
   musculacion: [
@@ -778,6 +893,9 @@ function renderApp() {
 
         <!-- MOTIVACIÓN DIARIA -->
         ${renderMotivacionHTML(s.objetivo)}
+
+        <!-- CLIMA -->
+        <div id="climaWidget"></div>
 
         <!-- QR -->
         <div class="section">
@@ -928,6 +1046,8 @@ function renderApp() {
   // Listener botón entrenamiento (anti-bug Android)
   const btnEntren = document.getElementById('btnIniciarEntren');
   if (btnEntren) btnEntren.onclick = function() { abrirSelectorDia(); };
+  // Clima
+  cargarClima();
 }
 
 function cambiarTab(tab) {
