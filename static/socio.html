@@ -1490,6 +1490,8 @@ function toggleFlip(card, ev) {
   card.classList.toggle('flipped');
 }
 
+let moduloKeyActivo = null;
+
 function abrirModulo(key, titulo) {
   const map = { podometro:'podometroSection', hidratacion:'hidratacionSection', logros:'logrosSection', racha:'rachaSection', fotos:'fotosProgresoSection', musculos:'musculosSection', comparativa:'comparativaSection', imc:'imcSection' };
   document.querySelectorAll('.modulo-overlay-body > div').forEach(d => d.classList.remove('modulo-activo'));
@@ -1497,11 +1499,24 @@ function abrirModulo(key, titulo) {
   if (target) target.classList.add('modulo-activo');
   document.getElementById('moduloOverlayTitle').textContent = titulo;
   document.getElementById('moduloOverlay').classList.add('open');
+  moduloKeyActivo = key;
+  history.pushState({ modulo: key }, '');
 }
 
 function cerrarModulo() {
   document.getElementById('moduloOverlay').classList.remove('open');
+  if (moduloKeyActivo) {
+    const card = document.getElementById('flip-' + moduloKeyActivo);
+    if (card) card.classList.remove('flipped');
+    moduloKeyActivo = null;
+  }
 }
+
+window.addEventListener('popstate', function(e) {
+  if (document.getElementById('moduloOverlay').classList.contains('open')) {
+    cerrarModulo();
+  }
+});
 
 function metricCardHTML(key, registros) {
   const conValor = registros.filter(r => r[key]);
