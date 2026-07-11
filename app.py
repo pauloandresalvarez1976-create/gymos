@@ -60,6 +60,9 @@ class Socio(Base):
     dias_congelados = Column(Integer, nullable=True)
     peso_objetivo   = Column(String(10), nullable=True)
     ultimo_resumen_mes = Column(String(7), nullable=True)  # 'YYYY-MM'
+    ultimo_cumple_anio  = Column(Integer, nullable=True)
+    ultimo_resumen_sem  = Column(String(8), nullable=True)
+    ia_habilitada       = Column(Integer, default=0)
     created_at     = Column(DateTime, default=datetime.now)
 
 class FichaMedica(Base):
@@ -161,6 +164,9 @@ def migrate_db():
                 "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivo TEXT",
                 "ALTER TABLE socios ADD COLUMN IF NOT EXISTS peso_objetivo TEXT",
                 "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_mes TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_cumple_anio INTEGER",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_sem TEXT",
+                "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ia_habilitada INTEGER DEFAULT 0",
                 "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
                 "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
             ]
@@ -288,7 +294,8 @@ def socio_to_dict(s):
             'fecha_venc':str(s.fecha_venc) if s.fecha_venc else None,
             'foto':s.foto,'activo':s.activo,'estado':estado,'dias_restantes':dias,
             'congelado':s.congelado or 0,'fecha_congelado':str(s.fecha_congelado) if s.fecha_congelado else None,
-            'objetivo':s.objetivo or ''}
+            'objetivo':s.objetivo or '',
+            'ia_habilitada': s.ia_habilitada or 0}
 
 # ── FRONTEND ─────────────────────────────────────────────
 @app.route('/ficha/<int:sid>')
@@ -1033,6 +1040,63 @@ def set_hidratacion(sid):
         ), {'sid': sid, 'f': fecha, 'ml': ml})
     session.commit(); session.close()
     return jsonify({'ok': True, 'ml': ml})
+
+# ── ASISTENTE IA ─────────────────────────────────────────────
+@app.route('/api/socios/<int:sid>/ia/toggle', methods=['POST'])
+def toggle_ia(sid):
+    session = Session()
+    s = session.query(Socio).get(sid)
+    if not s:
+        session.close()
+        return jsonify({'ok': False}), 404
+    s.ia_habilitada = 0 if s.ia_habilitada else 1
+    session.commit()
+    val = s.ia_habilitada
+    session.close()
+    return jsonify({'ok': True, 'ia_habilitada': val})
+
+@app.route('/api/socios/<int:sid>/ia/chat', methods=['POST'])
+def ia_chat(sid):
+    import requests as req
+    session = Session()
+    s = session.query(Socio).get(sid)
+    if not s or not s.ia_habilitada:
+        session.close()
+        return jsonify({'ok': False, 'error': 'IA no habilitada'}), 403
+    objetivo_labels = {
+        'musculacion': 'Musculación / Volumen',
+        'perdida_peso': 'Pérdida de peso',
+        'fitness': 'Fitness / Salud general',
+        'definicion': 'Definición muscular'
+    }
+    objetivo = objetivo_labels.get(s.objetivo or '', s.objetivo or 'No definido')
+    ultimo_progreso = session.execute(text(
+        "SELECT peso FROM progreso WHERE socio_id=:sid AND peso IS NOT NULL ORDER BY fecha DESC LIMIT 1"
+    ), {'sid': sid}).fetchone()
+    peso_actual = ultimo_progreso[0] if ultimo_progreso else 'No registrado'
+    session.close()
+    data = request.json
+    mensajes = data.get('mensajes', [])
+    if not mensajes:
+        return jsonify({'ok': False, 'error': 'Sin mensajes'}), 400
+    anthropic_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not anthropic_key:
+        return jsonify({'ok': False, 'error': 'Sin API key'}), 500
+    system_prompt = f"""Sos un asistente de fitness personal del gimnasio. Hablás en español argentino, de forma amigable y motivadora.
+Perfil del socio: Nombre: {s.nombre.split()[0]}, Objetivo: {objetivo}, Peso actual: {peso_actual} kg.
+Respondés preguntas sobre nutrición, entrenamiento, recuperación. Sos conciso (máximo 3-4 oraciones). Respondé siempre en español rioplatense."""
+    try:
+        resp = req.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={'x-api-key': anthropic_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+            json={'model': 'claude-haiku-4-5', 'max_tokens': 300, 'system': system_prompt, 'messages': mensajes},
+            timeout=20
+        )
+        result = resp.json()
+        texto = result['content'][0]['text']
+        return jsonify({'ok': True, 'respuesta': texto})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── ENVIAR APP AL SOCIO ──────────────────────────────────
 @app.route('/api/socios/<int:sid>/enviar_app', methods=['POST'])
