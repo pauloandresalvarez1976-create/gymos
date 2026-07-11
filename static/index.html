@@ -1275,6 +1275,13 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
         <div style="background:#1a1a1a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;font-size:11px;color:#555">
           <div style="display:flex;justify-content:space-between"><span>ID Socio</span><span id="mpId" style="color:#444">—</span></div>
           <div style="display:flex;justify-content:space-between"><span>Miembro desde</span><span id="mpDesde" style="color:#444">—</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Asistente IA</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="mpIaSwitch" onchange="toggleIaSocio()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+              <span id="mpIaLabel" style="color:#444">Desactivado</span>
+            </label>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
             <span>App del socio</span>
             <div style="display:flex;align-items:center;gap:8px">
@@ -1765,6 +1772,9 @@ async function abrirPerfil(id) {
     document.getElementById('mpEmail').value = s.email || '';
     document.getElementById('mpPlan').value = s.plan || 'Plan Mensual';
     document.getElementById('mpObjetivo').value = s.objetivo || '';
+    const iaSwitch = document.getElementById('mpIaSwitch');
+    iaSwitch.checked = s.ia_habilitada === 1;
+    document.getElementById('mpIaLabel').textContent = s.ia_habilitada ? 'Activado' : 'Desactivado';
     document.getElementById('mpPwaLink').href = `https://gymos-o3yw.onrender.com/socio/${s.id}`;
     document.getElementById('mpFechaVenc').value = s.fecha_venc || '';
     document.getElementById('mpId').textContent = '#' + String(s.id).padStart(4, '0');
@@ -1978,6 +1988,14 @@ async function enviarAppAlSocio() {
     if (data.ok) toast('✅ App enviada a ' + email, 'ok');
     else toast(data.error || 'Error al enviar', 'bad');
   } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function toggleIaSocio() {
+  const checked = document.getElementById('mpIaSwitch').checked;
+  document.getElementById('mpIaLabel').textContent = checked ? 'Activado' : 'Desactivado';
+  try {
+    await fetch(`${API}/api/socios/${socioEditandoId}/ia/toggle`, { method: 'POST' });
+  } catch(e) {}
 }
 
 async function guardarObjetivo() {

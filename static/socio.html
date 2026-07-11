@@ -380,6 +380,25 @@
   .countdown-ok { text-align: center; padding: 16px; font-size: 22px; }
   .countdown-ritmo { text-align: center; font-size: 11px; color: var(--text3); margin-top: 6px; }
 
+  /* ASISTENTE IA */
+  .ia-tab { display: flex; flex-direction: column; height: calc(100vh - 130px); }
+  .ia-mensajes { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .ia-burbuja { max-width: 82%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+  .ia-burbuja.user { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .ia-burbuja.bot { background: var(--bg2); color: var(--text1); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .ia-burbuja.typing { color: var(--text3); font-style: italic; }
+  .ia-input-area { padding: 12px 16px; display: flex; gap: 8px; background: var(--bg1); border-top: 1px solid var(--bg3); }
+  .ia-input { flex: 1; background: var(--bg2); border: 1px solid var(--bg3); border-radius: 24px; padding: 10px 16px; font-size: 14px; color: var(--text1); outline: none; }
+  .ia-input::placeholder { color: var(--text3); }
+  .ia-send { background: var(--accent); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .ia-send i { color: white; font-size: 18px; }
+  .ia-send:disabled { background: var(--bg3); }
+  .ia-bienvenida { text-align: center; padding: 30px 20px; color: var(--text3); }
+  .ia-bienvenida-emoji { font-size: 48px; margin-bottom: 12px; }
+  .ia-bienvenida-titulo { font-size: 16px; font-weight: 700; color: var(--text2); margin-bottom: 8px; }
+  .ia-sugerencias { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .ia-sugerencia { background: var(--bg2); border: 1px solid var(--bg3); border-radius: 12px; padding: 10px 14px; font-size: 13px; color: var(--text2); cursor: pointer; text-align: left; }
+
   /* CLIMA */
   .clima-card { background: var(--bg2); border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; display: flex; align-items: center; gap: 14px; }
   .clima-icono { font-size: 40px; flex-shrink: 0; }
@@ -668,6 +687,68 @@ async function init() {
   } catch(e) {
     document.getElementById('app').innerHTML = `<div class="error-msg">❌ No se pudo cargar tu membresía.<br><small>${e.message}</small></div>`;
   }
+}
+
+// ── ASISTENTE IA ────────────────────────────────────────
+let iaMensajesHistorial = [];
+
+function iaAgregarBurbuja(texto, rol) {
+  const cont = document.getElementById('iaMensajes');
+  if (!cont) return;
+  // Ocultar bienvenida al primer mensaje
+  const bienvenida = cont.querySelector('.ia-bienvenida');
+  if (bienvenida) bienvenida.style.display = 'none';
+  const div = document.createElement('div');
+  div.className = 'ia-burbuja ' + rol;
+  div.textContent = texto;
+  cont.appendChild(div);
+  cont.scrollTop = cont.scrollHeight;
+  return div;
+}
+
+async function enviarMensajeIATexto(texto) {
+  const input = document.getElementById('iaInput');
+  if (input) input.value = texto;
+  await enviarMensajeIA();
+}
+
+async function enviarMensajeIA() {
+  const input = document.getElementById('iaInput');
+  const sendBtn = document.getElementById('iaSendBtn');
+  if (!input) return;
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  input.value = '';
+  sendBtn.disabled = true;
+
+  iaAgregarBurbuja(texto, 'user');
+  iaMensajesHistorial.push({ role: 'user', content: texto });
+
+  const typing = iaAgregarBurbuja('Escribiendo...', 'bot typing');
+
+  try {
+    const res = await fetch('/api/socios/' + socioId + '/ia/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mensajes: iaMensajesHistorial })
+    });
+    const data = await res.json();
+    typing.remove();
+    if (data.ok) {
+      iaAgregarBurbuja(data.respuesta, 'bot');
+      iaMensajesHistorial.push({ role: 'assistant', content: data.respuesta });
+      // Mantener historial corto (últimos 10 mensajes)
+      if (iaMensajesHistorial.length > 10) iaMensajesHistorial = iaMensajesHistorial.slice(-10);
+    } else {
+      iaAgregarBurbuja('No pude responder. Intentá de nuevo.', 'bot');
+    }
+  } catch(e) {
+    if (typing) typing.remove();
+    iaAgregarBurbuja('Sin conexión. Intentá más tarde.', 'bot');
+  }
+  sendBtn.disabled = false;
+  input.focus();
 }
 
 // ── CLIMA + CONSEJO DEL DÍA ──────────────────────────────
@@ -1024,6 +1105,29 @@ function renderApp() {
         <div id="progresoContainer" class="loading" style="padding:40px 20px">Cargando...</div>
       </div>
 
+      ${s.ia_habilitada ? `
+      <!-- TAB IA -->
+      <div class="tab-content" id="tab-ia">
+        <div class="ia-tab">
+          <div class="ia-mensajes" id="iaMensajes">
+            <div class="ia-bienvenida">
+              <div class="ia-bienvenida-emoji">🤖</div>
+              <div class="ia-bienvenida-titulo">Hola ${s.nombre.split(' ')[0]}, soy tu asistente de fitness</div>
+              <div style="font-size:13px">Preguntame sobre nutrición, entrenamiento o hábitos saludables.</div>
+              <div class="ia-sugerencias">
+                <button class="ia-sugerencia" id="iaS1">¿Qué como antes de entrenar?</button>
+                <button class="ia-sugerencia" id="iaS2">¿Cuánto tiempo tarda en verse el resultado?</button>
+                <button class="ia-sugerencia" id="iaS3">¿Cómo puedo recuperarme mejor?</button>
+              </div>
+            </div>
+          </div>
+          <div class="ia-input-area">
+            <input class="ia-input" id="iaInput" placeholder="Preguntame algo..." maxlength="300">
+            <button class="ia-send" id="iaSendBtn"><i class="ti ti-send"></i></button>
+          </div>
+        </div>
+      </div>` : ''}
+
     </div>
 
     <!-- NAVBAR BOTTOM -->
@@ -1040,6 +1144,10 @@ function renderApp() {
       <button class="nav-btn" id="nav-progreso" onclick="cambiarTab('progreso')">
         <i class="ti ti-chart-line"></i>Progreso
       </button>
+      ${s.ia_habilitada ? `
+      <button class="nav-btn" id="nav-ia" onclick="cambiarTab('ia')">
+        <i class="ti ti-robot"></i>IA
+      </button>` : ''}
     </div>
   `;
   aplicarTema(localStorage.getItem('gymos-tema') || '');
@@ -1048,6 +1156,17 @@ function renderApp() {
   if (btnEntren) btnEntren.onclick = function() { abrirSelectorDia(); };
   // Clima
   cargarClima();
+  // IA listeners
+  if (socioData && socioData.ia_habilitada) {
+    const sendBtn = document.getElementById('iaSendBtn');
+    const input = document.getElementById('iaInput');
+    if (sendBtn) sendBtn.onclick = enviarMensajeIA;
+    if (input) input.onkeydown = function(e) { if (e.key === 'Enter') enviarMensajeIA(); };
+    ['iaS1','iaS2','iaS3'].forEach(function(id) {
+      const btn = document.getElementById(id);
+      if (btn) btn.onclick = function() { enviarMensajeIATexto(this.textContent); };
+    });
+  }
 }
 
 function cambiarTab(tab) {
