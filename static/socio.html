@@ -1233,6 +1233,8 @@ function renderApp() {
     </div>
   `;
   aplicarTema(localStorage.getItem('gymos-tema') || '');
+  // Estado inicial de historial — evita que el primer "atrás" salga de la app
+  history.replaceState({ tab: 'inicio' }, '');
   // Listener botón entrenamiento (anti-bug Android)
   const btnEntren = document.getElementById('btnIniciarEntren');
   if (btnEntren) btnEntren.onclick = function() { abrirSelectorDia(); };
@@ -1251,13 +1253,14 @@ function renderApp() {
   }
 }
 
-function cambiarTab(tab) {
+function cambiarTab(tab, sinHistorial) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${tab}`)?.classList.add('active');
   document.getElementById(`nav-${tab}`)?.classList.add('active');
   tabActual = tab;
   if (tab === 'progreso' && !progresoData) cargarProgreso();
+  if (!sinHistorial) history.pushState({ tab: tab }, '');
 }
 
 function toggleSection(id) {
@@ -1530,9 +1533,19 @@ function cerrarModulo() {
 }
 
 window.addEventListener('popstate', function(e) {
+  // 1. Si el overlay de módulo está abierto, cerrarlo primero
   if (document.getElementById('moduloOverlay').classList.contains('open')) {
     cerrarModulo();
+    return;
   }
+  // 2. Si hay un tab en el estado, ir a ese tab sin agregar historial
+  if (e.state && e.state.tab) {
+    cambiarTab(e.state.tab, true);
+    return;
+  }
+  // 3. Si llegamos a inicio o no hay estado, no salir — volver a pushear inicio
+  history.pushState({ tab: 'inicio' }, '');
+  cambiarTab('inicio', true);
 });
 
 function metricCardHTML(key, registros) {
