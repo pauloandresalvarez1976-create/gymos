@@ -128,21 +128,39 @@
   .pago-monto { font-size: 14px; font-weight: 600; color: var(--accent); }
 
   /* PLAN ALIMENTARIO */
-  .plan-disclaimer { background: var(--yellow)10; border: 0.5px solid var(--yellow)30; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--yellow); margin-bottom: 14px; display: flex; gap: 8px; align-items: flex-start; }
-  .comida-bloque { margin-bottom: 14px; }
-  .comida-titulo { font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-  .comida-items { display: flex; flex-direction: column; gap: 4px; }
-  .comida-item { font-size: 13px; color: var(--text2); padding: 5px 0; border-bottom: 0.5px solid #1a1a1a; display: flex; gap: 6px; }
-  .comida-item:last-child { border-bottom: none; }
-  .comida-item::before { content: '•'; color: var(--accent); flex-shrink: 0; }
+  .plan-disclaimer { background: var(--yellow)12; border-left: 3px solid var(--yellow); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: var(--yellow); margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; }
+
+  /* DIETA */
+  .dieta-header { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 18px; padding: 20px; margin-bottom: 18px; position: relative; overflow: hidden; }
+  .dieta-header::after { content:''; position:absolute; top:-30%; right:-10%; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle,#ffffff20,transparent 70%); pointer-events:none; }
+  .dieta-header-nombre { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.4px; }
+  .dieta-header-obj { font-size: 13px; color: #ffffffcc; margin-top: 5px; line-height: 1.4; }
+  .comida-card { background: var(--bg1); border-radius: 16px; border: 1px solid var(--bg3); margin-bottom: 12px; overflow: hidden; }
+  .comida-card-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; }
+  .comida-emoji { font-size: 26px; line-height: 1; flex-shrink: 0; }
+  .comida-titulo-nuevo { font-size: 16px; font-weight: 700; color: var(--text1); }
+  .comida-items-wrap { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 0; }
+  .comida-item-nuevo { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--bg3); }
+  .comida-item-nuevo:last-child { border-bottom: none; }
+  .comida-item-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
+  .comida-item-txt { font-size: 15px; color: var(--text2); line-height: 1.45; }
 
   /* RUTINA */
-  .dia-bloque { margin-bottom: 14px; }
-  .dia-titulo { font-size: 12px; font-weight: 700; color: var(--text1); background: var(--bg2); padding: 6px 10px; border-radius: 8px; margin-bottom: 8px; }
-  .ejercicio-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid #1a1a1a; }
-  .ejercicio-item:last-child { border-bottom: none; }
-  .ejercicio-nombre { font-size: 13px; color: var(--text2); }
-  .ejercicio-series { font-size: 11px; color: var(--accent); font-weight: 600; background: var(--accent)15; padding: 2px 8px; border-radius: 10px; }
+  .rutina-header { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 18px; padding: 20px; margin-bottom: 18px; position: relative; overflow: hidden; }
+  .rutina-header::after { content:''; position:absolute; top:-30%; right:-10%; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle,#ffffff20,transparent 70%); pointer-events:none; }
+  .rutina-header-nombre { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.4px; }
+  .dia-card { background: var(--bg1); border-radius: 16px; border: 1px solid var(--bg3); margin-bottom: 14px; overflow: hidden; }
+  .dia-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 1px solid var(--bg3); }
+  .dia-nombre { font-size: 15px; font-weight: 800; color: var(--text1); }
+  .dia-badge { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-bg); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--accent-bd); }
+  .ejercicio-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--bg3); }
+  .ejercicio-row:last-child { border-bottom: none; }
+  .ejercicio-num { width: 26px; height: 26px; border-radius: 8px; background: var(--accent-bg); color: var(--accent); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ejercicio-info { flex: 1; min-width: 0; }
+  .ejercicio-nombre-nuevo { font-size: 15px; font-weight: 600; color: var(--text1); line-height: 1.3; }
+  .ejercicio-series-nuevo { font-size: 13px; color: var(--accent); font-weight: 700; margin-top: 2px; }
+  /* RUTINA */
+  /* clases legacy rutina — reemplazadas por dia-card / ejercicio-row */
 
   /* BOTÓN RENOVAR */
   .btn-renovar { background: var(--accent); color: white; border: none; border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
@@ -1120,75 +1138,80 @@ function renderApp() {
       <!-- TAB ALIMENTACIÓN -->
       <div class="tab-content" id="tab-dieta">
         ${plan ? `
-          <div class="section" style="border:none;background:transparent">
-            <div class="section-body open" style="padding:0">
-              <div style="margin-bottom:14px">
-                <div style="font-size:16px;font-weight:700;margin-bottom:4px">${plan.nombre}</div>
-                <div style="font-size:12px;color:var(--text2)">${plan.objetivo}</div>
+          <div class="dieta-header">
+            <div class="dieta-header-nombre">${plan.nombre}</div>
+            <div class="dieta-header-obj">${plan.objetivo}</div>
+          </div>
+          <div class="plan-disclaimer">
+            <i class="ti ti-info-circle" style="font-size:18px;flex-shrink:0;margin-top:1px"></i>
+            <span>Este plan es una <strong>guía orientativa</strong>. No reemplaza la consulta con un nutricionista. Adaptalo a tus necesidades.</span>
+          </div>
+          ${plan.comidas.map(c => `
+            <div class="comida-card">
+              <div class="comida-card-header">
+                <div class="comida-emoji">${c.emoji || '🍽️'}</div>
+                <div class="comida-titulo-nuevo">${c.titulo.replace(/^[\p{Emoji}\s]+/u,'').trim()}</div>
               </div>
-              <div class="plan-disclaimer">
-                <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0"></i>
-                <span>Este plan es una <strong>guía orientativa</strong>. No reemplaza la consulta con un nutricionista. Adaptalo a tus necesidades.</span>
+              <div class="comida-items-wrap">
+                ${c.items.map(i => `
+                  <div class="comida-item-nuevo">
+                    <div class="comida-item-dot"></div>
+                    <div class="comida-item-txt">${i}</div>
+                  </div>`).join('')}
               </div>
-              ${plan.comidas.map(c => `
-                <div class="comida-bloque">
-                  <div class="comida-titulo">${c.titulo}</div>
-                  <div class="comida-items">
-                    ${c.items.map(i => `<div class="comida-item">${i}</div>`).join('')}
-                  </div>
-                </div>`).join('')}
-            </div>
-          </div>` :
+            </div>`).join('')}` :
           `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
             <i class="ti ti-salad" style="font-size:48px;display:block;margin-bottom:12px"></i>
-            <div style="font-size:14px">Tu gimnasio aún no asignó un objetivo.</div>
-            <div style="font-size:12px;margin-top:6px">Consultá con tu entrenador.</div>
+            <div style="font-size:15px">Tu gimnasio aún no asignó un objetivo.</div>
+            <div style="font-size:13px;margin-top:6px">Consultá con tu entrenador.</div>
           </div>`}
       </div>
 
       <!-- TAB RUTINA -->
       <div class="tab-content" id="tab-rutina">
         ${rutina ? `
-          <div class="section" style="border:none;background:transparent">
-            <div class="section-body open" style="padding:0">
-              <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
-                <div style="font-size:16px;font-weight:700">${rutina.nombre}</div>
-              </div>
-              <div class="hub-grid" style="margin-bottom:18px;grid-template-columns:1fr">
-                <div class="flip-card" id="flip-entrenamiento" style="aspect-ratio:unset;height:110px" onclick="toggleFlip(this,event)">
-                  <div class="flip-card-inner">
-                    <div class="flip-front" style="flex-direction:row;align-items:center;gap:16px;padding:20px 22px">
-                      <div class="flip-front-icon" style="font-size:36px;flex-shrink:0"><i class="ti ti-player-play"></i></div>
-                      <div>
-                        <div class="flip-front-title" style="font-size:16px">Iniciar entrenamiento guiado</div>
-                        <div class="flip-front-hint">Timer · Beeps · Resumen final</div>
-                      </div>
-                    </div>
-                    <div class="flip-back" style="flex-direction:row;align-items:center;gap:14px;padding:18px 20px;text-align:left">
-                      <div class="flip-back-icon" style="font-size:28px;flex-shrink:0"><i class="ti ti-player-play"></i></div>
-                      <div style="flex:1">
-                        <div class="flip-back-text" style="margin-bottom:10px">Seguí tu rutina paso a paso con timer de descanso y beeps de aviso.</div>
-                        <button class="flip-back-btn" id="btnIniciarEntren" onclick="event.stopPropagation()"><i class="ti ti-player-play"></i> ¡Arrancar!</button>
-                      </div>
-                    </div>
+          <div class="rutina-header">
+            <div class="rutina-header-nombre">${rutina.nombre}</div>
+          </div>
+          <div class="hub-grid" style="margin-bottom:18px;grid-template-columns:1fr">
+            <div class="flip-card" id="flip-entrenamiento" style="aspect-ratio:unset;height:110px" onclick="toggleFlip(this,event)">
+              <div class="flip-card-inner">
+                <div class="flip-front" style="flex-direction:row;align-items:center;gap:16px;padding:20px 22px">
+                  <div class="flip-front-icon" style="font-size:36px;flex-shrink:0"><i class="ti ti-player-play"></i></div>
+                  <div>
+                    <div class="flip-front-title" style="font-size:16px">Iniciar entrenamiento guiado</div>
+                    <div class="flip-front-hint">Timer · Beeps · Resumen final</div>
+                  </div>
+                </div>
+                <div class="flip-back" style="flex-direction:row;align-items:center;gap:14px;padding:18px 20px;text-align:left">
+                  <div class="flip-back-icon" style="font-size:28px;flex-shrink:0"><i class="ti ti-player-play"></i></div>
+                  <div style="flex:1">
+                    <div class="flip-back-text" style="margin-bottom:10px">Seguí tu rutina paso a paso con timer de descanso y beeps de aviso.</div>
+                    <button class="flip-back-btn" id="btnIniciarEntren" onclick="event.stopPropagation()"><i class="ti ti-player-play"></i> ¡Arrancar!</button>
                   </div>
                 </div>
               </div>
-              ${rutina.dias.map(d => `
-                <div class="dia-bloque">
-                  <div class="dia-titulo">${d.dia}</div>
-                  ${d.ejercicios.map(e => `
-                    <div class="ejercicio-item">
-                      <span class="ejercicio-nombre">${e.n}</span>
-                      <span class="ejercicio-series">${e.s}</span>
-                    </div>`).join('')}
-                </div>`).join('')}
             </div>
-          </div>` :
+          </div>
+          ${rutina.dias.map(d => `
+            <div class="dia-card">
+              <div class="dia-card-header">
+                <div class="dia-nombre">${d.dia}</div>
+                <div class="dia-badge">${d.ejercicios.length} ejercicios</div>
+              </div>
+              ${d.ejercicios.map((e, idx) => `
+                <div class="ejercicio-row">
+                  <div class="ejercicio-num">${idx + 1}</div>
+                  <div class="ejercicio-info">
+                    <div class="ejercicio-nombre-nuevo">${e.n}</div>
+                    <div class="ejercicio-series-nuevo">${e.s}</div>
+                  </div>
+                </div>`).join('')}
+            </div>`).join('')}` :
           `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
             <i class="ti ti-barbell" style="font-size:48px;display:block;margin-bottom:12px"></i>
-            <div style="font-size:14px">Tu gimnasio aún no asignó una rutina.</div>
-            <div style="font-size:12px;margin-top:6px">Consultá con tu entrenador.</div>
+            <div style="font-size:15px">Tu gimnasio aún no asignó una rutina.</div>
+            <div style="font-size:13px;margin-top:6px">Consultá con tu entrenador.</div>
           </div>`}
       </div>
 
