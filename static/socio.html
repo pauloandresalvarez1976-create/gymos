@@ -83,49 +83,50 @@
   body { background: var(--bg0); color: var(--text1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
   /* HEADER */
-  .pwa-header { background: linear-gradient(160deg, var(--accent), var(--accent2)); padding: 32px 16px 24px; text-align: center; position: relative; }
-  .gym-nombre { font-size: 11px; color: #fff9; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase; }
-  .socio-avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid white; object-fit: cover; margin: 0 auto 12px; display: block; background: #fff2; box-shadow: 0 4px 20px #0006; }
-  .socio-nombre { font-size: 24px; font-weight: 700; color: white; letter-spacing: -0.5px; }
-  .socio-plan { font-size: 12px; color: #fff9; margin-top: 5px; background: #ffffff20; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+  .pwa-header { background: linear-gradient(160deg, var(--accent), var(--accent2)); padding: 36px 16px 28px; text-align: center; position: relative; overflow: hidden; }
+  .pwa-header::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 70% 20%, #ffffff22, transparent 60%); pointer-events:none; }
+  .gym-nombre { font-size: 11px; color: #ffffffcc; margin-bottom: 14px; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; }
+  .socio-avatar { width: 96px; height: 96px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.9); object-fit: cover; margin: 0 auto 14px; display: block; background: #fff2; box-shadow: 0 6px 30px #0008, 0 0 0 6px rgba(255,255,255,0.15); }
+  .socio-nombre { font-size: 26px; font-weight: 800; color: white; letter-spacing: -0.5px; text-shadow: 0 2px 8px #0004; }
+  .socio-plan { font-size: 12px; color: #ffffffee; margin-top: 7px; background: rgba(255,255,255,0.2); display: inline-block; padding: 4px 16px; border-radius: 20px; font-weight: 600; letter-spacing: 0.3px; border: 1px solid rgba(255,255,255,0.3); }
 
-  /* CARD FLOTANTE */
-  .status-card { background: var(--bg1); border-radius: 20px; margin: 12px 12px 0; padding: 18px 20px; border: 0.5px solid #2a2a2a; box-shadow: 0 8px 40px #0009; }
+  /* STATUS CARD */
+  .status-card { background: var(--bg1); border-radius: 22px; margin: -18px 12px 0; padding: 20px 22px; border: 1px solid var(--bg3); box-shadow: 0 12px 48px #0009, 0 2px 8px #0004; position: relative; z-index: 2; }
   .status-row { display: flex; justify-content: space-between; align-items: center; }
-  .status-badge { font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 20px; letter-spacing: 0.3px; }
-  .status-badge.al-dia { background: var(--green)20; color: var(--green); border: 1px solid var(--green)40; }
-  .status-badge.vencido { background: var(--red)20; color: var(--red); border: 1px solid var(--red)40; }
-  .status-badge.congelado { background: var(--blue)20; color: var(--blue); border: 1px solid var(--blue)40; }
-  .dias-restantes { font-size: 36px; font-weight: 800; line-height: 1; }
-  .dias-restantes.ok { color: var(--green); }
-  .dias-restantes.warn { color: var(--yellow); }
-  .dias-restantes.bad { color: var(--red); }
-  .dias-label { font-size: 11px; color: var(--text3); }
-  .venc-fecha { font-size: 12px; color: var(--text2); margin-top: 10px; padding-top: 10px; border-top: 0.5px solid #222; }
+  .status-badge { font-size: 13px; font-weight: 800; padding: 7px 18px; border-radius: 20px; letter-spacing: 0.4px; }
+  .status-badge.al-dia { background: var(--green)25; color: var(--green); border: 1.5px solid var(--green)60; box-shadow: 0 0 12px var(--green)20; }
+  .status-badge.vencido { background: var(--red)20; color: var(--red); border: 1.5px solid var(--red)50; box-shadow: 0 0 12px var(--red)20; }
+  .status-badge.congelado { background: var(--blue)20; color: var(--blue); border: 1.5px solid var(--blue)50; }
+  .dias-restantes { font-size: 42px; font-weight: 900; line-height: 1; letter-spacing: -2px; }
+  .dias-restantes.ok { color: var(--green); text-shadow: 0 0 20px var(--green)50; }
+  .dias-restantes.warn { color: var(--yellow); text-shadow: 0 0 20px var(--yellow)40; }
+  .dias-restantes.bad { color: var(--red); text-shadow: 0 0 20px var(--red)40; }
+  .dias-label { font-size: 12px; color: var(--text3); font-weight: 500; margin-top: 2px; }
+  .venc-fecha { font-size: 13px; color: var(--text2); margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--bg3); font-weight: 500; }
 
   /* CONTENIDO */
-  .pwa-content { padding: 16px 12px 100px; display: flex; flex-direction: column; gap: 10px; }
+  .pwa-content { padding: 24px 12px 100px; display: flex; flex-direction: column; gap: 12px; }
 
   /* SECTION */
-  .section { background: var(--bg1); border-radius: 16px; border: 0.5px solid #1e1e1e; overflow: hidden; box-shadow: 0 2px 12px #0004; }
-  .section-header { padding: 16px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
-  .section-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent)20; color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-  .section-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .section-chevron { color: var(--text3); font-size: 16px; transition: transform 0.2s; }
+  .section { background: var(--bg1); border-radius: 18px; border: 1px solid var(--bg3); overflow: hidden; box-shadow: 0 4px 20px #0005; }
+  .section-header { padding: 18px 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; user-select: none; }
+  .section-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--accent)22; color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; border: 1px solid var(--accent)30; }
+  .section-title { font-size: 16px; font-weight: 700; flex: 1; color: var(--text1); }
+  .section-chevron { color: var(--text3); font-size: 18px; transition: transform 0.2s; }
   .section-chevron.open { transform: rotate(180deg); }
-  .section-body { display: none; padding: 0 16px 16px; }
+  .section-body { display: none; padding: 0 18px 18px; }
   .section-body.open { display: block; }
 
   /* QR */
-  .qr-container { text-align: center; padding: 16px 0; }
-  .qr-container img { width: 180px; height: 180px; border-radius: 12px; border: 4px solid white; }
-  .qr-hint { font-size: 12px; color: var(--text3); margin-top: 10px; }
+  .qr-container { text-align: center; padding: 20px 0; }
+  .qr-container img { width: 190px; height: 190px; border-radius: 16px; border: 4px solid var(--accent); box-shadow: 0 0 24px var(--accent)30; }
+  .qr-hint { font-size: 13px; color: var(--text3); margin-top: 12px; line-height: 1.5; }
 
   /* PAGOS */
-  .pago-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid #1a1a1a; }
+  .pago-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--bg3); }
   .pago-row:last-child { border-bottom: none; }
-  .pago-info { font-size: 12px; color: var(--text2); }
-  .pago-monto { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .pago-info { font-size: 14px; color: var(--text1); font-weight: 500; }
+  .pago-monto { font-size: 16px; font-weight: 800; color: var(--accent); }
 
   /* PLAN ALIMENTARIO */
   .plan-disclaimer { background: var(--yellow)12; border-left: 3px solid var(--yellow); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: var(--yellow); margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start; line-height: 1.5; }
@@ -163,14 +164,37 @@
   /* clases legacy rutina — reemplazadas por dia-card / ejercicio-row */
 
   /* BOTÓN RENOVAR */
-  .btn-renovar { background: var(--accent); color: white; border: none; border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+  .btn-renovar { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border: none; border-radius: 16px; padding: 18px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; box-shadow: 0 6px 20px var(--accent)40; letter-spacing: 0.2px; }
 
   /* NAVBAR BOTTOM */
-  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg1); border-top: 0.5px solid var(--bg3); display: flex; padding: 10px 0 env(safe-area-inset-bottom); z-index: 100; box-shadow: 0 -4px 20px #0008; }
-  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; cursor: pointer; color: #444; font-size: 10px; font-weight: 500; transition: all 0.15s; border: none; background: none; letter-spacing: 0.3px; }
-  .nav-btn.active { color: var(--accent); }
-  .nav-btn.active i { filter: drop-shadow(0 0 6px var(--accent)); }
-  .nav-btn i { font-size: 22px; }
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg1);
+    border-top: 1.5px solid var(--bg3);
+    display: flex; padding: 8px 6px env(safe-area-inset-bottom);
+    z-index: 100;
+    box-shadow: 0 -6px 32px #000a;
+    gap: 4px;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 8px 4px 6px; cursor: pointer; border: none; background: none;
+    color: var(--text3); font-size: 10px; font-weight: 600; letter-spacing: 0.4px;
+    transition: all 0.18s; border-radius: 14px;
+  }
+  .nav-btn i { font-size: 24px; transition: all 0.18s; }
+  .nav-btn.active {
+    color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .nav-btn.active i {
+    filter: drop-shadow(0 0 8px var(--accent));
+    transform: translateY(-2px) scale(1.15);
+  }
+  .nav-btn:not(.active):active {
+    color: var(--text2);
+    background: var(--bg3);
+  }
 
   /* TABS */
   .tab-content { display: none; }
@@ -418,21 +442,21 @@
   .ia-sugerencia { background: var(--bg2); border: 1px solid var(--bg3); border-radius: 12px; padding: 10px 14px; font-size: 13px; color: var(--text2); cursor: pointer; text-align: left; }
 
   /* CLIMA */
-  .clima-card { background: var(--bg2); border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; display: flex; align-items: center; gap: 14px; }
-  .clima-icono { font-size: 40px; flex-shrink: 0; }
+  .clima-card { background: var(--bg1); border-radius: 18px; padding: 18px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--bg3); box-shadow: 0 4px 16px #0004; }
+  .clima-icono { font-size: 48px; flex-shrink: 0; }
   .clima-info { flex: 1; }
-  .clima-temp { font-size: 22px; font-weight: 800; color: var(--text1); line-height: 1; }
-  .clima-desc { font-size: 12px; color: var(--text3); margin-top: 2px; text-transform: capitalize; }
-  .clima-consejo { font-size: 12px; color: var(--text2); margin-top: 8px; line-height: 1.4; background: var(--bg3); border-radius: 10px; padding: 8px 10px; }
-  .clima-loading { font-size: 12px; color: var(--text3); text-align: center; padding: 16px; }
+  .clima-temp { font-size: 28px; font-weight: 900; color: var(--text1); line-height: 1; letter-spacing: -1px; }
+  .clima-desc { font-size: 14px; color: var(--text2); margin-top: 3px; text-transform: capitalize; font-weight: 500; }
+  .clima-consejo { font-size: 13px; color: var(--text2); margin-top: 10px; line-height: 1.5; background: var(--bg3); border-radius: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); }
+  .clima-loading { font-size: 13px; color: var(--text3); text-align: center; padding: 18px; }
 
   /* MOTIVACIÓN DIARIA */
-  .motiv-card { background: linear-gradient(135deg, var(--accent)18, var(--bg2)); border: 1px solid var(--accent)30; border-radius: 18px; padding: 18px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
-  .motiv-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: var(--accent)15; border-radius: 50%; }
-  .motiv-dia { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; }
-  .motiv-frase { font-size: 15px; font-weight: 700; color: var(--text1); line-height: 1.4; margin-bottom: 6px; }
-  .motiv-autor { font-size: 11px; color: var(--text3); font-style: italic; }
-  .motiv-emoji { font-size: 32px; position: absolute; top: 16px; right: 20px; }
+  .motiv-card { background: linear-gradient(135deg, var(--accent)20, var(--bg1)); border: 1px solid var(--accent)40; border-radius: 20px; padding: 22px 20px; margin-bottom: 12px; position: relative; overflow: hidden; box-shadow: 0 6px 24px var(--accent)15; }
+  .motiv-card::before { content: ''; position: absolute; top: -30px; right: -20px; width: 110px; height: 110px; background: var(--accent)18; border-radius: 50%; }
+  .motiv-dia { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 10px; }
+  .motiv-frase { font-size: 17px; font-weight: 800; color: var(--text1); line-height: 1.45; margin-bottom: 8px; padding-right: 50px; }
+  .motiv-autor { font-size: 13px; color: var(--text3); font-style: italic; }
+  .motiv-emoji { font-size: 38px; position: absolute; top: 18px; right: 18px; }
 
   /* COMPARATIVA ANÓNIMA */
   .comp-card { background: var(--bg2); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
@@ -510,11 +534,13 @@
     padding: 14px; justify-content: center; align-items: center; text-align: center; gap: 10px;
     box-shadow: 0 6px 24px -6px #0007;
   }
-  .flip-back-icon { font-size: 22px; color: var(--accent); }
-  .flip-back-text { font-size: 11.5px; color: var(--text2); line-height: 1.35; }
+  .flip-back-icon { font-size: 24px; color: var(--accent); }
+  .flip-back-text { font-size: 13px; color: var(--text2); line-height: 1.4; }
   .flip-back-btn {
-    background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 8px 16px;
-    font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; border: none; border-radius: 12px; padding: 10px 18px;
+    font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 4px 14px var(--accent)40;
   }
 
   /* OVERLAY DE MÓDULO */
@@ -524,15 +550,17 @@
   }
   .modulo-overlay.open { transform: translateY(0); }
   .modulo-overlay-header {
-    display: flex; align-items: center; gap: 12px; padding: 16px 14px; background: var(--bg1);
-    border-bottom: 0.5px solid #1e1e1e; flex-shrink: 0;
+    display: flex; align-items: center; gap: 14px; padding: 18px 16px; background: var(--bg1);
+    border-bottom: 1px solid var(--bg3); flex-shrink: 0;
+    box-shadow: 0 2px 12px #0004;
   }
   .modulo-overlay-back {
-    width: 34px; height: 34px; border-radius: 10px; background: var(--bg3); border: none; color: var(--text1);
-    display: flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; flex-shrink: 0;
+    width: 38px; height: 38px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--bg3);
+    color: var(--text1); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer; flex-shrink: 0;
   }
-  .modulo-overlay-title { font-size: 15px; font-weight: 700; }
-  .modulo-overlay-body { flex: 1; overflow-y: auto; padding: 14px 12px 40px; }
+  .modulo-overlay-title { font-size: 17px; font-weight: 800; color: var(--text1); }
+  .modulo-overlay-body { flex: 1; overflow-y: auto; padding: 16px 12px 40px; }
   .modulo-overlay-body > div { display: none; }
   .modulo-overlay-body > div.modulo-activo { display: block; }
 </style>
@@ -1082,7 +1110,7 @@ function renderApp() {
             <div class="qr-container">
               <img src="/qr/socio_${s.id}.png" alt="QR de acceso" onerror="this.style.display='none';document.getElementById('qr-gen-btn').style.display='block'">
               <div id="qr-gen-btn" style="display:none">
-                <button onclick="generarQR()" style="background:var(--accent);color:white;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:13px">Generar mi QR</button>
+                <button onclick="generarQR()" style="background:var(--accent);color:white;border:none;border-radius:12px;padding:12px 24px;cursor:pointer;font-size:15px;font-weight:700">Generar mi QR</button>
               </div>
               <div class="qr-hint">Mostrá este código en la cámara del gimnasio para registrar tu ingreso</div>
             </div>
@@ -1092,7 +1120,7 @@ function renderApp() {
         <!-- HISTORIAL PAGOS -->
         <div class="section">
           <div class="section-header" onclick="toggleSection('pagos')">
-            <div class="section-icon" style="background:var(--green)20;color:var(--green)"><i class="ti ti-receipt"></i></div>
+            <div class="section-icon" style="background:var(--green)22;color:var(--green);border-color:var(--green)30"><i class="ti ti-receipt"></i></div>
             <div class="section-title">Últimos pagos</div>
             <i class="ti ti-chevron-down section-chevron" id="chev-pagos"></i>
           </div>
@@ -1101,22 +1129,22 @@ function renderApp() {
               <div class="pago-row">
                 <div>
                   <div class="pago-info">${p.plan || 'Pago'} · ${p.metodo || ''}</div>
-                  <div class="pago-info" style="font-size:11px;color:var(--text3)">${p.fecha}</div>
+                  <div class="pago-info" style="font-size:12px;color:var(--text3);margin-top:2px">${p.fecha}</div>
                 </div>
                 <div class="pago-monto">$${parseInt(p.monto).toLocaleString('es-AR')}</div>
-              </div>`).join('') : '<div style="font-size:13px;color:var(--text3);padding:10px 0">Sin pagos registrados</div>'}
+              </div>`).join('') : '<div style="font-size:14px;color:var(--text3);padding:12px 0">Sin pagos registrados</div>'}
           </div>
         </div>
 
         <!-- APARIENCIA -->
         <div class="section">
           <div class="section-header" style="cursor:default">
-            <div class="section-icon" style="background:var(--accent)20;color:var(--accent)"><i class="ti ti-palette"></i></div>
+            <div class="section-icon" style="background:var(--accent)22;color:var(--accent);border-color:var(--accent)30"><i class="ti ti-palette"></i></div>
             <div class="section-title">Apariencia</div>
           </div>
-          <div class="section-body open" style="padding:0 18px 16px">
+          <div class="section-body open" style="padding:0 18px 18px">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
-              <div style="font-size:13px;color:var(--text2)">Tema de color</div>
+              <div style="font-size:14px;color:var(--text2);font-weight:500">Tema de color</div>
               <div style="display:flex;gap:10px">
                 <div class="tema-swatch" data-tema="" onclick="aplicarTema('')" title="Original" style="background:#0d0d0d;border-color:#FF4500"></div>
                 <div class="tema-swatch" data-tema="b" onclick="aplicarTema('b')" title="Gris" style="background:#1f1f1f;border-color:#9ca3af"></div>
