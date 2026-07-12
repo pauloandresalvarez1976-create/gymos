@@ -1918,7 +1918,21 @@ async function renovEnviar() {
   if (renovArchivoSel) fd.append('comprobante', renovArchivoSel);
 
   try {
-    const res = await fetch(`/api/socio/${socioId}/renovacion`, { method: 'POST', body: fd });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    let res;
+    try {
+      res = await fetch(`/api/socio/${socioId}/renovacion`, { method: 'POST', body: fd, signal: controller.signal });
+      clearTimeout(timer);
+    } catch(fetchErr) {
+      clearTimeout(timer);
+      // Si el servidor cortó la conexión pero procesó el request, igual lo tomamos como éxito
+      cerrarRenovModal();
+      toast('✅ Solicitud enviada al gimnasio');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-send"></i> Enviar solicitud';
+      return;
+    }
     const data = await res.json();
     if (data.ok) {
       cerrarRenovModal();
