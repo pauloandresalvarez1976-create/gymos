@@ -1910,6 +1910,11 @@ async function renovEnviar() {
   if (!renovPlanSel) return;
   const btn = document.getElementById('renovBtnEnviar');
   btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Conectando...';
+
+  // Despertar servidor si está dormido (Render free tier)
+  try { await fetch('/api/config', { method: 'GET' }); } catch(e) {}
+  await new Promise(r => setTimeout(r, 1500));
   btn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando...';
 
   const fd = new FormData();
