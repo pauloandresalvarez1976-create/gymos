@@ -197,6 +197,14 @@ def migrate_db():
             fecha DATE,
             storage_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS solicitudes_renovacion (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER NOT NULL,
+            plan_elegido TEXT,
+            monto TEXT,
+            imagen_path TEXT,
+            estado TEXT DEFAULT 'pendiente',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS fichas_medicas (
             id SERIAL PRIMARY KEY, socio_id INTEGER UNIQUE,
             fecha_nacimiento DATE, sexo TEXT, grupo_sanguineo TEXT,
@@ -256,6 +264,8 @@ def init_config():
                 'precio_mensual':'18000','precio_trimestral':'50000','precio_anual':'180000',
                 'precio_inscripcion':'5000','dias_alerta':'7',
                 'gym_email':'','gym_email_pass':'','gym_email_nombre':'Mi Gimnasio',
+                'transferencia_alias':'','transferencia_cbu':'','transferencia_banco':'',
+                'transferencia_titular':'',
                 'declaracion_texto':'Declaro bajo juramento que me encuentro en buen estado de salud y en condiciones físicas aptas para realizar actividad física. Eximo al gimnasio y su personal de toda responsabilidad por accidentes, lesiones o problemas de salud que pudieran surgir durante mi entrenamiento, siendo de mi exclusiva responsabilidad informar cualquier condición médica preexistente. Esta declaración tiene carácter de declaración jurada.'}
     for clave, valor in defaults.items():
         c = session.query(Config).filter_by(clave=clave).first()
@@ -1497,33 +1507,121 @@ def solicitar_renovacion(sid):
     if not s:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
-    gym_nombre = cfg.get('gym_nombre', 'Gimnasio')
-    gym_email  = cfg.get('gym_email', '')
-    if not gym_email:
-        session.close(); return jsonify({'ok': False, 'error': 'El gimnasio no tiene email configurado'}), 400
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
-      <div style="background:#FF4500;padding:24px;text-align:center">
-        <h2 style="margin:0;color:white">🏋️ {gym_nombre}</h2>
-        <p style="margin:6px 0 0;color:#fff9;font-size:13px">Solicitud de renovación</p>
-      </div>
-      <div style="padding:24px">
-        <p style="font-size:15px">El socio <strong>{s.nombre}</strong> quiere renovar su membresía.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr style="border-bottom:1px solid #333"><td style="padding:8px 0;color:#888;font-size:12px">Plan actual</td><td style="text-align:right;font-size:13px">{s.plan or '—'}</td></tr>
-          <tr style="border-bottom:1px solid #333"><td style="padding:8px 0;color:#888;font-size:12px">Vencimiento</td><td style="text-align:right;font-size:13px;color:#FF4444">{str(s.fecha_venc) if s.fecha_venc else '—'}</td></tr>
-          <tr><td style="padding:8px 0;color:#888;font-size:12px">Teléfono</td><td style="text-align:right;font-size:13px">{s.telefono or '—'}</td></tr>
-        </table>
-        <p style="color:#666;font-size:12px">Contactate con el socio para coordinar el pago.</p>
-      </div>
-    </div>"""
+    gym_nombre  = cfg.get('gym_nombre', 'Gimnasio')
+    gym_email   = cfg.get('gym_email', '')
+
+    plan_elegido = request.form.get('plan', '')
+    monto        = request.form.get('monto', '')
+    imagen_path  = None
+
+    # Guardar imagen del comprobante en Supabase Storage si viene
+    if 'comprobante' in request.files:
+        archivo = request.files['comprobante']
+        if archivo and archivo.filename:
+            ext = os.path.splitext(archivo.filename)[1].lower() or '.jpg'
+            from datetime import datetime
+            nombre_archivo = f"renovacion_{sid}_{int(datetime.now().timestamp())}{ext}"
+            contenido = archivo.read()
+            # Comprimir si es imagen
+            try:
+                from PIL import Image
+                import io
+                img = Image.open(io.BytesIO(contenido))
+                img.thumbnail((1200, 1200))
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG', quality=0.80)
+                contenido = buf.getvalue()
+                ext = '.jpg'
+                nombre_archivo = f"renovacion_{sid}_{int(datetime.now().timestamp())}.jpg"
+            except Exception:
+                pass
+            try:
+                SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
+                SUPABASE_SECRET = os.environ.get('SUPABASE_SECRET', '')
+                resp = requests.put(
+                    f"{SUPABASE_URL}/storage/v1/object/fotos-progreso/comprobantes/{nombre_archivo}",
+                    headers={'Authorization': f'Bearer {SUPABASE_SECRET}', 'Content-Type': 'image/jpeg'},
+                    data=contenido, timeout=20
+                )
+                if resp.status_code in (200, 201):
+                    imagen_path = f"comprobantes/{nombre_archivo}"
+            except Exception as e:
+                print(f"Error subiendo comprobante: {e}")
+
+    # Guardar solicitud en tabla
     try:
-        enviar_email(gym_email, f'Solicitud de renovación — {s.nombre}', html, session)
+        session.execute(text(
+            "INSERT INTO solicitudes_renovacion (socio_id, plan_elegido, monto, imagen_path, estado) "
+            "VALUES (:sid, :plan, :monto, :img, 'pendiente')"
+        ), {'sid': sid, 'plan': plan_elegido, 'monto': monto, 'img': imagen_path})
+        session.commit()
+    except Exception as e:
+        print(f"Error guardando solicitud: {e}")
+
+    # Email al gimnasio
+    if gym_email:
+        img_html = ''
+        if imagen_path:
+            SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
+            url_img = f"{SUPABASE_URL}/storage/v1/object/public/fotos-progreso/{imagen_path}"
+            img_html = f'<div style="margin-top:16px"><p style="color:#888;font-size:12px;margin-bottom:8px">Comprobante adjunto:</p><img src="{url_img}" style="max-width:100%;border-radius:10px"></div>'
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
+          <div style="background:#FF4500;padding:24px;text-align:center">
+            <h2 style="margin:0;color:white">🏋️ {gym_nombre}</h2>
+            <p style="margin:6px 0 0;color:#fff9;font-size:13px">Nueva solicitud de renovación</p>
+          </div>
+          <div style="padding:24px">
+            <p style="font-size:15px">El socio <strong>{s.nombre}</strong> quiere renovar su membresía.</p>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0">
+              <tr style="border-bottom:1px solid #333"><td style="padding:10px 0;color:#888;font-size:12px">Plan elegido</td><td style="text-align:right;font-size:14px;font-weight:bold;color:#FF4500">{plan_elegido}</td></tr>
+              <tr style="border-bottom:1px solid #333"><td style="padding:10px 0;color:#888;font-size:12px">Monto</td><td style="text-align:right;font-size:14px;font-weight:bold;color:#00FF88">{monto}</td></tr>
+              <tr style="border-bottom:1px solid #333"><td style="padding:10px 0;color:#888;font-size:12px">Teléfono</td><td style="text-align:right;font-size:13px">{s.telefono or '—'}</td></tr>
+              <tr><td style="padding:10px 0;color:#888;font-size:12px">Vencimiento actual</td><td style="text-align:right;font-size:13px;color:#FF4444">{str(s.fecha_venc) if s.fecha_venc else '—'}</td></tr>
+            </table>
+            {img_html}
+            <p style="color:#666;font-size:11px;margin-top:20px;text-align:center">Revisá la solicitud en el panel de GymOS 💪</p>
+          </div>
+        </div>"""
+        try:
+            enviar_email(gym_email, f'🔔 Renovación — {s.nombre} ({plan_elegido})', html, session)
+        except Exception as e:
+            print(f"Error enviando email: {e}")
+
+    session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/renovaciones', methods=['GET'])
+def listar_renovaciones():
+    session = Session()
+    try:
+        rows = session.execute(text("""
+            SELECT sr.id, sr.socio_id, s.nombre, sr.plan_elegido, sr.monto,
+                   sr.imagen_path, sr.estado, sr.created_at
+            FROM solicitudes_renovacion sr
+            JOIN socios s ON s.id = sr.socio_id
+            ORDER BY sr.created_at DESC LIMIT 50
+        """)).fetchall()
+        SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
+        result = []
+        for r in rows:
+            img_url = f"{SUPABASE_URL}/storage/v1/object/public/fotos-progreso/{r[5]}" if r[5] else None
+            result.append({'id': r[0], 'socio_id': r[1], 'nombre': r[2], 'plan': r[3],
+                          'monto': r[4], 'imagen_url': img_url, 'estado': r[6],
+                          'fecha': str(r[7])[:16] if r[7] else ''})
         session.close()
-        return jsonify({'ok': True})
+        return jsonify(result)
     except Exception as e:
         session.close()
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify([])
+
+@app.route('/api/renovaciones/<int:rid>/estado', methods=['POST'])
+def actualizar_estado_renovacion(rid):
+    session = Session()
+    estado = request.json.get('estado', 'pendiente')
+    session.execute(text("UPDATE solicitudes_renovacion SET estado=:e WHERE id=:id"), {'e': estado, 'id': rid})
+    session.commit(); session.close()
+    return jsonify({'ok': True})
 
 # ── EMAIL VENCIMIENTO ────────────────────────────────────
 @app.route('/api/socios/<int:sid>/email_vencimiento', methods=['POST'])

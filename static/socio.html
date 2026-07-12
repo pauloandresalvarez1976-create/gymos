@@ -493,6 +493,36 @@
   /* TOAST */
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
   .toast.show { opacity: 1; }
+
+  /* MODAL RENOVACIÓN */
+  .renov-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 2000; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .renov-overlay.open { opacity: 1; pointer-events: all; }
+  .renov-sheet { background: var(--bg1); border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; padding: 0 0 40px; transform: translateY(40px); transition: transform 0.3s cubic-bezier(0.4,0.1,0.2,1); }
+  .renov-overlay.open .renov-sheet { transform: translateY(0); }
+  .renov-handle { width: 40px; height: 4px; background: var(--bg3); border-radius: 2px; margin: 14px auto 20px; }
+  .renov-titulo { font-size: 20px; font-weight: 800; padding: 0 20px 6px; color: var(--text1); }
+  .renov-sub { font-size: 13px; color: var(--text3); padding: 0 20px 20px; }
+  .renov-step { display: none; padding: 0 20px; }
+  .renov-step.activo { display: block; }
+  .renov-plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .renov-plan-card { background: var(--bg2); border: 2px solid var(--bg3); border-radius: 16px; padding: 16px 14px; cursor: pointer; transition: all 0.18s; }
+  .renov-plan-card.sel { border-color: var(--accent); background: var(--accent-bg); box-shadow: 0 0 0 1px var(--accent); }
+  .renov-plan-nombre { font-size: 13px; font-weight: 700; color: var(--text1); margin-bottom: 4px; }
+  .renov-plan-precio { font-size: 20px; font-weight: 900; color: var(--accent); letter-spacing: -0.5px; }
+  .renov-datos-box { background: var(--bg2); border-radius: 16px; border: 1px solid var(--bg3); padding: 18px; margin-bottom: 18px; }
+  .renov-dato-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--bg3); }
+  .renov-dato-row:last-child { border-bottom: none; }
+  .renov-dato-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-bg); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .renov-dato-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .renov-dato-val { font-size: 15px; font-weight: 700; color: var(--text1); margin-top: 2px; }
+  .renov-upload-area { border: 2px dashed var(--accent-bd); border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer; margin-bottom: 18px; transition: all 0.18s; background: var(--accent-bg); }
+  .renov-upload-area.tiene-img { border-style: solid; border-color: var(--accent); }
+  .renov-upload-icon { font-size: 36px; color: var(--accent); margin-bottom: 8px; }
+  .renov-upload-txt { font-size: 14px; color: var(--text2); font-weight: 500; }
+  .renov-upload-hint { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .renov-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-top: 12px; display: none; }
+  .renov-btn-pri { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border: none; border-radius: 14px; padding: 17px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 6px 20px var(--accent)40; margin-bottom: 10px; }
+  .renov-btn-sec { background: var(--bg2); color: var(--text2); border: 1px solid var(--bg3); border-radius: 14px; padding: 14px; font-size: 14px; font-weight: 600; width: 100%; cursor: pointer; }
   /* ===== HUB DE MÓDULOS — TARJETAS GIRATORIAS ===== */
   .hub-title { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin: 18px 4px 10px; }
   .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; perspective: 1200px; }
@@ -1594,6 +1624,11 @@ function cerrarModulo() {
 }
 
 window.addEventListener('popstate', function(e) {
+  // 0. Si el modal de renovación está abierto, cerrarlo
+  if (document.getElementById('renovOverlay').classList.contains('open')) {
+    cerrarRenovModal();
+    return;
+  }
   // 1. Si hay pantalla de entrenamiento abierta, cerrarla
   if (document.getElementById('entrenSelectorScreen') || document.getElementById('entrenMainScreen')) {
     cerrarEntrenScreen();
@@ -1765,14 +1800,141 @@ async function generarQR() {
   } catch(e) {}
 }
 
-async function solicitarRenovacion() {
-  toast('Enviando solicitud...');
+// ── MODAL RENOVACIÓN ─────────────────────────────────────
+let renovPlanSel = null;
+let renovPlanMonto = '';
+let renovArchivoSel = null;
+let renovDatos = {};
+
+function solicitarRenovacion() {
+  // Cargar config del gym para precios y datos de transferencia
+  fetch('/api/config')
+    .then(r => r.json())
+    .then(cfg => {
+      renovDatos = cfg;
+      const planes = [
+        { key: 'Plan Mensual',     precio: cfg.precio_mensual     || '0' },
+        { key: 'Plan Trimestral',  precio: cfg.precio_trimestral  || '0' },
+        { key: 'Plan Anual',       precio: cfg.precio_anual       || '0' },
+        { key: 'Inscripción',      precio: cfg.precio_inscripcion || '0' },
+      ].filter(p => parseInt(p.precio) > 0);
+
+      const grid = document.getElementById('renovPlanGrid');
+      grid.innerHTML = '';
+      planes.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'renov-plan-card';
+        card.dataset.key = p.key;
+        card.dataset.precio = p.precio;
+        card.innerHTML = `<div class="renov-plan-nombre">${p.key}</div><div class="renov-plan-precio">$${parseInt(p.precio).toLocaleString('es-AR')}</div>`;
+        card.onclick = function() {
+          document.querySelectorAll('.renov-plan-card').forEach(c => c.classList.remove('sel'));
+          card.classList.add('sel');
+          renovPlanSel = p.key;
+          renovPlanMonto = '$' + parseInt(p.precio).toLocaleString('es-AR');
+          const btn = document.getElementById('renovBtnSiguiente');
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        };
+        grid.appendChild(card);
+      });
+
+      // Resetear steps
+      document.getElementById('renovStep1').classList.add('activo');
+      document.getElementById('renovStep2').classList.remove('activo');
+      renovPlanSel = null;
+      renovArchivoSel = null;
+      document.getElementById('renovBtnSiguiente').disabled = true;
+      document.getElementById('renovBtnSiguiente').style.opacity = '0.5';
+      document.getElementById('renovPreview').style.display = 'none';
+      document.getElementById('renovUploadArea').classList.remove('tiene-img');
+      document.getElementById('renovSub').textContent = 'Elegí el plan que querés';
+
+      document.getElementById('renovOverlay').classList.add('open');
+      history.pushState({ renovModal: true }, '');
+    })
+    .catch(() => toast('❌ No se pudo conectar'));
+}
+
+function renovSiguiente() {
+  if (!renovPlanSel) return;
+  // Armar datos de transferencia
+  const cfg = renovDatos;
+  const alias   = cfg.transferencia_alias   || '';
+  const cbu     = cfg.transferencia_cbu     || '';
+  const banco   = cfg.transferencia_banco   || '';
+  const titular = cfg.transferencia_titular || '';
+
+  document.getElementById('renovResumenPlan').textContent = `${renovPlanSel} · ${renovPlanMonto}`;
+
+  let datosHTML = '';
+  if (titular) datosHTML += `<div class="renov-dato-row"><div class="renov-dato-icon"><i class="ti ti-user"></i></div><div><div class="renov-dato-label">Titular</div><div class="renov-dato-val">${titular}</div></div></div>`;
+  if (alias)   datosHTML += `<div class="renov-dato-row"><div class="renov-dato-icon"><i class="ti ti-at"></i></div><div><div class="renov-dato-label">Alias</div><div class="renov-dato-val">${alias}</div></div></div>`;
+  if (cbu)     datosHTML += `<div class="renov-dato-row"><div class="renov-dato-icon"><i class="ti ti-credit-card"></i></div><div><div class="renov-dato-label">CBU</div><div class="renov-dato-val" style="font-size:13px;letter-spacing:0.5px">${cbu}</div></div></div>`;
+  if (banco)   datosHTML += `<div class="renov-dato-row"><div class="renov-dato-icon"><i class="ti ti-building-bank"></i></div><div><div class="renov-dato-label">Banco</div><div class="renov-dato-val">${banco}</div></div></div>`;
+
+  const box = document.getElementById('renovDatosBox');
+  if (datosHTML) {
+    box.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Datos para transferir</div>' + datosHTML;
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+
+  document.getElementById('renovStep1').classList.remove('activo');
+  document.getElementById('renovStep2').classList.add('activo');
+  document.getElementById('renovSub').textContent = 'Transferí y adjuntá el comprobante';
+}
+
+function renovVolver() {
+  document.getElementById('renovStep2').classList.remove('activo');
+  document.getElementById('renovStep1').classList.add('activo');
+  document.getElementById('renovSub').textContent = 'Elegí el plan que querés';
+}
+
+function renovOnFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  renovArchivoSel = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('renovPreview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('renovUploadArea').classList.add('tiene-img');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function renovEnviar() {
+  if (!renovPlanSel) return;
+  const btn = document.getElementById('renovBtnEnviar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando...';
+
+  const fd = new FormData();
+  fd.append('plan', renovPlanSel);
+  fd.append('monto', renovPlanMonto);
+  if (renovArchivoSel) fd.append('comprobante', renovArchivoSel);
+
   try {
-    const res = await fetch(`/api/socio/${socioId}/renovacion`, { method: 'POST' });
+    const res = await fetch(`/api/socio/${socioId}/renovacion`, { method: 'POST', body: fd });
     const data = await res.json();
-    if (data.ok) toast('✅ Solicitud enviada al gimnasio');
-    else toast('❌ ' + (data.error || 'Error al enviar'));
-  } catch(e) { toast('❌ No se pudo conectar'); }
+    if (data.ok) {
+      cerrarRenovModal();
+      toast('✅ Solicitud enviada al gimnasio');
+    } else {
+      toast('❌ ' + (data.error || 'Error al enviar'));
+    }
+  } catch(e) {
+    toast('❌ No se pudo conectar');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-send"></i> Enviar solicitud';
+}
+
+function cerrarRenovModal() {
+  document.getElementById('renovOverlay').classList.remove('open');
 }
 
 function toast(msg) {
@@ -3803,5 +3965,46 @@ function renderHidratacion() {
 init();
 setTimeout(agregarBotonInstalar, 2000);
 </script>
+
+<!-- MODAL RENOVACIÓN -->
+<div class="renov-overlay" id="renovOverlay" onclick="if(event.target===this)cerrarRenovModal()">
+  <div class="renov-sheet">
+    <div class="renov-handle"></div>
+    <div class="renov-titulo">Renovar membresía</div>
+    <div class="renov-sub" id="renovSub">Elegí el plan que querés</div>
+
+    <!-- STEP 1: elegir plan -->
+    <div class="renov-step activo" id="renovStep1">
+      <div class="renov-plan-grid" id="renovPlanGrid"></div>
+      <button class="renov-btn-pri" id="renovBtnSiguiente" onclick="renovSiguiente()" disabled style="opacity:0.5">
+        <i class="ti ti-arrow-right"></i> Continuar
+      </button>
+      <button class="renov-btn-sec" onclick="cerrarRenovModal()">Cancelar</button>
+    </div>
+
+    <!-- STEP 2: datos de transferencia + comprobante -->
+    <div class="renov-step" id="renovStep2">
+      <div style="margin-bottom:14px;padding:14px 16px;background:var(--accent-bg);border-radius:14px;border:1px solid var(--accent-bd)">
+        <div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px">PLAN ELEGIDO</div>
+        <div style="font-size:17px;font-weight:800;color:var(--text1)" id="renovResumenPlan"></div>
+      </div>
+      <div class="renov-datos-box" id="renovDatosBox">
+        <div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Datos para transferir</div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px">📸 Adjuntá el comprobante</div>
+      <div class="renov-upload-area" id="renovUploadArea" onclick="document.getElementById('renovFileInput').click()">
+        <div class="renov-upload-icon"><i class="ti ti-cloud-upload"></i></div>
+        <div class="renov-upload-txt">Tocá para subir foto del comprobante</div>
+        <div class="renov-upload-hint">JPG, PNG · Opcional pero recomendado</div>
+        <img class="renov-preview" id="renovPreview">
+      </div>
+      <input type="file" id="renovFileInput" accept="image/*" style="display:none" onchange="renovOnFile(this)">
+      <button class="renov-btn-pri" id="renovBtnEnviar" onclick="renovEnviar()">
+        <i class="ti ti-send"></i> Enviar solicitud
+      </button>
+      <button class="renov-btn-sec" onclick="renovVolver()"><i class="ti ti-arrow-left"></i> Volver</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

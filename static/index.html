@@ -616,6 +616,10 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       <i class="ti ti-user-off"></i><div class="tip">Deserción</div>
       <div class="nav-badge" id="navBadgeDeser"></div>
     </div>
+    <div class="nav-item" id="nav-renovaciones" onclick="showScreen('renovaciones')">
+      <i class="ti ti-refresh-alert"></i><div class="tip">Renovaciones</div>
+      <div class="nav-badge" id="navBadgeRenov"></div>
+    </div>
     <div class="nav-sep"></div>
     <div class="nav-item" id="nav-config" onclick="showScreen('config')">
       <i class="ti ti-settings"></i><div class="tip">Configuración</div>
@@ -1153,6 +1157,14 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           <div class="config-row"><span class="config-key">Inscripción</span><input class="form-input" id="cfgInscripcion" style="width:140px;padding:6px 10px;font-size:12px" placeholder="0"></div>
         </div>
         <div class="config-section">
+          <div class="config-sec-title">Datos de transferencia (socios)</div>
+          <div class="config-row"><span class="config-key">Titular de la cuenta</span><input class="form-input" id="cfgTitular" placeholder="Nombre Apellido" style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Alias</span><input class="form-input" id="cfgAlias" placeholder="alias.mp.gym" style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">CBU</span><input class="form-input" id="cfgCbu" placeholder="0000000000000000000000" style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <div class="config-row"><span class="config-key">Banco</span><input class="form-input" id="cfgBanco" placeholder="Mercado Pago / Banco..." style="width:200px;padding:6px 10px;font-size:12px"></div>
+          <p style="font-size:11px;color:var(--text3);margin-top:10px">Estos datos se muestran al socio cuando solicita renovar desde la app.</p>
+        </div>
+        <div class="config-section">
           <div class="config-sec-title">Apariencia</div>
           <div class="config-row">
             <span class="config-key">Tema de color</span>
@@ -1196,10 +1208,19 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       </div>
     </div>
 
+    <!-- RENOVACIONES -->
+    <div class="screen" id="screen-renovaciones">
+      <div style="padding:20px;max-width:700px">
+        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Solicitudes de renovación</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:20px">Comprobantes enviados por los socios desde la app</div>
+        <div id="renovListado">
+          <div style="text-align:center;padding:40px;color:var(--text3)">Cargando...</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
-
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <!-- MODAL PAGO -->
@@ -1428,6 +1449,12 @@ async function verificarPin() {
       aplicarPermisos(data.usuario.permisos);
       // Ir a ingreso por defecto
       showScreen('ingreso');
+      // Cargar badge de renovaciones pendientes
+      fetch(`${API}/api/renovaciones`).then(r=>r.json()).then(rows=>{
+        const p = rows.filter(r=>r.estado==='pendiente').length;
+        const b = document.getElementById('navBadgeRenov');
+        if (b) { b.textContent = p||''; b.style.display = p ? '' : 'none'; }
+      }).catch(()=>{});
     } else {
       loginPin = '';
       actualizarDots();
@@ -1438,7 +1465,7 @@ async function verificarPin() {
 }
 
 function aplicarPermisos(permisos) {
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','renovaciones','config'];
   pantallas.forEach(p => {
     const nav = document.getElementById(`nav-${p}`);
     if (nav) nav.style.display = permisos[p] ? '' : 'none';
@@ -1449,7 +1476,7 @@ function cerrarSesionDesdeLogin() {
   // Si hay sesión activa, cerrarla y quedarse en login
   usuarioActual = null;
   document.getElementById('headerUsuario').textContent = '';
-  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'].forEach(p => {
+  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','renovaciones','config'].forEach(p => {
     const nav = document.getElementById(`nav-${p}`);
     if (nav) nav.style.display = '';
   });
@@ -1460,7 +1487,7 @@ function cerrarSesionDesdeLogin() {
 function cerrarSesion() {
   usuarioActual = null;
   // Restaurar todos los nav items
-  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'].forEach(p => {
+  ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','renovaciones','config'].forEach(p => {
     const nav = document.getElementById(`nav-${p}`);
     if (nav) nav.style.display = '';
   });
@@ -1505,7 +1532,7 @@ function editarUsuario(id, nombre, rol, permisos) {
   document.getElementById('usuarioNombre').value = nombre;
   document.getElementById('usuarioPin').value = '';
   document.getElementById('usuarioRol').value = rol;
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','renovaciones','config'];
   pantallas.forEach(p => {
     const el = document.getElementById(`perm-${p}`);
     if (el) el.checked = permisos[p] || false;
@@ -1516,7 +1543,7 @@ function editarUsuario(id, nombre, rol, permisos) {
 function aplicarPermisosDefault() {
   const rol = document.getElementById('usuarioRol').value;
   const def = PERMISOS_DEFAULT[rol] || {};
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','renovaciones','config'];
   pantallas.forEach(p => {
     const el = document.getElementById(`perm-${p}`);
     if (el) el.checked = def[p] || false;
@@ -1534,7 +1561,7 @@ async function guardarUsuario() {
   const rol    = document.getElementById('usuarioRol').value;
   if (!nombre) { toast('Ingresá un nombre', 'bad'); return; }
   if (!id && !pin) { toast('Ingresá un PIN', 'bad'); return; }
-  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','config'];
+  const pantallas = ['ingreso','socios','nuevo','cuotas','agenda','reportes','vencimientos','desercion','renovaciones','config'];
   const permisos = {};
   pantallas.forEach(p => { permisos[p] = document.getElementById(`perm-${p}`)?.checked || false; });
   const body = {nombre, pin, rol, permisos};
@@ -1577,8 +1604,63 @@ function showScreen(name) {
   if (name === 'config') { cargarConfig(); cargarUsuariosConfig(); }
   if (name === 'vencimientos') cargarVencimientos();
   if (name === 'desercion') cargarDesercion();
+  if (name === 'renovaciones') cargarRenovaciones();
   // ficha no carga automático — se carga via abrirFicha()
   if (name === 'ingreso') cargarHistorial();
+}
+
+// ── RENOVACIONES ──
+async function cargarRenovaciones() {
+  const cont = document.getElementById('renovListado');
+  cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Cargando...</div>';
+  try {
+    const res = await fetch(`${API}/api/renovaciones`);
+    const rows = await res.json();
+
+    // Actualizar badge
+    const pendientes = rows.filter(r => r.estado === 'pendiente').length;
+    const badge = document.getElementById('navBadgeRenov');
+    if (badge) { badge.textContent = pendientes || ''; badge.style.display = pendientes ? '' : 'none'; }
+
+    if (!rows.length) {
+      cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:40px;display:block;margin-bottom:12px"></i>Sin solicitudes aún</div>';
+      return;
+    }
+    cont.innerHTML = rows.map(r => `
+      <div style="background:var(--bg1);border:0.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start">
+        ${r.imagen_url ? `<img src="${r.imagen_url}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;flex-shrink:0;cursor:pointer" onclick="window.open('${r.imagen_url}','_blank')">` : `<div style="width:80px;height:80px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);font-size:28px"><i class="ti ti-photo-off"></i></div>`}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            <div style="font-size:15px;font-weight:700">${r.nombre}</div>
+            <div style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;${r.estado==='pendiente'?'background:#FF450020;color:#FF4500;border:1px solid #FF450040':'background:#00FF8820;color:#00FF88;border:1px solid #00FF8840'}">${r.estado==='pendiente'?'⏳ Pendiente':'✅ Aprobado'}</div>
+          </div>
+          <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px">${r.plan || '—'} · ${r.monto || ''}</div>
+          <div style="font-size:11px;color:var(--text3)">${r.fecha}</div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            ${r.estado === 'pendiente' ? `<button onclick="aprobarRenovacion(${r.id}, ${r.socio_id})" style="background:#00FF8820;color:#00FF88;border:1px solid #00FF8840;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-check"></i> Aprobar y registrar pago</button>` : ''}
+            <button onclick="rechazarRenovacion(${r.id})" style="background:var(--bg2);color:var(--text3);border:0.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer"><i class="ti ti-trash"></i> Eliminar</button>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) { cont.innerHTML = '<div style="color:var(--red);padding:20px">Error al cargar</div>'; }
+}
+
+async function aprobarRenovacion(rid, socioId) {
+  // Marcar como aprobado
+  await fetch(`${API}/api/renovaciones/${rid}/estado`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado:'aprobado'}) });
+  // Abrir modal de pago para ese socio
+  const res = await fetch(`${API}/api/socios/${socioId}`);
+  if (res.ok) {
+    const s = await res.json();
+    abrirModalPago(s);
+  }
+  cargarRenovaciones();
+}
+
+async function rechazarRenovacion(rid) {
+  if (!confirm('¿Eliminar esta solicitud?')) return;
+  await fetch(`${API}/api/renovaciones/${rid}/estado`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado:'eliminado'}) });
+  cargarRenovaciones();
 }
 
 // ── TOAST ──
@@ -2500,6 +2582,10 @@ async function cargarConfig() {
     document.getElementById('cfgTrimestral').value = d.precio_trimestral || '';
     document.getElementById('cfgAnual').value = d.precio_anual || '';
     if (document.getElementById('cfgInscripcion')) document.getElementById('cfgInscripcion').value = d.precio_inscripcion || '';
+    if (document.getElementById('cfgTitular')) document.getElementById('cfgTitular').value = d.transferencia_titular || '';
+    if (document.getElementById('cfgAlias')) document.getElementById('cfgAlias').value = d.transferencia_alias || '';
+    if (document.getElementById('cfgCbu')) document.getElementById('cfgCbu').value = d.transferencia_cbu || '';
+    if (document.getElementById('cfgBanco')) document.getElementById('cfgBanco').value = d.transferencia_banco || '';
     if (document.getElementById('cfgDiasAlerta')) document.getElementById('cfgDiasAlerta').value = d.dias_alerta_vencimiento || '7';
     if (document.getElementById('cfgDeclaracion')) document.getElementById('cfgDeclaracion').value = d.declaracion_texto || '';
     if (document.getElementById('cfgEmail')) document.getElementById('cfgEmail').value = d.gym_email || '';
@@ -2538,6 +2624,10 @@ async function guardarConfig() {
     gym_email: document.getElementById('cfgEmail') ? document.getElementById('cfgEmail').value : '',
     gym_email_pass: document.getElementById('cfgEmailPass') ? document.getElementById('cfgEmailPass').value : '',
     gym_email_nombre: document.getElementById('cfgEmailNombre') ? document.getElementById('cfgEmailNombre').value : '',
+    transferencia_titular: document.getElementById('cfgTitular') ? document.getElementById('cfgTitular').value : '',
+    transferencia_alias: document.getElementById('cfgAlias') ? document.getElementById('cfgAlias').value : '',
+    transferencia_cbu: document.getElementById('cfgCbu') ? document.getElementById('cfgCbu').value : '',
+    transferencia_banco: document.getElementById('cfgBanco') ? document.getElementById('cfgBanco').value : '',
   };
   try {
     const res = await fetch(`${API}/api/config`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
