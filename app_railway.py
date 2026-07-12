@@ -355,7 +355,7 @@ def manifest_data(sid):
 def get_socio_pwa(sid):
     """Datos completos del socio para la PWA."""
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s or not s.activo:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     pagos = session.query(Pago).filter_by(socio_id=sid).order_by(Pago.fecha.desc()).limit(5).all()
@@ -378,7 +378,7 @@ def get_socio_pwa(sid):
 def set_objetivo(sid):
     data = request.json
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s: session.close(); return jsonify({'ok': False}), 404
     s.objetivo = data.get('objetivo', '')
     session.commit(); session.close()
@@ -409,7 +409,7 @@ def get_socios():
 @app.route('/api/socios/<int:sid>', methods=['GET'])
 def get_socio(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s: session.close(); return jsonify({'error':'No encontrado'}), 404
     data = socio_to_dict(s); session.close(); return jsonify(data)
 
@@ -443,7 +443,7 @@ def crear_socio():
 @app.route('/api/socios/<int:sid>', methods=['PUT'])
 def actualizar_socio(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s: session.close(); return jsonify({'error':'No encontrado'}), 404
     data = request.json
     for campo in ['nombre','dni','telefono','email','plan']:
@@ -467,7 +467,7 @@ def actualizar_socio(sid):
 @app.route('/api/socios/<int:sid>', methods=['DELETE'])
 def eliminar_socio(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if s: s.activo = 0; session.commit()
     session.close(); return jsonify({'ok': True})
 
@@ -480,7 +480,7 @@ def registrar_pago():
     pago = Pago(socio_id=data['socio_id'],monto=data.get('monto',0),
                 metodo=data.get('metodo','efectivo'),plan=data.get('plan',''),fecha=date.today())
     session.add(pago)
-    socio = session.query(Socio).get(data['socio_id'])
+    socio = session.query(Socio).filter_by(id=data["socio_id"]).first()
     if socio:
         # Usar el plan enviado desde el frontend; si no, el plan actual del socio
         plan = data.get('plan') or socio.plan or ''
@@ -507,7 +507,7 @@ def get_pagos_socio(socio_id):
 @app.route('/api/socios/<int:sid>/congelar', methods=['POST'])
 def congelar_socio(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close(); return jsonify({'error':'No encontrado'}), 404
     if s.congelado:
@@ -525,7 +525,7 @@ def congelar_socio(sid):
 def descongelar_socio(sid):
     from dateutil.relativedelta import relativedelta
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close(); return jsonify({'error':'No encontrado'}), 404
     if not s.congelado:
@@ -610,7 +610,7 @@ def eliminar_usuario(uid):
 @app.route('/api/socios/<int:sid>/qr', methods=['GET'])
 def get_qr_socio(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     session.close()
     if not s:
         return jsonify({'error': 'Socio no encontrado'}), 404
@@ -639,7 +639,7 @@ def escanear_qr():
     except:
         return jsonify({'ok': False, 'error': 'QR inválido'}), 400
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s or not s.activo:
         session.close()
         return jsonify({'ok': False, 'error': 'Socio no encontrado o inactivo'}), 404
@@ -798,7 +798,7 @@ def enviar_comprobante():
     session = Session()
     data     = request.json
     socio_id = data.get('socio_id')
-    socio    = session.query(Socio).get(socio_id) if socio_id else None
+    socio    = session.query(Socio).filter_by(id=socio_id).first() if socio_id else None
     if not socio:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     if not socio.email:
@@ -954,7 +954,7 @@ def guardar_ficha(sid):
 @app.route('/api/socios/<int:sid>/progreso', methods=['GET'])
 def get_progreso(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     registros = session.query(Progreso).filter_by(socio_id=sid).order_by(Progreso.fecha.asc(), Progreso.id.asc()).all()
@@ -974,7 +974,7 @@ def get_progreso(sid):
 def add_progreso(sid):
     data = request.json or {}
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     if not data.get('peso'):
@@ -1015,7 +1015,7 @@ def borrar_progreso(sid, rid):
 def set_peso_objetivo(sid):
     data = request.json or {}
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     s.peso_objetivo = str(data.get('peso_objetivo')) if data.get('peso_objetivo') else None
@@ -1627,7 +1627,7 @@ def actualizar_estado_renovacion(rid):
 @app.route('/api/socios/<int:sid>/email_vencimiento', methods=['POST'])
 def email_vencimiento(sid):
     session = Session()
-    socio = session.query(Socio).get(sid)
+    socio = session.query(Socio).filter_by(id=sid).first()
     if not socio:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     if not socio.email:
@@ -1681,7 +1681,7 @@ def ingresos_hoy():
     ingresos = session.query(Ingreso).filter(Ingreso.fecha == hoy).order_by(Ingreso.hora.desc()).all()
     result  = []
     for i in ingresos:
-        s = session.query(Socio).get(i.socio_id)
+        s = session.query(Socio).filter_by(id=i.socio_id).first()
         result.append({'socio_id':i.socio_id,'nombre':s.nombre if s else 'Desconocido',
                        'hora':i.hora.strftime('%H:%M') if i.hora else '','foto':s.foto if s else None})
     session.close(); return jsonify(result)
@@ -1817,7 +1817,7 @@ def set_config():
 @app.route('/api/socios/<int:sid>/ia/toggle', methods=['POST'])
 def toggle_ia(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close()
         return jsonify({'ok': False}), 404
@@ -1830,7 +1830,7 @@ def toggle_ia(sid):
 @app.route('/api/socios/<int:sid>/ia/chat', methods=['POST'])
 def ia_chat(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s or not s.ia_habilitada:
         session.close()
         return jsonify({'ok': False, 'error': 'IA no habilitada'}), 403
