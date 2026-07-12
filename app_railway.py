@@ -248,7 +248,7 @@ def migrate_db():
         try:
             result = conn.execute(text("SELECT id FROM usuarios WHERE rol='administrador'")).fetchone()
             if not result:
-                permisos_admin = json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'desercion':True,'renovaciones':True,'config':True})
+                permisos_admin = json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True})
                 conn.execute(text("INSERT INTO usuarios (nombre,pin,rol,permisos,activo) VALUES (:n,:p,:r,:pe,:a)"),
                              {'n':'Administrador','p':'1234','r':'administrador','pe':permisos_admin,'a':1})
                 conn.commit()
@@ -556,17 +556,7 @@ def login_usuario():
     u = session.query(Usuario).filter_by(id=data.get('id'), activo=1).first()
     if not u or u.pin != str(data.get('pin','')):
         session.close(); return jsonify({'ok':False,'error':'PIN incorrecto'}), 401
-    permisos = json.loads(u.permisos or '{}')
-    # Parchar permisos existentes: agregar nuevas pantallas si faltan
-    nuevas = {'desercion': True, 'renovaciones': True}
-    if u.rol == 'administrador':
-        changed = False
-        for k, v in nuevas.items():
-            if k not in permisos:
-                permisos[k] = v; changed = True
-        if changed:
-            u.permisos = json.dumps(permisos); session.commit()
-    result = {'id':u.id,'nombre':u.nombre,'rol':u.rol,'permisos':permisos}
+    result = {'id':u.id,'nombre':u.nombre,'rol':u.rol,'permisos':json.loads(u.permisos or '{}')}
     session.close()
     return jsonify({'ok':True,'usuario':result})
 
@@ -575,9 +565,9 @@ def crear_usuario():
     data = request.json
     session = Session()
     permisos_default = {
-        'administrador': {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'desercion':True,'renovaciones':True,'config':True},
-        'encargado':     {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'desercion':True,'renovaciones':True,'config':False},
-        'recepcionista': {'ingreso':True,'socios':True,'nuevo':False,'cuotas':True,'agenda':False,'reportes':False,'vencimientos':True,'desercion':False,'renovaciones':True,'config':False},
+        'administrador': {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True},
+        'encargado':     {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':False},
+        'recepcionista': {'ingreso':True,'socios':True,'nuevo':False,'cuotas':True,'agenda':False,'reportes':False,'vencimientos':True,'config':False},
     }
     rol = data.get('rol','recepcionista')
     permisos = json.dumps(data.get('permisos') or permisos_default.get(rol,{}))
@@ -1539,7 +1529,7 @@ def solicitar_renovacion(sid):
                 img = Image.open(io.BytesIO(contenido))
                 img.thumbnail((1200, 1200))
                 buf = io.BytesIO()
-                img.save(buf, format='JPEG', quality=0.80)
+                img.save(buf, format='JPEG', quality=80)
                 contenido = buf.getvalue()
                 ext = '.jpg'
                 nombre_archivo = f"renovacion_{sid}_{int(datetime.now().timestamp())}.jpg"
@@ -1567,6 +1557,22 @@ def solicitar_renovacion(sid):
         session.commit()
     except Exception as e:
         print(f"Error guardando solicitud: {e}")
+        session.rollback()
+        # Intentar crear la tabla y reintentar
+        try:
+            session.execute(text("""CREATE TABLE IF NOT EXISTS solicitudes_renovacion (
+                id SERIAL PRIMARY KEY, socio_id INTEGER NOT NULL, plan_elegido TEXT,
+                monto TEXT, imagen_path TEXT, estado TEXT DEFAULT 'pendiente',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+            session.commit()
+            session.execute(text(
+                "INSERT INTO solicitudes_renovacion (socio_id, plan_elegido, monto, imagen_path, estado) "
+                "VALUES (:sid, :plan, :monto, :img, 'pendiente')"
+            ), {'sid': sid, 'plan': plan_elegido, 'monto': monto, 'img': imagen_path})
+            session.commit()
+        except Exception as e2:
+            print(f"Error reintentando: {e2}")
+            session.rollback()
 
     # Email al gimnasio
     if gym_email:
