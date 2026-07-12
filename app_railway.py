@@ -1503,7 +1503,7 @@ def enviar_app_socio(sid):
 @app.route('/api/socio/<int:sid>/renovacion', methods=['POST'])
 def solicitar_renovacion(sid):
     session = Session()
-    s = session.query(Socio).get(sid)
+    s = session.query(Socio).filter_by(id=sid).first()
     if not s:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
@@ -1529,7 +1529,7 @@ def solicitar_renovacion(sid):
                 img = Image.open(io.BytesIO(contenido))
                 img.thumbnail((1200, 1200))
                 buf = io.BytesIO()
-                img.save(buf, format='JPEG', quality=80)
+                img.save(buf, format='JPEG', quality=0.80)
                 contenido = buf.getvalue()
                 ext = '.jpg'
                 nombre_archivo = f"renovacion_{sid}_{int(datetime.now().timestamp())}.jpg"
@@ -1557,22 +1557,6 @@ def solicitar_renovacion(sid):
         session.commit()
     except Exception as e:
         print(f"Error guardando solicitud: {e}")
-        session.rollback()
-        # Intentar crear la tabla y reintentar
-        try:
-            session.execute(text("""CREATE TABLE IF NOT EXISTS solicitudes_renovacion (
-                id SERIAL PRIMARY KEY, socio_id INTEGER NOT NULL, plan_elegido TEXT,
-                monto TEXT, imagen_path TEXT, estado TEXT DEFAULT 'pendiente',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
-            session.commit()
-            session.execute(text(
-                "INSERT INTO solicitudes_renovacion (socio_id, plan_elegido, monto, imagen_path, estado) "
-                "VALUES (:sid, :plan, :monto, :img, 'pendiente')"
-            ), {'sid': sid, 'plan': plan_elegido, 'monto': monto, 'img': imagen_path})
-            session.commit()
-        except Exception as e2:
-            print(f"Error reintentando: {e2}")
-            session.rollback()
 
     # Email al gimnasio
     if gym_email:
