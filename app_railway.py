@@ -248,7 +248,7 @@ def migrate_db():
         try:
             result = conn.execute(text("SELECT id FROM usuarios WHERE rol='administrador'")).fetchone()
             if not result:
-                permisos_admin = json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True})
+                permisos_admin = json.dumps({'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'desercion':True,'renovaciones':True,'config':True})
                 conn.execute(text("INSERT INTO usuarios (nombre,pin,rol,permisos,activo) VALUES (:n,:p,:r,:pe,:a)"),
                              {'n':'Administrador','p':'1234','r':'administrador','pe':permisos_admin,'a':1})
                 conn.commit()
@@ -556,7 +556,17 @@ def login_usuario():
     u = session.query(Usuario).filter_by(id=data.get('id'), activo=1).first()
     if not u or u.pin != str(data.get('pin','')):
         session.close(); return jsonify({'ok':False,'error':'PIN incorrecto'}), 401
-    result = {'id':u.id,'nombre':u.nombre,'rol':u.rol,'permisos':json.loads(u.permisos or '{}')}
+    permisos = json.loads(u.permisos or '{}')
+    # Parchar permisos existentes: agregar nuevas pantallas si faltan
+    nuevas = {'desercion': True, 'renovaciones': True}
+    if u.rol == 'administrador':
+        changed = False
+        for k, v in nuevas.items():
+            if k not in permisos:
+                permisos[k] = v; changed = True
+        if changed:
+            u.permisos = json.dumps(permisos); session.commit()
+    result = {'id':u.id,'nombre':u.nombre,'rol':u.rol,'permisos':permisos}
     session.close()
     return jsonify({'ok':True,'usuario':result})
 
@@ -565,9 +575,9 @@ def crear_usuario():
     data = request.json
     session = Session()
     permisos_default = {
-        'administrador': {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':True},
-        'encargado':     {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'config':False},
-        'recepcionista': {'ingreso':True,'socios':True,'nuevo':False,'cuotas':True,'agenda':False,'reportes':False,'vencimientos':True,'config':False},
+        'administrador': {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'desercion':True,'renovaciones':True,'config':True},
+        'encargado':     {'ingreso':True,'socios':True,'nuevo':True,'cuotas':True,'agenda':True,'reportes':True,'vencimientos':True,'desercion':True,'renovaciones':True,'config':False},
+        'recepcionista': {'ingreso':True,'socios':True,'nuevo':False,'cuotas':True,'agenda':False,'reportes':False,'vencimientos':True,'desercion':False,'renovaciones':True,'config':False},
     }
     rol = data.get('rol','recepcionista')
     permisos = json.dumps(data.get('permisos') or permisos_default.get(rol,{}))
