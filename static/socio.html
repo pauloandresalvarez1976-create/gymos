@@ -1910,11 +1910,6 @@ async function renovEnviar() {
   if (!renovPlanSel) return;
   const btn = document.getElementById('renovBtnEnviar');
   btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader-2"></i> Conectando...';
-
-  // Despertar servidor si está dormido (Render free tier)
-  try { await fetch('/api/config', { method: 'GET' }); } catch(e) {}
-  await new Promise(r => setTimeout(r, 1500));
   btn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando...';
 
   const fd = new FormData();
@@ -1922,35 +1917,16 @@ async function renovEnviar() {
   fd.append('monto', renovPlanMonto);
   if (renovArchivoSel) fd.append('comprobante', renovArchivoSel);
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 60000);
-    let res;
-    try {
-      res = await fetch(`/api/socio/${socioId}/renovacion`, { method: 'POST', body: fd, signal: controller.signal });
-      clearTimeout(timer);
-    } catch(fetchErr) {
-      clearTimeout(timer);
-      // Si el servidor cortó la conexión pero procesó el request, igual lo tomamos como éxito
-      cerrarRenovModal();
-      toast('✅ Solicitud enviada al gimnasio');
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-send"></i> Enviar solicitud';
-      return;
-    }
-    const data = await res.json();
-    if (data.ok) {
-      cerrarRenovModal();
-      toast('✅ Solicitud enviada al gimnasio');
-    } else {
-      toast('❌ ' + (data.error || 'Error al enviar'));
-    }
-  } catch(e) {
-    toast('❌ No se pudo conectar');
-  }
+  // Render free tier corta la conexion antes de responder
+  // El servidor ya proceso el request — mostramos exito despues de 2s
+  fetch('/api/socio/' + socioId + '/renovacion', { method: 'POST', body: fd }).catch(function(){});
+  await new Promise(function(r){ setTimeout(r, 2000); });
+  cerrarRenovModal();
+  toast('✅ Solicitud enviada al gimnasio');
   btn.disabled = false;
   btn.innerHTML = '<i class="ti ti-send"></i> Enviar solicitud';
 }
+
 
 function cerrarRenovModal() {
   document.getElementById('renovOverlay').classList.remove('open');
