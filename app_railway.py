@@ -1503,93 +1503,85 @@ def enviar_app_socio(sid):
 @app.route('/api/socio/<int:sid>/renovacion', methods=['POST'])
 def solicitar_renovacion(sid):
     session = Session()
-    s = session.query(Socio).filter_by(id=sid).first()
-    if not s:
-        session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
-    cfg = {c.clave: c.valor for c in session.query(Config).all()}
-    gym_nombre  = cfg.get('gym_nombre', 'Gimnasio')
-    gym_email   = cfg.get('gym_email', '')
-
-    plan_elegido = request.form.get('plan', '')
-    monto        = request.form.get('monto', '')
-    imagen_path  = None
-
-    # Guardar imagen del comprobante en Supabase Storage si viene
-    if 'comprobante' in request.files:
-        archivo = request.files['comprobante']
-        if archivo and archivo.filename:
-            ext = os.path.splitext(archivo.filename)[1].lower() or '.jpg'
-            from datetime import datetime
-            nombre_archivo = f"renovacion_{sid}_{int(datetime.now().timestamp())}{ext}"
-            contenido = archivo.read()
-            # Comprimir si es imagen
-            try:
-                from PIL import Image
-                import io
-                img = Image.open(io.BytesIO(contenido))
-                img.thumbnail((1200, 1200))
-                buf = io.BytesIO()
-                img.save(buf, format='JPEG', quality=0.80)
-                contenido = buf.getvalue()
-                ext = '.jpg'
-                nombre_archivo = f"renovacion_{sid}_{int(datetime.now().timestamp())}.jpg"
-            except Exception:
-                pass
-            try:
-                SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
-                SUPABASE_SECRET = os.environ.get('SUPABASE_SECRET', '')
-                resp = requests.put(
-                    f"{SUPABASE_URL}/storage/v1/object/fotos-progreso/comprobantes/{nombre_archivo}",
-                    headers={'Authorization': f'Bearer {SUPABASE_SECRET}', 'Content-Type': 'image/jpeg'},
-                    data=contenido, timeout=20
-                )
-                if resp.status_code in (200, 201):
-                    imagen_path = f"comprobantes/{nombre_archivo}"
-            except Exception as e:
-                print(f"Error subiendo comprobante: {e}")
-
-    # Guardar solicitud en tabla
     try:
-        session.execute(text(
-            "INSERT INTO solicitudes_renovacion (socio_id, plan_elegido, monto, imagen_path, estado) "
-            "VALUES (:sid, :plan, :monto, :img, 'pendiente')"
-        ), {'sid': sid, 'plan': plan_elegido, 'monto': monto, 'img': imagen_path})
-        session.commit()
-    except Exception as e:
-        print(f"Error guardando solicitud: {e}")
+        s = session.query(Socio).filter_by(id=sid).first()
+        if not s:
+            return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_nombre = cfg.get('gym_nombre', 'Gimnasio')
+        gym_email  = cfg.get('gym_email', '')
+        plan_elegido = request.form.get('plan', '')
+        monto        = request.form.get('monto', '')
+        imagen_path  = None
 
-    # Email al gimnasio
-    if gym_email:
-        img_html = ''
-        if imagen_path:
-            SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
-            url_img = f"{SUPABASE_URL}/storage/v1/object/public/fotos-progreso/{imagen_path}"
-            img_html = f'<div style="margin-top:16px"><p style="color:#888;font-size:12px;margin-bottom:8px">Comprobante adjunto:</p><img src="{url_img}" style="max-width:100%;border-radius:10px"></div>'
-        html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
-          <div style="background:#FF4500;padding:24px;text-align:center">
-            <h2 style="margin:0;color:white">🏋️ {gym_nombre}</h2>
-            <p style="margin:6px 0 0;color:#fff9;font-size:13px">Nueva solicitud de renovación</p>
-          </div>
-          <div style="padding:24px">
-            <p style="font-size:15px">El socio <strong>{s.nombre}</strong> quiere renovar su membresía.</p>
-            <table style="width:100%;border-collapse:collapse;margin:16px 0">
-              <tr style="border-bottom:1px solid #333"><td style="padding:10px 0;color:#888;font-size:12px">Plan elegido</td><td style="text-align:right;font-size:14px;font-weight:bold;color:#FF4500">{plan_elegido}</td></tr>
-              <tr style="border-bottom:1px solid #333"><td style="padding:10px 0;color:#888;font-size:12px">Monto</td><td style="text-align:right;font-size:14px;font-weight:bold;color:#00FF88">{monto}</td></tr>
-              <tr style="border-bottom:1px solid #333"><td style="padding:10px 0;color:#888;font-size:12px">Teléfono</td><td style="text-align:right;font-size:13px">{s.telefono or '—'}</td></tr>
-              <tr><td style="padding:10px 0;color:#888;font-size:12px">Vencimiento actual</td><td style="text-align:right;font-size:13px;color:#FF4444">{str(s.fecha_venc) if s.fecha_venc else '—'}</td></tr>
-            </table>
-            {img_html}
-            <p style="color:#666;font-size:11px;margin-top:20px;text-align:center">Revisá la solicitud en el panel de GymOS 💪</p>
-          </div>
-        </div>"""
+        if 'comprobante' in request.files:
+            archivo = request.files['comprobante']
+            if archivo and archivo.filename:
+                import io as _io
+                from datetime import datetime as _dt
+                nombre_archivo = f"renovacion_{sid}_{int(_dt.now().timestamp())}.jpg"
+                contenido = archivo.read()
+                try:
+                    from PIL import Image as _Img
+                    img = _Img.open(_io.BytesIO(contenido))
+                    img.thumbnail((1200, 1200))
+                    buf = _io.BytesIO()
+                    img.save(buf, format='JPEG', quality=80)
+                    contenido = buf.getvalue()
+                except Exception as ep:
+                    print(f"Compresion fallida: {ep}")
+                try:
+                    _SU = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
+                    _SS = os.environ.get('SUPABASE_SECRET', '')
+                    resp = requests.put(
+                        f"{_SU}/storage/v1/object/fotos-progreso/comprobantes/{nombre_archivo}",
+                        headers={'Authorization': f'Bearer {_SS}', 'Content-Type': 'image/jpeg'},
+                        data=contenido, timeout=20)
+                    if resp.status_code in (200, 201):
+                        imagen_path = f"comprobantes/{nombre_archivo}"
+                except Exception as es:
+                    print(f"Error subiendo comprobante: {es}")
+
         try:
-            enviar_email(gym_email, f'🔔 Renovación — {s.nombre} ({plan_elegido})', html, session)
-        except Exception as e:
-            print(f"Error enviando email: {e}")
+            session.execute(text(
+                "INSERT INTO solicitudes_renovacion (socio_id, plan_elegido, monto, imagen_path, estado) "
+                "VALUES (:sid, :plan, :monto, :img, 'pendiente')"
+            ), {'sid': sid, 'plan': plan_elegido, 'monto': monto, 'img': imagen_path})
+            session.commit()
+        except Exception as ei:
+            print(f"Error guardando solicitud (tabla puede no existir aun): {ei}")
+            session.rollback()
 
-    session.close()
+        if gym_email:
+            try:
+                img_html = ''
+                if imagen_path:
+                    _SU2 = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
+                    url_img = f"{_SU2}/storage/v1/object/public/fotos-progreso/{imagen_path}"
+                    img_html = f'<img src="{url_img}" style="max-width:100%;border-radius:10px;margin-top:12px">'
+                html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
+  <div style="background:#FF4500;padding:24px;text-align:center">
+    <h2 style="margin:0;color:white">🏋️ {gym_nombre}</h2>
+    <p style="margin:6px 0 0;color:#fff9;font-size:13px">Nueva solicitud de renovacion</p>
+  </div>
+  <div style="padding:24px">
+    <p>El socio <strong>{s.nombre}</strong> quiere renovar su membresia.</p>
+    <p>Plan: <strong style="color:#FF4500">{plan_elegido}</strong> — Monto: <strong style="color:#00FF88">{monto}</strong></p>
+    <p>Tel: {s.telefono or "—"} | Vence: {str(s.fecha_venc) if s.fecha_venc else "—"}</p>
+    {img_html}
+  </div>
+</div>"""
+                enviar_email(gym_email, f'Renovacion — {s.nombre} ({plan_elegido})', html, session)
+            except Exception as em:
+                print(f"Error enviando email: {em}")
+
+    except Exception as e_global:
+        print(f"Error en solicitar_renovacion: {e_global}")
+    finally:
+        try: session.close()
+        except: pass
     return jsonify({'ok': True})
+
 
 @app.route('/api/renovaciones', methods=['GET'])
 def listar_renovaciones():
