@@ -2442,7 +2442,7 @@ async function cargarClases(dia) {
       const cupoClass = pct >= 1 ? 'lleno' : pct >= 0.8 ? 'casi' : 'libre';
       const cupoLabel = pct >= 1 ? 'Lleno' : `${c.cupo_act}/${c.cupo_max} cupos`;
       return `
-      <div class="clase-item">
+      <div class="clase-item" style="flex-wrap:wrap;">
         <div class="clase-hora">${c.hora}</div>
         <div class="clase-info">
           <div class="clase-nombre">${c.nombre}</div>
@@ -2454,12 +2454,36 @@ async function cargarClases(dia) {
           <button onclick="ajustarCupo(${c.id}, +1)" title="Sumar cupo">+</button>
         </div>
         <div class="clase-actions">
+          <button class="btn-clase-edit" onclick="verInscriptos(${c.id}, '${c.nombre}')" title="Ver inscriptos"><i class="ti ti-users"></i></button>
           <button class="btn-clase-edit" onclick="editarClase(${c.id},'${c.nombre}','${c.profesor}','${c.dia}','${c.hora}',${c.cupo_max})"><i class="ti ti-pencil"></i></button>
           <button class="btn-clase-del" onclick="eliminarClase(${c.id},'${c.nombre}')" title="Eliminar"><i class="ti ti-trash"></i></button>
         </div>
+        <div id="inscriptos-${c.id}" style="display:none;width:100%;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)"></div>
       </div>`;
     }).join('');
   } catch(e) { console.error(e); }
+}
+
+async function verInscriptos(id, nombre) {
+  const el = document.getElementById(`inscriptos-${id}`);
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div style="font-size:12px;color:#555">Cargando...</div>';
+  try {
+    const res = await fetch(`${API}/api/clases/${id}/inscriptos`);
+    const lista = await res.json();
+    if (!lista.length) {
+      el.innerHTML = '<div style="font-size:12px;color:#555;padding:4px 0">Sin inscriptos todavía</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Inscriptos en ${nombre}</div>
+      ${lista.map((s,i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)${i===lista.length-1?';border:none':''}">
+          <div style="font-size:13px;color:var(--text1)">${s.nombre}</div>
+          <div style="font-size:11px;color:var(--text3)">${s.fecha_reserva}</div>
+        </div>`).join('')}`;
+  } catch(e) { el.innerHTML = '<div style="font-size:12px;color:#f55">Error al cargar</div>'; }
 }
 
 async function ajustarCupo(id, delta) {

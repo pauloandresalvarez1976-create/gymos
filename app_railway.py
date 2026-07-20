@@ -142,6 +142,13 @@ class Clase(Base):
     cupo_max = Column(Integer, default=20)
     cupo_act = Column(Integer, default=0)
 
+class ReservaClase(Base):
+    __tablename__ = 'reservas_clases'
+    id            = Column(Integer, primary_key=True)
+    socio_id      = Column(Integer, nullable=False)
+    clase_id      = Column(Integer, nullable=False)
+    fecha_reserva = Column(DateTime, default=datetime.utcnow)
+
 class Config(Base):
     __tablename__ = 'config'
     id    = Column(Integer, primary_key=True)
@@ -1682,19 +1689,30 @@ def ingresos_hoy():
 @app.route('/api/clases', methods=['GET'])
 def get_clases():
     session = Session()
-    dia = request.args.get('dia')
-    q   = session.query(Clase)
+    dia     = request.args.get('dia')
+    socio_id = request.args.get('socio_id', type=int)
+    q = session.query(Clase)
     if dia: q = q.filter(Clase.dia == dia)
-    result = [{'id':c.id,'nombre':c.nombre,'profesor':c.profesor,'dia':c.dia,
-               'hora':c.hora,'cupo_max':c.cupo_max,'cupo_act':c.cupo_act} for c in q.all()]
-    session.close(); return jsonify(result)
+    clases = q.all()
+    # contar inscriptos reales desde reservas_clases
+    result = []
+    for c in clases:
+        cupo_act = session.query(ReservaClase).filter_by(clase_id=c.id).count()
+        ya_reservado = False
+        if socio_id:
+            ya_reservado = session.query(ReservaClase).filter_by(clase_id=c.id, socio_id=socio_id).count() > 0
+        result.append({'id':c.id,'nombre':c.nombre,'profesor':c.profesor,'dia':c.dia,
+                       'hora':c.hora,'cupo_max':c.cupo_max,'cupo_act':cupo_act,
+                       'ya_reservado': ya_reservado})
+    session.close()
+    return jsonify(result)
 
 @app.route('/api/clases', methods=['POST'])
 def crear_clase():
     session = Session()
-    data    = request.json
-    clase   = Clase(nombre=data['nombre'],profesor=data.get('profesor',''),
-                    dia=data.get('dia',''),hora=data.get('hora',''),cupo_max=data.get('cupo_max',20))
+    data  = request.json
+    clase = Clase(nombre=data['nombre'], profesor=data.get('profesor',''),
+                  dia=data.get('dia',''), hora=data.get('hora',''), cupo_max=data.get('cupo_max',20))
     session.add(clase); session.commit(); session.close()
     return jsonify({'ok': True}), 201
 
@@ -1710,7 +1728,6 @@ def editar_clase(clase_id):
     if 'dia'      in data: clase.dia       = data['dia']
     if 'hora'     in data: clase.hora      = data['hora']
     if 'cupo_max' in data: clase.cupo_max  = data['cupo_max']
-    if 'cupo_act' in data: clase.cupo_act  = data['cupo_act']
     session.commit(); session.close()
     return jsonify({'ok': True})
 
@@ -1729,22 +1746,47 @@ def reservar_clase(clase_id):
     clase = session.query(Clase).get(clase_id)
     if not clase:
         session.close(); return jsonify({'error': 'No encontrada'}), 404
-    if clase.cupo_act >= clase.cupo_max:
+    # verificar cupo real
+    inscriptos = session.query(ReservaClase).filter_by(clase_id=clase_id).count()
+    if inscriptos >= clase.cupo_max:
         session.close(); return jsonify({'error': 'Sin cupos disponibles'}), 409
-    clase.cupo_act += 1
-    session.commit(); session.close()
+    data     = request.json or {}
+    socio_id = data.get('socio_id')
+    if not socio_id:
+        session.close(); return jsonify({'error': 'socio_id requerido'}), 400
+    # evitar doble reserva
+    existe = session.query(ReservaClase).filter_by(clase_id=clase_id, socio_id=socio_id).first()
+    if existe:
+        session.close(); return jsonify({'error': 'Ya tenés una reserva para esta clase'}), 409
+    reserva = ReservaClase(socio_id=socio_id, clase_id=clase_id)
+    session.add(reserva); session.commit(); session.close()
     return jsonify({'ok': True})
 
 @app.route('/api/clases/<int:clase_id>/cancelar', methods=['POST'])
 def cancelar_reserva(clase_id):
-    session = Session()
-    clase = session.query(Clase).get(clase_id)
-    if not clase:
-        session.close(); return jsonify({'error': 'No encontrada'}), 404
-    if clase.cupo_act > 0:
-        clase.cupo_act -= 1
-    session.commit(); session.close()
+    session  = Session()
+    data     = request.json or {}
+    socio_id = data.get('socio_id')
+    if not socio_id:
+        session.close(); return jsonify({'error': 'socio_id requerido'}), 400
+    reserva = session.query(ReservaClase).filter_by(clase_id=clase_id, socio_id=socio_id).first()
+    if reserva:
+        session.delete(reserva); session.commit()
+    session.close()
     return jsonify({'ok': True})
+
+@app.route('/api/clases/<int:clase_id>/inscriptos', methods=['GET'])
+def get_inscriptos(clase_id):
+    session = Session()
+    reservas = session.query(ReservaClase).filter_by(clase_id=clase_id).all()
+    result = []
+    for r in reservas:
+        socio = session.query(Socio).get(r.socio_id)
+        if socio:
+            result.append({'socio_id': socio.id, 'nombre': socio.nombre,
+                           'fecha_reserva': r.fecha_reserva.strftime('%d/%m %H:%M')})
+    session.close()
+    return jsonify(result)
 
 # ── VENCIMIENTOS ─────────────────────────────────────────
 @app.route('/api/vencimientos', methods=['GET'])

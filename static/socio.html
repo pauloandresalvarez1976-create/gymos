@@ -1426,7 +1426,7 @@ async function cargarClasesSocio(dia) {
   const list = document.getElementById('clasesListSocio');
   list.innerHTML = '<div class="clases-vacio">Cargando...</div>';
   try {
-    const res = await fetch(`/api/clases?dia=${dia}`);
+    const res = await fetch(`/api/clases?dia=${dia}&socio_id=${socioId}`);
     const clases = await res.json();
     if (!clases.length) {
       list.innerHTML = '<div class="clases-vacio">No hay clases este día</div>';
@@ -1437,7 +1437,7 @@ async function cargarClasesSocio(dia) {
       const pct = c.cupo_max > 0 ? c.cupo_act / c.cupo_max : 0;
       const badgeClass = pct >= 1 ? 'lleno' : pct >= 0.8 ? 'casi' : 'libre';
       const badgeLabel = pct >= 1 ? 'Sin cupos' : `${c.cupo_max - c.cupo_act} cupos libres`;
-      const yaReservado = !!clasesReservadas[c.id];
+      const yaReservado = c.ya_reservado;
       const btnLabel = yaReservado ? 'Cancelar reserva' : 'Reservar lugar';
       const btnClass = yaReservado ? 'btn-reservar cancelar' : 'btn-reservar';
       const disabled = !yaReservado && pct >= 1 ? 'disabled style="opacity:.4;cursor:default"' : '';
@@ -1460,11 +1460,12 @@ async function cargarClasesSocio(dia) {
 async function toggleReserva(id, yaReservado) {
   const endpoint = yaReservado ? 'cancelar' : 'reservar';
   try {
-    const res = await fetch(`/api/clases/${id}/${endpoint}`, { method: 'POST' });
+    const res = await fetch(`/api/clases/${id}/${endpoint}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ socio_id: socioId })
+    });
     if (res.ok) {
-      if (yaReservado) delete clasesReservadas[id];
-      else clasesReservadas[id] = true;
-      localStorage.setItem('gymos-reservas', JSON.stringify(clasesReservadas));
       cargarClasesSocio(claseDiaActivo);
     } else {
       const d = await res.json();
