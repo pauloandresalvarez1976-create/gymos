@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GymOS</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1740,47 +1741,69 @@ function toast(msg, tipo = '') {
 
 // ── INGRESO / CÁMARA ──
 let camActiva = false;
-let scanInterval = null;
+let localStream = null;
+let reconocInterval = null;
+let reconocProcesando = false;
 
 async function toggleCam() {
   if (!camActiva) {
-    // Iniciar reconocimiento en el servidor
-    await fetch(API + '/api/camara/iniciar', {method:'POST'});
-    document.getElementById('camBtnText').textContent = 'Detener cámara';
-    document.getElementById('camBtnIcon').className = 'ti ti-camera-off';
-    document.getElementById('statusText').textContent = 'Cámara activa — escaneando...';
-    document.getElementById('camPlaceholder').style.display = 'none';
-    // Mostrar stream MJPEG del servidor
-    const imgStream = document.createElement('img');
-    imgStream.id = 'mjpegStream';
-    imgStream.src = API + '/api/camara/stream';
-    imgStream.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
-    const camArea = document.querySelector('.cam-area');
-    camArea.insertBefore(imgStream, camArea.firstChild);
-    camActiva = true;
-    scanInterval = setInterval(consultarReconocimiento, 1000);
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+      const video = document.getElementById('videoEl');
+      video.srcObject = localStream;
+      video.style.display = 'block';
+      document.getElementById('camPlaceholder').style.display = 'none';
+      document.getElementById('camBtnText').textContent = 'Detener cámara';
+      document.getElementById('camBtnIcon').className = 'ti ti-camera-off';
+      document.getElementById('statusText').textContent = 'Cámara activa — escaneando...';
+      camActiva = true;
+      // Enviar un frame cada 1.5 segundos para reconocimiento facial
+      reconocInterval = setInterval(enviarFrameReconocimiento, 1500);
+    } catch(e) {
+      toast('No se pudo acceder a la cámara. Verificá los permisos del navegador.', 'bad');
+    }
   } else {
-    await fetch(API + '/api/camara/detener', {method:'POST'});
-    if (scanInterval) clearInterval(scanInterval);
-    const stream = document.getElementById('mjpegStream');
-    if (stream) { stream.src = ''; stream.remove(); }
-    document.getElementById('camPlaceholder').style.display = 'flex';
-    document.getElementById('camBtnText').textContent = 'Iniciar cámara';
-    document.getElementById('camBtnIcon').className = 'ti ti-camera';
-    document.getElementById('statusText').textContent = 'Esperando cámara...';
-    camActiva = false;
-    resetPanel();
+    detenerCam();
   }
 }
 
-async function consultarReconocimiento() {
+function detenerCam() {
+  if (reconocInterval) { clearInterval(reconocInterval); reconocInterval = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  const video = document.getElementById('videoEl');
+  video.srcObject = null;
+  video.style.display = 'none';
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('camBtnText').textContent = 'Iniciar cámara';
+  document.getElementById('camBtnIcon').className = 'ti ti-camera';
+  document.getElementById('statusText').textContent = 'Esperando cámara...';
+  camActiva = false;
+  reconocProcesando = false;
+  resetPanel();
+}
+
+async function enviarFrameReconocimiento() {
+  if (reconocProcesando) return;
+  const video = document.getElementById('videoEl');
+  if (!video || !video.videoWidth) return;
+  reconocProcesando = true;
   try {
-    const r = await fetch(API + '/api/camara/estado');
-    const d = await r.json();
-    if (d.socio) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320; canvas.height = 240;
+    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+    const frame = canvas.toDataURL('image/jpeg', 0.7);
+    const res = await fetch(`${API}/api/facial/reconocer`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ frame })
+    });
+    const d = await res.json();
+    if (d.ok && d.socio) {
       mostrarSocio(d.socio);
     }
-  } catch(e) {}
+  } catch(e) {} finally {
+    reconocProcesando = false;
+  }
 }
 
 function mostrarSocio(s) {
@@ -1961,32 +1984,77 @@ async function cargarPagosPerfil(id) {
 }
 
 let scanQRInterval = null;
+let qrStream = null;
+
 function activarScanQR() {
   document.getElementById('qrScanOverlay').classList.add('active');
-  // Usar OpenCV del backend para detectar QR en el stream
-  scanQRInterval = setInterval(async () => {
-    try {
-      const res = await fetch(`${API}/api/qr/scan_frame`);
-      const data = await res.json();
-      if (data.ok && data.qr_data) {
-        clearInterval(scanQRInterval);
-        cancelarScanQR();
-        // Procesar el QR
-        const res2 = await fetch(`${API}/api/qr/escanear`, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({qr_data: data.qr_data})
-        });
-        const d2 = await res2.json();
-        if (d2.ok) {
-          mostrarSocio(d2.socio);
-          toast(`✅ Acceso registrado — ${d2.socio.nombre}`, 'ok');
-        } else {
-          toast(d2.error || 'QR no reconocido', 'bad');
+  // Usar la cámara ya activa si está abierta, sino abrir una temporal
+  const videoEl = document.getElementById('videoEl');
+  const videoSrc = (camActiva && localStream) ? videoEl : null;
+  _iniciarScanQR(videoSrc);
+}
+
+function _iniciarScanQR(videoExistente) {
+  const canvas = document.createElement('canvas');
+  const escanear = () => {
+    const video = videoExistente || document.getElementById('qrVideoTemp');
+    if (!video || !video.videoWidth) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height);
+    if (code && code.data) {
+      cancelarScanQR();
+      procesarQR(code.data);
+    }
+  };
+
+  if (videoExistente) {
+    // Usar la cámara de ingreso ya activa
+    scanQRInterval = setInterval(escanear, 300);
+  } else {
+    // Abrir cámara temporal para el QR
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        qrStream = stream;
+        let v = document.getElementById('qrVideoTemp');
+        if (!v) {
+          v = document.createElement('video');
+          v.id = 'qrVideoTemp';
+          v.autoplay = true;
+          v.playsInline = true;
+          v.style.display = 'none';
+          document.body.appendChild(v);
         }
-      }
-    } catch(e) {}
-  }, 800);
+        v.srcObject = stream;
+        v.onloadedmetadata = () => {
+          scanQRInterval = setInterval(escanear, 300);
+        };
+      })
+      .catch(() => {
+        toast('No se pudo acceder a la cámara para el QR', 'bad');
+        cancelarScanQR();
+      });
+  }
+}
+
+async function procesarQR(qrData) {
+  try {
+    const res = await fetch(`${API}/api/qr/escanear`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ qr_data: qrData })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      mostrarSocio(d.socio);
+      toast(`✅ Acceso registrado — ${d.socio.nombre}`, 'ok');
+    } else {
+      toast(d.error || 'QR no reconocido', 'bad');
+    }
+  } catch(e) { toast('Error al procesar QR', 'bad'); }
 }
 
 async function enviarEmailVencimiento(id, nombre, email) {
@@ -2001,6 +2069,9 @@ async function enviarEmailVencimiento(id, nombre, email) {
 
 function cancelarScanQR() {
   if (scanQRInterval) { clearInterval(scanQRInterval); scanQRInterval = null; }
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  const v = document.getElementById('qrVideoTemp');
+  if (v) v.remove();
   document.getElementById('qrScanOverlay').classList.remove('active');
 }
 

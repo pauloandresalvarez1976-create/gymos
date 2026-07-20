@@ -658,6 +658,60 @@ def escanear_qr():
     session.close()
     return jsonify({'ok': True, 'socio': result})
 
+@app.route('/api/facial/reconocer', methods=['POST'])
+def reconocer_facial():
+    """Recibe un frame base64 del browser, lo compara con los encodings guardados."""
+    try:
+        import face_recognition, numpy as np
+        from PIL import Image as _Img
+    except ImportError:
+        return jsonify({'ok': False, 'error': 'face_recognition no disponible'}), 500
+    data  = request.json or {}
+    frame = data.get('frame', '')
+    if not frame:
+        return jsonify({'ok': False}), 400
+    try:
+        # Decodificar imagen base64
+        header, b64data = frame.split(',', 1) if ',' in frame else ('', frame)
+        img_bytes = base64.b64decode(b64data)
+        img = _Img.open(io.BytesIO(img_bytes)).convert('RGB')
+        img_np = np.array(img)
+        # Detectar caras en el frame
+        locs = face_recognition.face_locations(img_np, model='hog')
+        if not locs:
+            return jsonify({'ok': False})
+        frame_encodings = face_recognition.face_encodings(img_np, locs)
+        if not frame_encodings:
+            return jsonify({'ok': False})
+        frame_enc = frame_encodings[0]
+        # Comparar con todos los socios que tienen encoding
+        session = Session()
+        socios  = session.query(Socio).filter(Socio.encoding.isnot(None), Socio.activo == 1).all()
+        mejor_socio = None
+        mejor_dist  = 0.55  # umbral de tolerancia
+        for s in socios:
+            try:
+                enc_conocido = np.array(json.loads(s.encoding))
+                dist = face_recognition.face_distance([enc_conocido], frame_enc)[0]
+                if dist < mejor_dist:
+                    mejor_dist  = dist
+                    mejor_socio = s
+            except Exception:
+                continue
+        if not mejor_socio:
+            session.close()
+            return jsonify({'ok': False})
+        # Registrar ingreso
+        ingreso = Ingreso(socio_id=mejor_socio.id, fecha=date.today())
+        session.add(ingreso)
+        session.commit()
+        result = socio_to_dict(mejor_socio)
+        session.close()
+        return jsonify({'ok': True, 'socio': result, 'confianza': round(1 - mejor_dist, 2)})
+    except Exception as e:
+        print(f'Error reconocimiento facial: {e}')
+        return jsonify({'ok': False}), 500
+
 # ── COMPROBANTE EMAIL ────────────────────────────────────
 def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto_nombre=None):
     """Envía un email usando la config SMTP guardada. Opcionalmente adjunta un archivo."""
