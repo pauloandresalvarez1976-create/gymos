@@ -242,7 +242,32 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .clase-info { flex: 1; }
 .clase-nombre { font-size: 13px; color: #ddd; }
 .clase-prof { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.clase-cupos { font-size: 11px; color: var(--text3); background: var(--bg2); border-radius: 6px; padding: 3px 10px; }
+.clase-cupos { font-size: 11px; color: var(--text3); background: var(--bg2); border-radius: 6px; padding: 3px 10px; white-space: nowrap; }
+.clase-cupos.lleno { color: #ef4444; background: #ef444420; }
+.clase-cupos.casi { color: #f59e0b; background: #f59e0b20; }
+.clase-cupos.libre { color: #22c55e; background: #22c55e20; }
+.clase-actions { display: flex; gap: 6px; align-items: center; }
+.clase-cupo-ctrl { display: flex; align-items: center; gap: 4px; }
+.clase-cupo-ctrl button { width: 22px; height: 22px; border-radius: 5px; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.clase-cupo-ctrl button:hover { background: var(--accent-bg); color: var(--accent); }
+.btn-clase-edit { background: var(--bg2); border: 0.5px solid var(--border); color: var(--text3); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+.btn-clase-edit:hover { color: var(--accent); border-color: var(--accent)40; }
+.btn-clase-del { background: transparent; border: none; color: var(--text3); font-size: 14px; cursor: pointer; padding: 4px; }
+.btn-clase-del:hover { color: #ef4444; }
+/* Modal clase */
+.modal-clase { display: none; position: fixed; inset: 0; background: #0009; z-index: 1000; align-items: center; justify-content: center; }
+.modal-clase.open { display: flex; }
+.modal-clase-box { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 24px; width: 340px; max-width: 94vw; }
+.modal-clase-title { font-size: 16px; font-weight: 600; color: var(--text1); margin-bottom: 18px; }
+.modal-clase-field { margin-bottom: 14px; }
+.modal-clase-field label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+.modal-clase-field input, .modal-clase-field select { width: 100%; background: var(--bg2); border: 0.5px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text1); font-size: 13px; box-sizing: border-box; }
+.modal-clase-field input:focus, .modal-clase-field select:focus { outline: none; border-color: var(--accent)60; }
+.modal-clase-row { display: flex; gap: 10px; }
+.modal-clase-row .modal-clase-field { flex: 1; }
+.modal-clase-btns { display: flex; gap: 10px; margin-top: 20px; }
+.modal-clase-btns .btn-primary { flex: 1; }
+.modal-clase-btns .btn-sec { flex: 0 0 auto; }
 
 /* ── REPORTES ── */
 .reportes-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -1222,6 +1247,48 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- MODAL CLASE -->
+<div class="modal-clase" id="modalClase">
+  <div class="modal-clase-box">
+    <div class="modal-clase-title" id="modalClaseTitulo">Nueva clase</div>
+    <input type="hidden" id="claseEditId">
+    <div class="modal-clase-field">
+      <label>Nombre de la clase</label>
+      <input type="text" id="claseNombre" placeholder="Ej: Spinning, Yoga, Funcional...">
+    </div>
+    <div class="modal-clase-field">
+      <label>Profesor</label>
+      <input type="text" id="claseProfesor" placeholder="Nombre del profesor">
+    </div>
+    <div class="modal-clase-row">
+      <div class="modal-clase-field">
+        <label>Día</label>
+        <select id="claseDia">
+          <option value="Lun">Lunes</option>
+          <option value="Mar">Martes</option>
+          <option value="Mié">Miércoles</option>
+          <option value="Jue">Jueves</option>
+          <option value="Vie">Viernes</option>
+          <option value="Sáb">Sábado</option>
+          <option value="Dom">Domingo</option>
+        </select>
+      </div>
+      <div class="modal-clase-field">
+        <label>Hora</label>
+        <input type="time" id="claseHora">
+      </div>
+    </div>
+    <div class="modal-clase-field">
+      <label>Cupo máximo</label>
+      <input type="number" id="claseCupoMax" placeholder="20" min="1" max="200">
+    </div>
+    <div class="modal-clase-btns">
+      <button class="btn-sec" onclick="cerrarModalClase()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarClase()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL PAGO -->
 <div class="modal-overlay" id="modalPago">
@@ -2365,21 +2432,99 @@ async function cargarClases(dia) {
     const res = await fetch(`${API}/api/clases?dia=${dia}`);
     const clases = await res.json();
     const list = document.getElementById('clasesList');
-    if (!clases.length) { list.innerHTML = '<div style="color:#555;font-size:13px;padding:10px 0">Sin clases este día</div>'; return; }
-    list.innerHTML = clases.map(c => `
+    if (!clases.length) {
+      list.innerHTML = '<div style="color:#555;font-size:13px;padding:10px 0">Sin clases este día</div>';
+      return;
+    }
+    const ordenadas = clases.slice().sort((a, b) => a.hora.localeCompare(b.hora));
+    list.innerHTML = ordenadas.map(c => {
+      const pct = c.cupo_max > 0 ? c.cupo_act / c.cupo_max : 0;
+      const cupoClass = pct >= 1 ? 'lleno' : pct >= 0.8 ? 'casi' : 'libre';
+      const cupoLabel = pct >= 1 ? 'Lleno' : `${c.cupo_act}/${c.cupo_max} cupos`;
+      return `
       <div class="clase-item">
         <div class="clase-hora">${c.hora}</div>
         <div class="clase-info">
           <div class="clase-nombre">${c.nombre}</div>
           <div class="clase-prof">Prof. ${c.profesor}</div>
         </div>
-        <div class="clase-cupos">${c.cupo_act}/${c.cupo_max} cupos</div>
-      </div>`).join('');
-  } catch(e) {}
+        <div class="clase-cupo-ctrl">
+          <button onclick="ajustarCupo(${c.id}, -1)" title="Restar cupo">−</button>
+          <div class="clase-cupos ${cupoClass}">${cupoLabel}</div>
+          <button onclick="ajustarCupo(${c.id}, +1)" title="Sumar cupo">+</button>
+        </div>
+        <div class="clase-actions">
+          <button class="btn-clase-edit" onclick="editarClase(${c.id},'${c.nombre}','${c.profesor}','${c.dia}','${c.hora}',${c.cupo_max})"><i class="ti ti-pencil"></i></button>
+          <button class="btn-clase-del" onclick="eliminarClase(${c.id},'${c.nombre}')" title="Eliminar"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function ajustarCupo(id, delta) {
+  try {
+    const endpoint = delta > 0 ? 'reservar' : 'cancelar';
+    const res = await fetch(`${API}/api/clases/${id}/${endpoint}`, { method: 'POST' });
+    if (res.ok) cargarClases(diaSeleccionado);
+    else { const d = await res.json(); toast(d.error || 'Error', 'bad'); }
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+async function eliminarClase(id, nombre) {
+  if (!confirm(`¿Eliminar la clase "${nombre}"?`)) return;
+  try {
+    const res = await fetch(`${API}/api/clases/${id}`, { method: 'DELETE' });
+    if (res.ok) { toast('Clase eliminada', 'ok'); cargarClases(diaSeleccionado); }
+    else toast('Error al eliminar', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
 }
 
 function mostrarModalClase() {
-  toast('Próximamente: agregar clases', '');
+  document.getElementById('claseEditId').value = '';
+  document.getElementById('modalClaseTitulo').textContent = 'Nueva clase';
+  document.getElementById('claseNombre').value = '';
+  document.getElementById('claseProfesor').value = '';
+  document.getElementById('claseDia').value = diaSeleccionado || 'Lun';
+  document.getElementById('claseHora').value = '';
+  document.getElementById('claseCupoMax').value = '20';
+  document.getElementById('modalClase').classList.add('open');
+}
+
+function editarClase(id, nombre, profesor, dia, hora, cupoMax) {
+  document.getElementById('claseEditId').value = id;
+  document.getElementById('modalClaseTitulo').textContent = 'Editar clase';
+  document.getElementById('claseNombre').value = nombre;
+  document.getElementById('claseProfesor').value = profesor;
+  document.getElementById('claseDia').value = dia;
+  document.getElementById('claseHora').value = hora;
+  document.getElementById('claseCupoMax').value = cupoMax;
+  document.getElementById('modalClase').classList.add('open');
+}
+
+function cerrarModalClase() {
+  document.getElementById('modalClase').classList.remove('open');
+}
+
+async function guardarClase() {
+  const editId = document.getElementById('claseEditId').value;
+  const nombre = document.getElementById('claseNombre').value.trim();
+  const profesor = document.getElementById('claseProfesor').value.trim();
+  const dia = document.getElementById('claseDia').value;
+  const hora = document.getElementById('claseHora').value;
+  const cupo_max = parseInt(document.getElementById('claseCupoMax').value) || 20;
+  if (!nombre || !hora) { toast('Completá nombre y hora', 'bad'); return; }
+  const body = { nombre, profesor, dia, hora, cupo_max };
+  try {
+    const url = editId ? `${API}/api/clases/${editId}` : `${API}/api/clases`;
+    const method = editId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (res.ok) {
+      toast(editId ? 'Clase actualizada' : 'Clase creada', 'ok');
+      cerrarModalClase();
+      cargarClases(diaSeleccionado);
+    } else toast('Error al guardar', 'bad');
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
 }
 
 // ── REPORTES ──

@@ -1698,6 +1698,54 @@ def crear_clase():
     session.add(clase); session.commit(); session.close()
     return jsonify({'ok': True}), 201
 
+@app.route('/api/clases/<int:clase_id>', methods=['PUT'])
+def editar_clase(clase_id):
+    session = Session()
+    clase = session.query(Clase).get(clase_id)
+    if not clase:
+        session.close(); return jsonify({'error': 'No encontrada'}), 404
+    data = request.json
+    if 'nombre'   in data: clase.nombre   = data['nombre']
+    if 'profesor' in data: clase.profesor  = data['profesor']
+    if 'dia'      in data: clase.dia       = data['dia']
+    if 'hora'     in data: clase.hora      = data['hora']
+    if 'cupo_max' in data: clase.cupo_max  = data['cupo_max']
+    if 'cupo_act' in data: clase.cupo_act  = data['cupo_act']
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/clases/<int:clase_id>', methods=['DELETE'])
+def eliminar_clase(clase_id):
+    session = Session()
+    clase = session.query(Clase).get(clase_id)
+    if not clase:
+        session.close(); return jsonify({'error': 'No encontrada'}), 404
+    session.delete(clase); session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/clases/<int:clase_id>/reservar', methods=['POST'])
+def reservar_clase(clase_id):
+    session = Session()
+    clase = session.query(Clase).get(clase_id)
+    if not clase:
+        session.close(); return jsonify({'error': 'No encontrada'}), 404
+    if clase.cupo_act >= clase.cupo_max:
+        session.close(); return jsonify({'error': 'Sin cupos disponibles'}), 409
+    clase.cupo_act += 1
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/clases/<int:clase_id>/cancelar', methods=['POST'])
+def cancelar_reserva(clase_id):
+    session = Session()
+    clase = session.query(Clase).get(clase_id)
+    if not clase:
+        session.close(); return jsonify({'error': 'No encontrada'}), 404
+    if clase.cupo_act > 0:
+        clase.cupo_act -= 1
+    session.commit(); session.close()
+    return jsonify({'ok': True})
+
 # ── VENCIMIENTOS ─────────────────────────────────────────
 @app.route('/api/vencimientos', methods=['GET'])
 def get_vencimientos():

@@ -200,6 +200,31 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
+  /* ── CLASES ── */
+  .clases-header { padding: 20px 16px 8px; }
+  .clases-title { font-size: 18px; font-weight: 700; color: var(--text1); }
+  .clases-subtitle { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .clases-dias-row { display: flex; gap: 6px; padding: 0 16px 14px; overflow-x: auto; }
+  .clases-dia-btn { flex: 0 0 auto; padding: 8px 14px; background: var(--bg1); border: 1px solid var(--bg3); border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .clases-dia-btn.active { border-color: var(--accent); background: var(--accent-bg); }
+  .clases-dia-btn .cd-nombre { font-size: 10px; color: var(--text3); font-weight: 600; }
+  .clases-dia-btn .cd-num { font-size: 15px; font-weight: 700; color: var(--text3); }
+  .clases-dia-btn.active .cd-nombre, .clases-dia-btn.active .cd-num { color: var(--accent); }
+  .clases-list { padding: 0 16px 100px; }
+  .clase-card { background: var(--bg1); border: 1px solid var(--bg3); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .clase-card-hora { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .5px; margin-bottom: 6px; }
+  .clase-card-nombre { font-size: 16px; font-weight: 700; color: var(--text1); }
+  .clase-card-prof { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .clase-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .clase-badge { font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
+  .clase-badge.libre { background: #22c55e20; color: #22c55e; }
+  .clase-badge.casi { background: #f59e0b20; color: #f59e0b; }
+  .clase-badge.lleno { background: #ef444420; color: #ef4444; }
+  .btn-reservar { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+  .btn-reservar:active { opacity: .75; }
+  .btn-reservar.cancelar { background: var(--bg2); color: var(--text2); border: 1px solid var(--bg3); }
+  .clases-vacio { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+
   /* LOADING */
   .loading { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; }
   .error-msg { text-align: center; padding: 60px 20px; color: var(--red); font-size: 14px; }
@@ -1278,6 +1303,16 @@ function renderApp() {
         <div id="progresoContainer" class="loading" style="padding:40px 20px">Cargando...</div>
       </div>
 
+      <!-- TAB CLASES -->
+      <div class="tab-content" id="tab-clases">
+        <div class="clases-header">
+          <div class="clases-title">Clases grupales</div>
+          <div class="clases-subtitle">Reservá tu lugar con anticipación</div>
+        </div>
+        <div class="clases-dias-row" id="clasesDiasRow"></div>
+        <div class="clases-list" id="clasesListSocio"><div class="clases-vacio">Cargando...</div></div>
+      </div>
+
       ${s.ia_habilitada ? `
       <!-- TAB IA -->
       <div class="tab-content" id="tab-ia">
@@ -1317,6 +1352,9 @@ function renderApp() {
       <button class="nav-btn" id="nav-progreso" onclick="cambiarTab('progreso')">
         <i class="ti ti-chart-line"></i>Progreso
       </button>
+      <button class="nav-btn" id="nav-clases" onclick="cambiarTab('clases')">
+        <i class="ti ti-calendar-event"></i>Clases
+      </button>
       ${s.ia_habilitada ? `
       <button class="nav-btn" id="nav-ia" onclick="cambiarTab('ia')">
         <i class="ti ti-robot"></i>IA
@@ -1351,7 +1389,88 @@ function cambiarTab(tab, sinHistorial) {
   document.getElementById(`nav-${tab}`)?.classList.add('active');
   tabActual = tab;
   if (tab === 'progreso' && !progresoData) cargarProgreso();
+  if (tab === 'clases') iniciarClasesSocio();
   if (!sinHistorial) history.pushState({ tab: tab }, '');
+}
+
+// ── CLASES SOCIO ─────────────────────────────────────
+let claseDiaActivo = null;
+let clasesReservadas = JSON.parse(localStorage.getItem('gymos-reservas') || '{}');
+
+function iniciarClasesSocio() {
+  const dias = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const hoy = new Date();
+  const diaSemana = (hoy.getDay() + 6) % 7;
+  const row = document.getElementById('clasesDiasRow');
+  if (!row) return;
+  if (!claseDiaActivo) claseDiaActivo = dias[diaSemana];
+  row.innerHTML = dias.map((d, i) => {
+    const fecha = new Date(hoy); fecha.setDate(hoy.getDate() - diaSemana + i);
+    const isActive = d === claseDiaActivo;
+    return `<div class="clases-dia-btn ${isActive?'active':''}" onclick="seleccionarDiaClase('${d}',this)">
+      <div class="cd-nombre">${d.toUpperCase()}</div>
+      <div class="cd-num">${fecha.getDate()}</div>
+    </div>`;
+  }).join('');
+  cargarClasesSocio(claseDiaActivo);
+}
+
+function seleccionarDiaClase(dia, el) {
+  document.querySelectorAll('.clases-dia-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  claseDiaActivo = dia;
+  cargarClasesSocio(dia);
+}
+
+async function cargarClasesSocio(dia) {
+  const list = document.getElementById('clasesListSocio');
+  list.innerHTML = '<div class="clases-vacio">Cargando...</div>';
+  try {
+    const res = await fetch(`/api/clases?dia=${dia}`);
+    const clases = await res.json();
+    if (!clases.length) {
+      list.innerHTML = '<div class="clases-vacio">No hay clases este día</div>';
+      return;
+    }
+    const ordenadas = clases.slice().sort((a, b) => a.hora.localeCompare(b.hora));
+    list.innerHTML = ordenadas.map(c => {
+      const pct = c.cupo_max > 0 ? c.cupo_act / c.cupo_max : 0;
+      const badgeClass = pct >= 1 ? 'lleno' : pct >= 0.8 ? 'casi' : 'libre';
+      const badgeLabel = pct >= 1 ? 'Sin cupos' : `${c.cupo_max - c.cupo_act} cupos libres`;
+      const yaReservado = !!clasesReservadas[c.id];
+      const btnLabel = yaReservado ? 'Cancelar reserva' : 'Reservar lugar';
+      const btnClass = yaReservado ? 'btn-reservar cancelar' : 'btn-reservar';
+      const disabled = !yaReservado && pct >= 1 ? 'disabled style="opacity:.4;cursor:default"' : '';
+      return `
+      <div class="clase-card">
+        <div class="clase-card-hora">${c.hora}</div>
+        <div class="clase-card-nombre">${c.nombre}</div>
+        <div class="clase-card-prof">Prof. ${c.profesor}</div>
+        <div class="clase-card-footer">
+          <span class="clase-badge ${badgeClass}">${badgeLabel}</span>
+          <button class="${btnClass}" ${disabled} onclick="toggleReserva(${c.id}, ${yaReservado})">${btnLabel}</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="clases-vacio">No se pudo cargar las clases</div>';
+  }
+}
+
+async function toggleReserva(id, yaReservado) {
+  const endpoint = yaReservado ? 'cancelar' : 'reservar';
+  try {
+    const res = await fetch(`/api/clases/${id}/${endpoint}`, { method: 'POST' });
+    if (res.ok) {
+      if (yaReservado) delete clasesReservadas[id];
+      else clasesReservadas[id] = true;
+      localStorage.setItem('gymos-reservas', JSON.stringify(clasesReservadas));
+      cargarClasesSocio(claseDiaActivo);
+    } else {
+      const d = await res.json();
+      toast(d.error || 'No se pudo completar');
+    }
+  } catch(e) { toast('Sin conexión'); }
 }
 
 function toggleSection(id) {
