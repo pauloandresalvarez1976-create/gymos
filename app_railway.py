@@ -440,7 +440,7 @@ def crear_socio():
             f.write(base64.b64decode(foto_b64.split(',')[-1]))
         socio.foto = nombre_foto
         try:
-            socio.encoding = json.dumps(generar_encoding(ruta_foto))
+            socio.encoding = json.dumps(generar_encoding_mp(ruta_foto))
         except Exception as e:
             print(f"Warning facial: {e}")
     session.add(socio); session.commit()
@@ -465,7 +465,7 @@ def actualizar_socio(sid):
             f.write(base64.b64decode(foto_b64.split(',')[-1]))
         s.foto = nombre_foto
         try:
-            enc = generar_encoding(ruta_foto)
+            enc = generar_encoding_mp(ruta_foto)
             s.encoding = json.dumps(enc) if enc else None
         except Exception as e:
             print(f"Warning facial update: {e}")
@@ -660,57 +660,84 @@ def escanear_qr():
 
 @app.route('/api/facial/reconocer', methods=['POST'])
 def reconocer_facial():
-    """Recibe un frame base64 del browser, lo compara con los encodings guardados."""
-    try:
-        import face_recognition, numpy as np
-        from PIL import Image as _Img
-    except ImportError:
-        return jsonify({'ok': False, 'error': 'face_recognition no disponible'}), 500
+    """Recibe un frame base64 del browser, lo compara con los encodings guardados (mediapipe)."""
     data  = request.json or {}
     frame = data.get('frame', '')
     if not frame:
         return jsonify({'ok': False}), 400
     try:
-        # Decodificar imagen base64
-        header, b64data = frame.split(',', 1) if ',' in frame else ('', frame)
-        img_bytes = base64.b64decode(b64data)
-        img = _Img.open(io.BytesIO(img_bytes)).convert('RGB')
-        img_np = np.array(img)
-        # Detectar caras en el frame
-        locs = face_recognition.face_locations(img_np, model='hog')
-        if not locs:
+        enc_frame = _encoding_desde_b64(frame)
+        if enc_frame is None:
             return jsonify({'ok': False})
-        frame_encodings = face_recognition.face_encodings(img_np, locs)
-        if not frame_encodings:
-            return jsonify({'ok': False})
-        frame_enc = frame_encodings[0]
-        # Comparar con todos los socios que tienen encoding
-        session = Session()
-        socios  = session.query(Socio).filter(Socio.encoding.isnot(None), Socio.activo == 1).all()
+        session     = Session()
+        socios      = session.query(Socio).filter(Socio.encoding.isnot(None), Socio.activo == 1).all()
         mejor_socio = None
-        mejor_dist  = 0.55  # umbral de tolerancia
+        mejor_sim   = 0.80  # umbral mínimo de similitud coseno
+        import numpy as np
         for s in socios:
             try:
                 enc_conocido = np.array(json.loads(s.encoding))
-                dist = face_recognition.face_distance([enc_conocido], frame_enc)[0]
-                if dist < mejor_dist:
-                    mejor_dist  = dist
+                sim = float(np.dot(enc_frame, enc_conocido) /
+                            (np.linalg.norm(enc_frame) * np.linalg.norm(enc_conocido) + 1e-9))
+                if sim > mejor_sim:
+                    mejor_sim   = sim
                     mejor_socio = s
             except Exception:
                 continue
         if not mejor_socio:
             session.close()
             return jsonify({'ok': False})
-        # Registrar ingreso
         ingreso = Ingreso(socio_id=mejor_socio.id, fecha=date.today())
-        session.add(ingreso)
-        session.commit()
+        session.add(ingreso); session.commit()
         result = socio_to_dict(mejor_socio)
         session.close()
-        return jsonify({'ok': True, 'socio': result, 'confianza': round(1 - mejor_dist, 2)})
+        return jsonify({'ok': True, 'socio': result, 'confianza': round(mejor_sim, 2)})
     except Exception as e:
         print(f'Error reconocimiento facial: {e}')
         return jsonify({'ok': False}), 500
+
+def generar_encoding_mp(ruta_foto):
+    """Genera un vector de embedding facial usando mediapipe FaceMesh."""
+    return _encoding_desde_archivo(ruta_foto)
+
+def _encoding_desde_archivo(ruta):
+    from PIL import Image as _Img
+    import numpy as np
+    with open(ruta, 'rb') as f:
+        img_bytes = f.read()
+    img = _Img.open(io.BytesIO(img_bytes)).convert('RGB')
+    img_np = np.array(img)
+    return _extraer_embedding(img_np)
+
+def _encoding_desde_b64(b64_str):
+    from PIL import Image as _Img
+    import numpy as np
+    header, b64data = b64_str.split(',', 1) if ',' in b64_str else ('', b64_str)
+    img_bytes = base64.b64decode(b64data)
+    img = _Img.open(io.BytesIO(img_bytes)).convert('RGB')
+    img_np = np.array(img)
+    return _extraer_embedding(img_np)
+
+def _extraer_embedding(img_np):
+    """Extrae landmarks de FaceMesh y devuelve vector normalizado."""
+    import numpy as np
+    import mediapipe as mp
+    face_mesh = mp.solutions.face_mesh.FaceMesh(
+        static_image_mode=True, max_num_faces=1,
+        refine_landmarks=True, min_detection_confidence=0.5)
+    h, w = img_np.shape[:2]
+    result = face_mesh.process(img_np)
+    face_mesh.close()
+    if not result.multi_face_landmarks:
+        return None
+    lm = result.multi_face_landmarks[0].landmark
+    coords = np.array([[p.x, p.y, p.z] for p in lm]).flatten()
+    # Normalizar para que sea independiente de posición y escala
+    coords = coords - coords.mean()
+    norm = np.linalg.norm(coords)
+    if norm > 0:
+        coords = coords / norm
+    return coords.tolist()
 
 # ── COMPROBANTE EMAIL ────────────────────────────────────
 def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto_nombre=None):
