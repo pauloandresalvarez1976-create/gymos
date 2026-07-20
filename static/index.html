@@ -466,7 +466,8 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .btn-scan-qr:hover { background: var(--accent)25; }
 .qr-scan-overlay { position: absolute; inset: 0; background: #000000cc; display: none; align-items: center; justify-content: center; z-index: 10; flex-direction: column; gap: 12px; }
 .qr-scan-overlay.active { display: flex; }
-.qr-scan-frame { width: 200px; height: 200px; border: 2px solid var(--accent); border-radius: 12px; position: relative; box-shadow: 0 0 0 9999px #00000080; }
+.qr-scan-frame { width: 200px; height: 200px; border: 2px solid var(--accent); border-radius: 12px; position: relative; box-shadow: 0 0 0 9999px #00000080; overflow: hidden; }
+.qr-scan-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .qr-scan-corner { position: absolute; width: 20px; height: 20px; border-color: var(--accent); border-style: solid; }
 .qr-scan-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
 .qr-scan-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
@@ -670,6 +671,7 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           </div>
           <div class="qr-scan-overlay" id="qrScanOverlay">
             <div class="qr-scan-frame">
+              <video id="qrVideoOverlay" class="qr-scan-video" autoplay playsinline muted></video>
               <div class="qr-scan-corner tl"></div>
               <div class="qr-scan-corner tr"></div>
               <div class="qr-scan-corner bl"></div>
@@ -1758,7 +1760,7 @@ async function toggleCam() {
       document.getElementById('statusText').textContent = 'Cámara activa — escaneando...';
       camActiva = true;
       // Enviar un frame cada 1.5 segundos para reconocimiento facial
-      reconocInterval = setInterval(enviarFrameReconocimiento, 1500);
+      reconocInterval = setInterval(enviarFrameReconocimiento, 2000);
     } catch(e) {
       toast('No se pudo acceder a la cámara. Verificá los permisos del navegador.', 'bad');
     }
@@ -1789,8 +1791,8 @@ async function enviarFrameReconocimiento() {
   reconocProcesando = true;
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = 320; canvas.height = 240;
-    canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+    canvas.width = 640; canvas.height = 480;
+    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
     const frame = canvas.toDataURL('image/jpeg', 0.7);
     const res = await fetch(`${API}/api/facial/reconocer`, {
       method: 'POST',
@@ -1996,8 +1998,10 @@ function activarScanQR() {
 
 function _iniciarScanQR(videoExistente) {
   const canvas = document.createElement('canvas');
+  const qrVideo = document.getElementById('qrVideoOverlay');
+
   const escanear = () => {
-    const video = videoExistente || document.getElementById('qrVideoTemp');
+    const video = videoExistente || qrVideo;
     if (!video || !video.videoWidth) return;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -2012,24 +2016,16 @@ function _iniciarScanQR(videoExistente) {
   };
 
   if (videoExistente) {
-    // Usar la cámara de ingreso ya activa
+    // Mostrar el video de ingreso también en el overlay
+    qrVideo.srcObject = videoExistente.srcObject;
     scanQRInterval = setInterval(escanear, 300);
   } else {
-    // Abrir cámara temporal para el QR
+    // Abrir cámara trasera para escanear QR
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(stream => {
         qrStream = stream;
-        let v = document.getElementById('qrVideoTemp');
-        if (!v) {
-          v = document.createElement('video');
-          v.id = 'qrVideoTemp';
-          v.autoplay = true;
-          v.playsInline = true;
-          v.style.display = 'none';
-          document.body.appendChild(v);
-        }
-        v.srcObject = stream;
-        v.onloadedmetadata = () => {
+        qrVideo.srcObject = stream;
+        qrVideo.onloadedmetadata = () => {
           scanQRInterval = setInterval(escanear, 300);
         };
       })
@@ -2070,8 +2066,8 @@ async function enviarEmailVencimiento(id, nombre, email) {
 function cancelarScanQR() {
   if (scanQRInterval) { clearInterval(scanQRInterval); scanQRInterval = null; }
   if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
-  const v = document.getElementById('qrVideoTemp');
-  if (v) v.remove();
+  const qrVideo = document.getElementById('qrVideoOverlay');
+  if (qrVideo) { qrVideo.srcObject = null; }
   document.getElementById('qrScanOverlay').classList.remove('active');
 }
 

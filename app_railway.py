@@ -672,7 +672,7 @@ def reconocer_facial():
         session     = Session()
         socios      = session.query(Socio).filter(Socio.encoding.isnot(None), Socio.activo == 1).all()
         mejor_socio = None
-        mejor_sim   = 0.80  # umbral mínimo de similitud coseno
+        mejor_sim   = 0.70  # umbral mínimo de similitud coseno
         import numpy as np
         for s in socios:
             try:
