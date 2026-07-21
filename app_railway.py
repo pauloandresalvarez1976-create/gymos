@@ -664,37 +664,48 @@ def reconocer_facial():
     data  = request.json or {}
     frame = data.get('frame', '')
     if not frame:
-        return jsonify({'ok': False}), 400
+        return jsonify({'ok': False, 'error': 'sin frame'}), 400
     try:
         enc_frame = _encoding_desde_b64(frame)
         if enc_frame is None:
-            return jsonify({'ok': False})
+            print('FACIAL: no se detectó cara en el frame')
+            return jsonify({'ok': False, 'error': 'no_cara'})
+        print(f'FACIAL: cara detectada, vector len={len(enc_frame)}')
         session     = Session()
         socios      = session.query(Socio).filter(Socio.encoding.isnot(None), Socio.activo == 1).all()
+        print(f'FACIAL: {len(socios)} socios con encoding')
         mejor_socio = None
-        mejor_sim   = 0.70  # umbral mínimo de similitud coseno
+        mejor_sim   = 0.60  # umbral bajado para diagnóstico
         import numpy as np
+        enc_frame_np = np.array(enc_frame)
         for s in socios:
             try:
                 enc_conocido = np.array(json.loads(s.encoding))
-                sim = float(np.dot(enc_frame, enc_conocido) /
-                            (np.linalg.norm(enc_frame) * np.linalg.norm(enc_conocido) + 1e-9))
+                if enc_conocido.shape != enc_frame_np.shape:
+                    print(f'FACIAL: shape mismatch socio {s.id} — frame={enc_frame_np.shape} vs guardado={enc_conocido.shape}')
+                    continue
+                sim = float(np.dot(enc_frame_np, enc_conocido) /
+                            (np.linalg.norm(enc_frame_np) * np.linalg.norm(enc_conocido) + 1e-9))
+                print(f'FACIAL: socio {s.id} ({s.nombre}) sim={sim:.4f}')
                 if sim > mejor_sim:
                     mejor_sim   = sim
                     mejor_socio = s
-            except Exception:
+            except Exception as ex:
+                print(f'FACIAL: error comparando socio {s.id}: {ex}')
                 continue
         if not mejor_socio:
             session.close()
-            return jsonify({'ok': False})
+            return jsonify({'ok': False, 'error': 'no_match'})
         ingreso = Ingreso(socio_id=mejor_socio.id, fecha=date.today())
         session.add(ingreso); session.commit()
         result = socio_to_dict(mejor_socio)
         session.close()
+        print(f'FACIAL: reconocido {mejor_socio.nombre} con sim={mejor_sim:.4f}')
         return jsonify({'ok': True, 'socio': result, 'confianza': round(mejor_sim, 2)})
     except Exception as e:
-        print(f'Error reconocimiento facial: {e}')
-        return jsonify({'ok': False}), 500
+        print(f'FACIAL ERROR: {e}')
+        import traceback; traceback.print_exc()
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 def generar_encoding_mp(ruta_foto):
     """Genera un vector de embedding facial usando mediapipe FaceMesh."""
