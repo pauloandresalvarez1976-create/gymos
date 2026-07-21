@@ -730,25 +730,66 @@ def _encoding_desde_b64(b64_str):
     return _extraer_embedding(img_np)
 
 def _extraer_embedding(img_np):
-    """Extrae landmarks de FaceMesh y devuelve vector normalizado."""
+    """Extrae landmarks de FaceMesh usando la API nueva de mediapipe (0.10+)."""
     import numpy as np
     import mediapipe as mp
-    face_mesh = mp.solutions.face_mesh.FaceMesh(
-        static_image_mode=True, max_num_faces=1,
-        refine_landmarks=True, min_detection_confidence=0.5)
-    h, w = img_np.shape[:2]
-    result = face_mesh.process(img_np)
-    face_mesh.close()
-    if not result.multi_face_landmarks:
-        return None
-    lm = result.multi_face_landmarks[0].landmark
-    coords = np.array([[p.x, p.y, p.z] for p in lm]).flatten()
-    # Normalizar para que sea independiente de posición y escala
+    from mediapipe.tasks import python as mp_python
+    from mediapipe.tasks.python import vision as mp_vision
+
+    # Usar FaceLandmarker de la nueva API
+    try:
+        base_options = mp_python.BaseOptions(
+            model_asset_path=_get_face_model_path()
+        )
+        options = mp_vision.FaceLandmarkerOptions(
+            base_options=base_options,
+            num_faces=1,
+            min_face_detection_confidence=0.5
+        )
+        detector = mp_vision.FaceLandmarker.create_from_options(options)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_np)
+        result = detector.detect(mp_image)
+        detector.close()
+        if not result.face_landmarks:
+            return None
+        lm = result.face_landmarks[0]
+        coords = np.array([[p.x, p.y, p.z] for p in lm]).flatten()
+    except Exception as e:
+        print(f'FaceLandmarker error: {e}, intentando con legacy API')
+        # Fallback a API legacy si está disponible
+        try:
+            solutions = getattr(mp, 'solutions', None)
+            if solutions is None:
+                raise ImportError('solutions no disponible')
+            face_mesh = solutions.face_mesh.FaceMesh(
+                static_image_mode=True, max_num_faces=1,
+                refine_landmarks=True, min_detection_confidence=0.5)
+            result2 = face_mesh.process(img_np)
+            face_mesh.close()
+            if not result2.multi_face_landmarks:
+                return None
+            lm2 = result2.multi_face_landmarks[0].landmark
+            coords = np.array([[p.x, p.y, p.z] for p in lm2]).flatten()
+        except Exception as e2:
+            print(f'Legacy API error: {e2}')
+            return None
+
     coords = coords - coords.mean()
     norm = np.linalg.norm(coords)
     if norm > 0:
         coords = coords / norm
     return coords.tolist()
+
+def _get_face_model_path():
+    """Descarga el modelo de FaceLandmarker si no existe."""
+    import os, urllib.request
+    model_path = '/tmp/face_landmarker.task'
+    if not os.path.exists(model_path):
+        print('Descargando modelo FaceLandmarker...')
+        url = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
+        urllib.request.urlretrieve(url, model_path)
+        print('Modelo descargado.')
+    return model_path
 
 # ── COMPROBANTE EMAIL ────────────────────────────────────
 def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto_nombre=None):
