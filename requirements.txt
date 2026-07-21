@@ -6,7 +6,3 @@ qrcode[pil]
 pillow
 psycopg2-binary
 requests
-numpy
-deepface
-opencv-python-headless
-tf-keras

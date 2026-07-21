@@ -439,10 +439,6 @@ def crear_socio():
         with open(ruta_foto, 'wb') as f:
             f.write(base64.b64decode(foto_b64.split(',')[-1]))
         socio.foto = nombre_foto
-        try:
-            socio.encoding = json.dumps(generar_encoding_mp(ruta_foto))
-        except Exception as e:
-            print(f"Warning facial: {e}")
     session.add(socio); session.commit()
     result = socio_to_dict(socio); session.close()
     return jsonify(result), 201
@@ -464,11 +460,6 @@ def actualizar_socio(sid):
         with open(ruta_foto, 'wb') as f:
             f.write(base64.b64decode(foto_b64.split(',')[-1]))
         s.foto = nombre_foto
-        try:
-            enc = generar_encoding_mp(ruta_foto)
-            s.encoding = json.dumps(enc) if enc else None
-        except Exception as e:
-            print(f"Warning facial update: {e}")
     session.commit(); result = socio_to_dict(s); session.close(); return jsonify(result)
 
 @app.route('/api/socios/<int:sid>', methods=['DELETE'])
@@ -657,99 +648,6 @@ def escanear_qr():
     result = socio_to_dict(s)
     session.close()
     return jsonify({'ok': True, 'socio': result})
-
-@app.route('/api/facial/reconocer', methods=['POST'])
-def reconocer_facial():
-    """Recibe un frame base64 del browser, lo compara con los encodings guardados (mediapipe)."""
-    data  = request.json or {}
-    frame = data.get('frame', '')
-    if not frame:
-        return jsonify({'ok': False, 'error': 'sin frame'}), 400
-    try:
-        enc_frame = _encoding_desde_b64(frame)
-        if enc_frame is None:
-            print('FACIAL: no se detectó cara en el frame')
-            return jsonify({'ok': False, 'error': 'no_cara'})
-        print(f'FACIAL: cara detectada, vector len={len(enc_frame)}')
-        session     = Session()
-        socios      = session.query(Socio).filter(Socio.encoding.isnot(None), Socio.activo == 1).all()
-        print(f'FACIAL: {len(socios)} socios con encoding')
-        mejor_socio = None
-        mejor_sim   = 0.60  # umbral bajado para diagnóstico
-        import numpy as np
-        enc_frame_np = np.array(enc_frame)
-        for s in socios:
-            try:
-                enc_conocido = np.array(json.loads(s.encoding))
-                if enc_conocido.shape != enc_frame_np.shape:
-                    print(f'FACIAL: shape mismatch socio {s.id} — frame={enc_frame_np.shape} vs guardado={enc_conocido.shape}')
-                    continue
-                sim = float(np.dot(enc_frame_np, enc_conocido) /
-                            (np.linalg.norm(enc_frame_np) * np.linalg.norm(enc_conocido) + 1e-9))
-                print(f'FACIAL: socio {s.id} ({s.nombre}) sim={sim:.4f}')
-                if sim > mejor_sim:
-                    mejor_sim   = sim
-                    mejor_socio = s
-            except Exception as ex:
-                print(f'FACIAL: error comparando socio {s.id}: {ex}')
-                continue
-        if not mejor_socio:
-            session.close()
-            return jsonify({'ok': False, 'error': 'no_match'})
-        ingreso = Ingreso(socio_id=mejor_socio.id, fecha=date.today())
-        session.add(ingreso); session.commit()
-        result = socio_to_dict(mejor_socio)
-        session.close()
-        print(f'FACIAL: reconocido {mejor_socio.nombre} con sim={mejor_sim:.4f}')
-        return jsonify({'ok': True, 'socio': result, 'confianza': round(mejor_sim, 2)})
-    except Exception as e:
-        print(f'FACIAL ERROR: {e}')
-        import traceback; traceback.print_exc()
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-def generar_encoding_mp(ruta_foto):
-    """Genera un vector de embedding facial usando DeepFace (Facenet)."""
-    return _encoding_desde_archivo(ruta_foto)
-
-def _encoding_desde_archivo(ruta):
-    from PIL import Image as _Img
-    import numpy as np
-    with open(ruta, 'rb') as f:
-        img_bytes = f.read()
-    img = _Img.open(io.BytesIO(img_bytes)).convert('RGB')
-    img_np = np.array(img)
-    return _extraer_embedding(img_np)
-
-def _encoding_desde_b64(b64_str):
-    from PIL import Image as _Img
-    import numpy as np
-    header, b64data = b64_str.split(',', 1) if ',' in b64_str else ('', b64_str)
-    img_bytes = base64.b64decode(b64data)
-    img = _Img.open(io.BytesIO(img_bytes)).convert('RGB')
-    img_np = np.array(img)
-    return _extraer_embedding(img_np)
-
-def _extraer_embedding(img_np):
-    """Extrae embedding facial usando DeepFace (modelo Facenet)."""
-    import numpy as np
-    try:
-        from deepface import DeepFace
-        result = DeepFace.represent(
-            img_path=img_np,
-            model_name='Facenet',
-            enforce_detection=True,
-            detector_backend='opencv'
-        )
-        if not result:
-            return None
-        emb = np.array(result[0]['embedding'])
-        norm = np.linalg.norm(emb)
-        if norm > 0:
-            emb = emb / norm
-        return emb.tolist()
-    except Exception as e:
-        print(f'DeepFace embedding error: {e}')
-        return None
 
 # ── COMPROBANTE EMAIL ────────────────────────────────────
 def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto_nombre=None):
