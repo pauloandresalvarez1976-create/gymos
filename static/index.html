@@ -725,7 +725,7 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
                 <i class="ti ti-user"></i>
               </button>
             </div>
-            <button class="btn-scan-qr" onclick="activarScanQR()" style="margin-top:8px;width:100%;justify-content:center"><i class="ti ti-qrcode"></i> Escanear QR</button>
+
           </div>
 
           <!-- PANE COBRO -->
@@ -1748,15 +1748,17 @@ let localStream = null;
 async function toggleCam() {
   if (!camActiva) {
     try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true });
       const video = document.getElementById('videoEl');
       video.srcObject = localStream;
       video.style.display = 'block';
       document.getElementById('camPlaceholder').style.display = 'none';
       document.getElementById('camBtnText').textContent = 'Detener cámara';
       document.getElementById('camBtnIcon').className = 'ti ti-camera-off';
-      document.getElementById('statusText').textContent = 'Cámara activa — listo para escanear QR';
+      document.getElementById('statusText').textContent = 'Escaneando QR...';
       camActiva = true;
+      // Arrancar escaneo QR automáticamente
+      activarScanQR();
     } catch(e) {
       toast('No se pudo acceder a la cámara. Verificá los permisos del navegador.', 'bad');
     }
@@ -1766,6 +1768,7 @@ async function toggleCam() {
 }
 
 function detenerCam() {
+  cancelarScanQR();
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   const video = document.getElementById('videoEl');
   video.srcObject = null;
@@ -1960,48 +1963,53 @@ let qrStream = null;
 
 function activarScanQR() {
   document.getElementById('qrScanOverlay').classList.add('active');
-  // Usar la cámara ya activa si está abierta, sino abrir una temporal
-  const videoEl = document.getElementById('videoEl');
-  const videoSrc = (camActiva && localStream) ? videoEl : null;
-  _iniciarScanQR(videoSrc);
+  _iniciarScanQR();
 }
 
-function _iniciarScanQR(videoExistente) {
+function _iniciarScanQR() {
   const canvas = document.createElement('canvas');
   const qrVideo = document.getElementById('qrVideoOverlay');
 
   const escanear = () => {
-    const video = videoExistente || qrVideo;
-    if (!video || !video.videoWidth) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    if (!qrVideo || !qrVideo.videoWidth) return;
+    canvas.width = qrVideo.videoWidth;
+    canvas.height = qrVideo.videoHeight;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(qrVideo, 0, 0);
     const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
     if (code && code.data) {
       cancelarScanQR();
       procesarQR(code.data);
     }
   };
 
-  if (videoExistente) {
-    qrVideo.srcObject = videoExistente.srcObject;
-    scanQRInterval = setInterval(escanear, 200);
-  } else {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } })
-      .then(stream => {
-        qrStream = stream;
-        qrVideo.srcObject = stream;
-        qrVideo.onloadedmetadata = () => {
-          scanQRInterval = setInterval(escanear, 200);
-        };
-      })
-      .catch(() => {
-        toast('No se pudo acceder a la cámara para el QR', 'bad');
-        cancelarScanQR();
-      });
-  }
+  // Siempre abrir cámara trasera para QR
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+  })
+    .then(stream => {
+      qrStream = stream;
+      qrVideo.srcObject = stream;
+      qrVideo.onloadedmetadata = () => {
+        scanQRInterval = setInterval(escanear, 150);
+      };
+    })
+    .catch(() => {
+      // Fallback sin restricción de cámara
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          qrStream = stream;
+          qrVideo.srcObject = stream;
+          qrVideo.onloadedmetadata = () => {
+            scanQRInterval = setInterval(escanear, 150);
+          };
+        })
+        .catch(() => {
+          toast('No se pudo acceder a la cámara para el QR', 'bad');
+          cancelarScanQR();
+        });
+    });
 }
 
 async function procesarQR(qrData) {
@@ -2019,6 +2027,10 @@ async function procesarQR(qrData) {
       toast(d.error || 'QR no reconocido', 'bad');
     }
   } catch(e) { toast('Error al procesar QR', 'bad'); }
+  // Volver a escanear automáticamente después de 3 segundos
+  if (camActiva) {
+    setTimeout(() => { if (camActiva) activarScanQR(); }, 3000);
+  }
 }
 
 async function enviarEmailVencimiento(id, nombre, email) {
