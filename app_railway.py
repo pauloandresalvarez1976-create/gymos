@@ -708,7 +708,7 @@ def reconocer_facial():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 def generar_encoding_mp(ruta_foto):
-    """Genera un vector de embedding facial usando mediapipe FaceMesh."""
+    """Genera un vector de embedding facial usando DeepFace (Facenet)."""
     return _encoding_desde_archivo(ruta_foto)
 
 def _encoding_desde_archivo(ruta):
@@ -730,66 +730,26 @@ def _encoding_desde_b64(b64_str):
     return _extraer_embedding(img_np)
 
 def _extraer_embedding(img_np):
-    """Extrae landmarks de FaceMesh usando la API nueva de mediapipe (0.10+)."""
+    """Extrae embedding facial usando DeepFace (modelo Facenet)."""
     import numpy as np
-    import mediapipe as mp
-    from mediapipe.tasks import python as mp_python
-    from mediapipe.tasks.python import vision as mp_vision
-
-    # Usar FaceLandmarker de la nueva API
     try:
-        base_options = mp_python.BaseOptions(
-            model_asset_path=_get_face_model_path()
+        from deepface import DeepFace
+        result = DeepFace.represent(
+            img_path=img_np,
+            model_name='Facenet',
+            enforce_detection=True,
+            detector_backend='opencv'
         )
-        options = mp_vision.FaceLandmarkerOptions(
-            base_options=base_options,
-            num_faces=1,
-            min_face_detection_confidence=0.5
-        )
-        detector = mp_vision.FaceLandmarker.create_from_options(options)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_np)
-        result = detector.detect(mp_image)
-        detector.close()
-        if not result.face_landmarks:
+        if not result:
             return None
-        lm = result.face_landmarks[0]
-        coords = np.array([[p.x, p.y, p.z] for p in lm]).flatten()
+        emb = np.array(result[0]['embedding'])
+        norm = np.linalg.norm(emb)
+        if norm > 0:
+            emb = emb / norm
+        return emb.tolist()
     except Exception as e:
-        print(f'FaceLandmarker error: {e}, intentando con legacy API')
-        # Fallback a API legacy si está disponible
-        try:
-            solutions = getattr(mp, 'solutions', None)
-            if solutions is None:
-                raise ImportError('solutions no disponible')
-            face_mesh = solutions.face_mesh.FaceMesh(
-                static_image_mode=True, max_num_faces=1,
-                refine_landmarks=True, min_detection_confidence=0.5)
-            result2 = face_mesh.process(img_np)
-            face_mesh.close()
-            if not result2.multi_face_landmarks:
-                return None
-            lm2 = result2.multi_face_landmarks[0].landmark
-            coords = np.array([[p.x, p.y, p.z] for p in lm2]).flatten()
-        except Exception as e2:
-            print(f'Legacy API error: {e2}')
-            return None
-
-    coords = coords - coords.mean()
-    norm = np.linalg.norm(coords)
-    if norm > 0:
-        coords = coords / norm
-    return coords.tolist()
-
-def _get_face_model_path():
-    """Descarga el modelo de FaceLandmarker si no existe."""
-    import os, urllib.request
-    model_path = '/tmp/face_landmarker.task'
-    if not os.path.exists(model_path):
-        print('Descargando modelo FaceLandmarker...')
-        url = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
-        urllib.request.urlretrieve(url, model_path)
-        print('Modelo descargado.')
-    return model_path
+        print(f'DeepFace embedding error: {e}')
+        return None
 
 # ── COMPROBANTE EMAIL ────────────────────────────────────
 def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto_nombre=None):
