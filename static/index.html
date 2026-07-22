@@ -464,19 +464,15 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 
 .btn-scan-qr { background: var(--accent)15; border: 0.5px solid var(--accent)40; color: var(--accent); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
 .btn-scan-qr:hover { background: var(--accent)25; }
-.qr-scan-overlay { position: fixed; inset: 0; background: #000; display: none; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
-.qr-scan-overlay.active { display: flex; }
-.qr-scan-frame { width: min(70vw, 300px); height: min(70vw, 300px); border-radius: 16px; position: relative; z-index: 2; box-shadow: 0 0 0 9999px #00000088; }
-.qr-scan-video-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(1.2) contrast(1.1); z-index: 1; }
-.qr-scan-corner { position: absolute; width: 28px; height: 28px; border-color: #fff; border-style: solid; }
-.qr-scan-corner.tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-radius: 6px 0 0 0; }
-.qr-scan-corner.tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-radius: 0 6px 0 0; }
-.qr-scan-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-radius: 0 0 0 6px; }
-.qr-scan-corner.br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-radius: 0 0 6px 0; }
+.qr-scan-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 200px; height: 200px; border-radius: 12px; pointer-events: none; display: none; }
+.qr-scan-frame.active { display: block; }
+.qr-scan-corner { position: absolute; width: 22px; height: 22px; border-color: var(--accent); border-style: solid; }
+.qr-scan-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 5px 0 0 0; }
+.qr-scan-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 5px 0 0; }
+.qr-scan-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 5px; }
+.qr-scan-corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 5px 0; }
 .qr-scan-line { position: absolute; left: 4px; right: 4px; height: 2px; background: var(--accent); opacity: 0.8; animation: scanline 2s linear infinite; top: 0; }
 @keyframes scanline { 0% { top: 4px; } 100% { top: 190px; } }
-.qr-scan-label { color: white; font-size: 15px; font-weight: 500; text-shadow: 0 1px 4px #000; margin-top: 24px; z-index: 2; position: relative; }
-.qr-scan-cancel { background: #ffffff20; border: 1px solid #ffffff40; color: white; border-radius: 10px; padding: 10px 28px; font-size: 14px; cursor: pointer; z-index: 2; position: relative; }
 
 .mp-congelado-banner { margin: 0 20px 0; background: #1e3a5f; border: 0.5px solid #3b82f680; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #93c5fd; }
 .mp-congelado-banner i { font-size: 16px; color: #3b82f6; }
@@ -669,18 +665,13 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
             <div class="sc bl"></div><div class="sc br"></div>
             <div class="scan-line"></div>
           </div>
-          <div class="qr-scan-overlay" id="qrScanOverlay">
-            <video id="qrVideoOverlay" class="qr-scan-video-bg" autoplay playsinline muted></video>
-            <div class="qr-scan-frame">
+          <div class="qr-scan-frame" id="qrScanFrame">
               <div class="qr-scan-corner tl"></div>
               <div class="qr-scan-corner tr"></div>
               <div class="qr-scan-corner bl"></div>
               <div class="qr-scan-corner br"></div>
               <div class="qr-scan-line"></div>
             </div>
-            <div class="qr-scan-label">Mostrá el QR frente a la cámara</div>
-            <button class="qr-scan-cancel" onclick="cancelarScanQR()">Cancelar</button>
-          </div>
           <div class="status-pill" id="statusPill">
             <div class="pulse"></div>
             <span id="statusText">Esperando cámara...</span>
@@ -1962,54 +1953,28 @@ let scanQRInterval = null;
 let qrStream = null;
 
 function activarScanQR() {
-  document.getElementById('qrScanOverlay').classList.add('active');
+  document.getElementById('qrScanFrame').classList.add('active');
   _iniciarScanQR();
 }
 
 function _iniciarScanQR() {
   const canvas = document.createElement('canvas');
-  const qrVideo = document.getElementById('qrVideoOverlay');
+  const video  = document.getElementById('videoEl');
 
   const escanear = () => {
-    if (!qrVideo || !qrVideo.videoWidth) return;
-    canvas.width = qrVideo.videoWidth;
-    canvas.height = qrVideo.videoHeight;
+    if (!video || !video.videoWidth) return;
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(qrVideo, 0, 0);
-    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0);
+    const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
     if (code && code.data) {
       cancelarScanQR();
       procesarQR(code.data);
     }
   };
-
-  // Siempre abrir cámara trasera para QR
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-  })
-    .then(stream => {
-      qrStream = stream;
-      qrVideo.srcObject = stream;
-      qrVideo.onloadedmetadata = () => {
-        scanQRInterval = setInterval(escanear, 150);
-      };
-    })
-    .catch(() => {
-      // Fallback sin restricción de cámara
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-          qrStream = stream;
-          qrVideo.srcObject = stream;
-          qrVideo.onloadedmetadata = () => {
-            scanQRInterval = setInterval(escanear, 150);
-          };
-        })
-        .catch(() => {
-          toast('No se pudo acceder a la cámara para el QR', 'bad');
-          cancelarScanQR();
-        });
-    });
+  scanQRInterval = setInterval(escanear, 150);
 }
 
 async function procesarQR(qrData) {
@@ -2045,10 +2010,8 @@ async function enviarEmailVencimiento(id, nombre, email) {
 
 function cancelarScanQR() {
   if (scanQRInterval) { clearInterval(scanQRInterval); scanQRInterval = null; }
-  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
-  const qrVideo = document.getElementById('qrVideoOverlay');
-  if (qrVideo) { qrVideo.srcObject = null; }
-  document.getElementById('qrScanOverlay').classList.remove('active');
+  const frame = document.getElementById('qrScanFrame');
+  if (frame) frame.classList.remove('active');
 }
 
 // ── FICHA MÉDICA ──
