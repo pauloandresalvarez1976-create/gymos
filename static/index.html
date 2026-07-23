@@ -1831,7 +1831,7 @@ function mostrarSocio(s) {
     badge.innerHTML = '<i class="ti ti-alert-triangle" style="font-size:11px"></i> Cuota vencida';
     av.className = 'avatar bad';
   }
-  if (s.foto) av.innerHTML = `<img src=s.foto>`;
+  if (s.foto) av.innerHTML = `<img src="${s.foto}">`;
   document.getElementById('dVenc').textContent = s.fecha_venc || '--';
   const dias = s.dias_restantes;
   const diasEl = document.getElementById('dDias');
@@ -1951,7 +1951,7 @@ async function abrirPerfil(id) {
     // Foto
     const av = document.getElementById('mpAvatar');
     if (s.foto) {
-      av.innerHTML = `<img src=s.foto>`;
+      av.innerHTML = `<img src="${s.foto}">`;
     } else {
       av.innerHTML = `<i class="ti ti-user"></i>`;
     }
@@ -2757,7 +2757,7 @@ async function cargarVencimientos() {
       const dias = s.dias_restantes;
       const clsDias = dias < 0 ? 'vencido' : dias <= 3 ? 'urgente' : 'ok';
       const txtDias = dias < 0 ? `Venció hace ${Math.abs(dias)}d` : dias === 0 ? 'Vence HOY' : `${dias} días`;
-      const foto = s.foto ? `<img src=s.foto>` : '<i class="ti ti-user" style="font-size:12px;color:#555"></i>';
+      const foto = s.foto ? `<img src="${s.foto}">` : '<i class="ti ti-user" style="font-size:12px;color:#555"></i>';
       const tel = s.telefono || '';
       return `<div class="venc-row">
         <div class="venc-nombre"><div class="venc-av">${foto}</div>${s.nombre}</div>
