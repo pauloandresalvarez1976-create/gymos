@@ -12,6 +12,7 @@ import qrcode
 SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
 SUPABASE_SECRET = os.environ.get('SUPABASE_SECRET', '')
 FOTOS_BUCKET = 'fotos-progreso'
+FOTOS_SOCIOS_BUCKET = 'fotos-socios'
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
@@ -292,11 +293,12 @@ def socio_to_dict(s):
     else:
         dias   = None
         estado = 'sin_cuota'
+    foto_url = f"{SUPABASE_URL}/storage/v1/object/public/{FOTOS_SOCIOS_BUCKET}/{s.foto}" if s.foto else None
     return {'id':s.id,'nombre':s.nombre,'dni':s.dni,'telefono':s.telefono,
             'email':s.email,'plan':s.plan,
             'fecha_inicio':str(s.fecha_inicio) if s.fecha_inicio else None,
             'fecha_venc':str(s.fecha_venc) if s.fecha_venc else None,
-            'foto':s.foto,'activo':s.activo,'estado':estado,'dias_restantes':dias,
+            'foto':foto_url,'activo':s.activo,'estado':estado,'dias_restantes':dias,
             'congelado':s.congelado or 0,'fecha_congelado':str(s.fecha_congelado) if s.fecha_congelado else None,
             'objetivo':s.objetivo or '',
             'ia_habilitada': s.ia_habilitada or 0}
@@ -399,6 +401,33 @@ def index():
 def fotos(path):
     return send_from_directory(FOTOS_DIR, path)
 
+def subir_foto_socio(foto_b64):
+    """Comprime y sube la foto del socio a Supabase Storage. Devuelve el nombre del archivo."""
+    from PIL import Image as _Img
+    import io as _io
+    # Decodificar base64
+    img_bytes = base64.b64decode(foto_b64.split(',')[-1])
+    # Comprimir con Pillow — máx 400x400, calidad 75
+    img = _Img.open(_io.BytesIO(img_bytes)).convert('RGB')
+    img.thumbnail((400, 400), _Img.LANCZOS)
+    buf = _io.BytesIO()
+    img.save(buf, format='JPEG', quality=75, optimize=True)
+    buf.seek(0)
+    img_compressed = buf.read()
+    # Nombre único
+    nombre = f"socio_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
+    # Subir a Supabase Storage
+    url = f"{SUPABASE_URL}/storage/v1/object/{FOTOS_SOCIOS_BUCKET}/{nombre}"
+    headers = {
+        'Authorization': f'Bearer {SUPABASE_SECRET}',
+        'Content-Type': 'image/jpeg',
+        'x-upsert': 'true'
+    }
+    resp = requests.put(url, headers=headers, data=img_compressed, timeout=30)
+    if resp.status_code not in (200, 201):
+        raise Exception(f'Supabase Storage error: {resp.status_code} {resp.text}')
+    return nombre
+
 @app.route('/qr/<path:path>')
 def serve_qr(path):
     return send_from_directory(QR_DIR, path)
@@ -434,11 +463,10 @@ def crear_socio():
                   email=data.get('email'),plan=plan,fecha_inicio=inicio,fecha_venc=venc,activo=1)
     foto_b64 = data.get('foto_base64')
     if foto_b64:
-        nombre_foto = f"socio_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
-        ruta_foto   = os.path.join(FOTOS_DIR, nombre_foto)
-        with open(ruta_foto, 'wb') as f:
-            f.write(base64.b64decode(foto_b64.split(',')[-1]))
-        socio.foto = nombre_foto
+        try:
+            socio.foto = subir_foto_socio(foto_b64)
+        except Exception as e:
+            print(f"Warning foto socio: {e}")
     session.add(socio); session.commit()
     result = socio_to_dict(socio); session.close()
     return jsonify(result), 201
@@ -455,11 +483,10 @@ def actualizar_socio(sid):
         s.fecha_venc = date.fromisoformat(data['fecha_venc'])
     foto_b64 = data.get('foto_base64')
     if foto_b64:
-        nombre_foto = f"socio_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
-        ruta_foto   = os.path.join(FOTOS_DIR, nombre_foto)
-        with open(ruta_foto, 'wb') as f:
-            f.write(base64.b64decode(foto_b64.split(',')[-1]))
-        s.foto = nombre_foto
+        try:
+            s.foto = subir_foto_socio(foto_b64)
+        except Exception as e:
+            print(f"Warning foto socio update: {e}")
     session.commit(); result = socio_to_dict(s); session.close(); return jsonify(result)
 
 @app.route('/api/socios/<int:sid>', methods=['DELETE'])
