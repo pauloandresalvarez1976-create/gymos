@@ -423,8 +423,9 @@ def subir_foto_socio(foto_b64):
         'Content-Type': 'image/jpeg',
         'x-upsert': 'true'
     }
-    resp = requests.put(url, headers=headers, data=img_compressed, timeout=30)
+    resp = requests.post(url, headers=headers, data=img_compressed, timeout=30)
     if resp.status_code not in (200, 201):
+        print(f'Supabase Storage error: {resp.status_code} {resp.text}')
         raise Exception(f'Supabase Storage error: {resp.status_code} {resp.text}')
     return nombre
 
