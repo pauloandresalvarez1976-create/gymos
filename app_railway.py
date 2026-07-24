@@ -503,9 +503,35 @@ def actualizar_socio(sid):
 @app.route('/api/socios/<int:sid>', methods=['DELETE'])
 def eliminar_socio(sid):
     session = Session()
-    s = session.query(Socio).filter_by(id=sid).first()
-    if s: s.activo = 0; session.commit()
-    session.close(); return jsonify({'ok': True})
+    try:
+        # Borrar datos relacionados primero
+        session.execute(text('DELETE FROM reservas_clases WHERE socio_id=:id'), {'id': sid})
+        session.execute(text('DELETE FROM fichas_medicas WHERE socio_id=:id'), {'id': sid})
+        session.execute(text('DELETE FROM progreso WHERE socio_id=:id'), {'id': sid})
+        session.execute(text('DELETE FROM ingresos WHERE socio_id=:id'), {'id': sid})
+        session.execute(text('DELETE FROM pagos WHERE socio_id=:id'), {'id': sid})
+        session.execute(text('DELETE FROM solicitudes_renovacion WHERE socio_id=:id'), {'id': sid})
+        # Borrar el socio
+        s = session.query(Socio).filter_by(id=sid).first()
+        if s:
+            # Borrar foto de Supabase Storage si existe
+            if s.foto:
+                try:
+                    nombre_foto = s.foto.split('/')[-1]
+                    url = f"{SUPABASE_URL}/storage/v1/object/{FOTOS_SOCIOS_BUCKET}/{nombre_foto}"
+                    headers = {'Authorization': f'Bearer {SUPABASE_SECRET}'}
+                    requests.delete(url, headers=headers, timeout=10)
+                except Exception as e:
+                    print(f'Warning borrar foto: {e}')
+            session.delete(s)
+        session.commit()
+        session.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        session.rollback()
+        session.close()
+        print(f'Error eliminar socio: {e}')
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── PAGOS ────────────────────────────────────────────────
 @app.route('/api/pagos', methods=['POST'])

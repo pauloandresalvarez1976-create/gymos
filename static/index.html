@@ -2459,15 +2459,23 @@ async function guardarPerfil() {
 
 async function eliminarSocio() {
   if (!socioEditandoId) return;
-  if (!confirm('¿Dar de baja a este socio? No se eliminará del historial.')) return;
+  // Solo el administrador puede eliminar definitivamente
+  if (!usuarioActual || usuarioActual.rol !== 'administrador') {
+    toast('⛔ Solo el administrador puede eliminar socios. Contactá al encargado.', 'bad');
+    return;
+  }
+  const nombre = document.getElementById('mpNombre').value || 'este socio';
+  if (!confirm(`¿Eliminar definitivamente a ${nombre}?\n\nEsta acción borra todos sus datos y no se puede deshacer.`)) return;
   try {
     const res = await fetch(`${API}/api/socios/${socioEditandoId}`, { method: 'DELETE' });
     if (res.ok) {
-      toast('Socio dado de baja', 'ok');
+      toast('Socio eliminado definitivamente', 'ok');
       cerrarPerfil();
       cargarSocios();
+    } else {
+      toast('Error al eliminar', 'bad');
     }
-  } catch(e) { toast('Error al dar de baja', 'bad'); }
+  } catch(e) { toast('Error al eliminar', 'bad'); }
 }
 
 // ── NUEVO SOCIO ──
