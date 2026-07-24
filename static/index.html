@@ -577,16 +577,43 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 </div>
 
 <!-- LOGIN -->
-<div class="login-overlay" id="loginOverlay" style="gap:14px">
+<div class="login-overlay" id="loginOverlay">
   <img id="loginLogo" src="" alt="" class="login-logo" style="display:none">
-  <div style="text-align:center;display:flex;flex-direction:column;gap:8px">
-    <div style="font-size:40px;line-height:1">🏋️</div>
-    <div class="login-title" id="loginGymNombre" style="font-size:24px;font-weight:700;margin:0">GymOS</div>
-    <div class="login-sub" style="font-size:12px;color:#666;margin:0">Seleccioná tu usuario para continuar</div>
+
+  <!-- Pantalla 1: seleccionar usuario -->
+  <div id="loginStep1" style="display:flex;flex-direction:column;align-items:center;gap:24px;width:100%;max-width:340px;padding:0 24px;box-sizing:border-box">
+    <div style="text-align:center">
+      <div style="font-size:48px;line-height:1;margin-bottom:12px">🏋️</div>
+      <div class="login-title" id="loginGymNombre" style="font-size:26px;font-weight:800;margin:0">GymOS</div>
+      <div style="font-size:13px;color:#ffffff30;margin-top:6px">Seleccioná tu usuario para continuar</div>
+    </div>
+    <!-- Dropdown -->
+    <div style="width:100%;position:relative">
+      <div id="loginDropdownBtn" onclick="toggleLoginDropdown()" style="background:linear-gradient(135deg,#0d1520,#070b14);border:1px solid #3b82f630;border-radius:14px;padding:14px 18px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all 0.2s" onmouseover="this.style.borderColor='#3b82f660'" onmouseout="this.style.borderColor='#3b82f630'">
+        <div style="width:38px;height:38px;border-radius:50%;background:#3b82f618;border:1.5px solid #3b82f630;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-size:18px;flex-shrink:0"><i class="ti ti-user"></i></div>
+        <div style="flex:1">
+          <div id="loginDropdownLabel" style="font-size:14px;color:#ffffff60">Elegí un usuario</div>
+          <div id="loginDropdownRol" style="font-size:11px;color:#ffffff30;margin-top:2px"></div>
+        </div>
+        <i class="ti ti-chevron-down" id="loginDropdownArrow" style="color:#ffffff30;transition:transform 0.2s"></i>
+      </div>
+      <!-- Lista desplegable -->
+      <div id="loginDropdownList" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:linear-gradient(135deg,#0d1520,#070b14);border:1px solid #3b82f630;border-radius:14px;overflow:hidden;z-index:10;box-shadow:0 8px 32px #00000060" id="loginDropdownList"></div>
+    </div>
+    <button onclick="irAlPin()" id="loginContinueBtn" style="width:100%;background:linear-gradient(135deg,#1a3a5e,#0d1a2e);border:1px solid #3b82f640;color:#3b82f6;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;opacity:0.4;pointer-events:none" id="loginContinueBtn">
+      Continuar →
+    </button>
+    <div id="loginCerrarSesionBtn" style="display:none">
+      <button onclick="cerrarSesionDesdeLogin()" style="background:transparent;border:0.5px solid #333;color:#555;border-radius:10px;padding:8px 20px;font-size:12px;cursor:pointer"><i class="ti ti-logout"></i> Cerrar sesión</button>
+    </div>
   </div>
-  <div class="login-users" id="loginUsers"></div>
-  <div class="login-pin-area" id="loginPinArea">
-    <div style="font-size:13px;color:var(--text3)" id="loginPinLabel">Ingresá tu PIN</div>
+
+  <!-- Pantalla 2: ingresar PIN -->
+  <div id="loginStep2" style="display:none;flex-direction:column;align-items:center;gap:20px;width:100%;max-width:280px;padding:0 24px;box-sizing:border-box">
+    <div style="text-align:center">
+      <div id="loginPinAvatar" style="width:64px;height:64px;border-radius:50%;background:#3b82f618;border:2px solid #3b82f640;display:flex;align-items:center;justify-content:center;font-size:28px;color:#3b82f6;margin:0 auto 12px"><i class="ti ti-user"></i></div>
+      <div style="font-size:13px;color:#ffffff60" id="loginPinLabel">Ingresá tu PIN</div>
+    </div>
     <div class="login-pin-dots" id="loginPinDots">
       <div class="login-pin-dot" id="dot0"></div>
       <div class="login-pin-dot" id="dot1"></div>
@@ -605,14 +632,9 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       <div class="login-num" onclick="loginNum('9')">9</div>
       <div class="login-num" onclick="loginBack()">⌫</div>
       <div class="login-num" onclick="loginNum('0')">0</div>
-      <div class="login-num" onclick="loginCancelar()" style="font-size:11px;color:var(--text3)">Volver</div>
+      <div class="login-num" onclick="volverAlSelector()" style="font-size:11px;color:#ffffff40">Volver</div>
     </div>
     <div class="login-error" id="loginError">PIN incorrecto</div>
-  </div>
-  <div id="loginCerrarSesionBtn" style="display:none;margin-top:8px">
-    <button onclick="cerrarSesionDesdeLogin()" style="background:transparent;border:0.5px solid #333;color:#666;border-radius:8px;padding:8px 20px;font-size:12px;cursor:pointer">
-      <i class="ti ti-logout"></i> Cerrar sesión actual
-    </button>
   </div>
 </div>
 
@@ -1507,6 +1529,7 @@ cargarConfig();
 let usuarioActual = null;
 let loginUsuarioId = null;
 let loginPin = '';
+let loginDropdownOpen = false;
 
 const PERMISOS_DEFAULT = {
   administrador: {ingreso:true,socios:true,nuevo:true,cuotas:true,agenda:true,reportes:true,vencimientos:true,desercion:true,config:true},
@@ -1516,35 +1539,73 @@ const PERMISOS_DEFAULT = {
 
 async function mostrarLogin() {
   document.getElementById('loginOverlay').classList.remove('hidden');
-  document.getElementById('loginPinArea').classList.remove('visible');
+  document.getElementById('loginStep1').style.display = 'flex';
+  document.getElementById('loginStep2').style.display = 'none';
   loginPin = ''; loginUsuarioId = null;
   actualizarDots();
   document.getElementById('loginCerrarSesionBtn').style.display = usuarioActual ? 'block' : 'none';
+  // Reset dropdown
+  document.getElementById('loginDropdownLabel').textContent = 'Elegí un usuario';
+  document.getElementById('loginDropdownRol').textContent = '';
+  const btn = document.getElementById('loginContinueBtn');
+  btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none';
   try {
     const res = await fetch(`${API}/api/usuarios`);
     const users = await res.json();
     const cfg = await (await fetch(`${API}/api/config`)).json();
     document.getElementById('loginGymNombre').textContent = cfg.gym_nombre || 'GymOS';
-    const grid = document.getElementById('loginUsers');
-    grid.innerHTML = users.map(u => `
-      <div class="login-user-btn" id="login-usr-${u.id}" onclick="seleccionarUsuario(${u.id}, '${u.nombre}')">
-        <div class="login-user-avatar"><i class="ti ti-user"></i></div>
-        <div class="login-user-nombre">${u.nombre}</div>
-        <div class="login-user-rol">${u.rol}</div>
+    const list = document.getElementById('loginDropdownList');
+    list.innerHTML = users.map(u => `
+      <div onclick="seleccionarUsuario(${u.id},'${u.nombre}','${u.rol}')" style="display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;transition:background 0.15s;border-bottom:1px solid #ffffff05" onmouseover="this.style.background='#3b82f610'" onmouseout="this.style.background='transparent'">
+        <div style="width:36px;height:36px;border-radius:50%;background:#3b82f618;border:1.5px solid #3b82f630;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-size:16px;flex-shrink:0"><i class="ti ti-user"></i></div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#fff">${u.nombre}</div>
+          <div style="font-size:11px;color:#ffffff40;text-transform:capitalize;margin-top:1px">${u.rol}</div>
+        </div>
       </div>`).join('');
   } catch(e) { console.error('Login:', e); }
 }
 
-function seleccionarUsuario(id, nombre) {
-  loginUsuarioId = id;
-  loginPin = '';
-  actualizarDots();
-  document.querySelectorAll('.login-user-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById(`login-usr-${id}`)?.classList.add('selected');
-  document.getElementById('loginPinLabel').textContent = `PIN de ${nombre}`;
-  document.getElementById('loginPinArea').classList.add('visible');
-  document.getElementById('loginError').classList.remove('show');
+function toggleLoginDropdown() {
+  loginDropdownOpen = !loginDropdownOpen;
+  const list = document.getElementById('loginDropdownList');
+  const arrow = document.getElementById('loginDropdownArrow');
+  list.style.display = loginDropdownOpen ? 'block' : 'none';
+  arrow.style.transform = loginDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)';
 }
+
+function seleccionarUsuario(id, nombre, rol) {
+  loginUsuarioId = id;
+  loginDropdownOpen = false;
+  document.getElementById('loginDropdownList').style.display = 'none';
+  document.getElementById('loginDropdownArrow').style.transform = 'rotate(0deg)';
+  document.getElementById('loginDropdownLabel').textContent = nombre;
+  document.getElementById('loginDropdownRol').textContent = rol;
+  const btn = document.getElementById('loginContinueBtn');
+  btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+}
+
+function irAlPin() {
+  if (!loginUsuarioId) return;
+  const nombre = document.getElementById('loginDropdownLabel').textContent;
+  loginPin = ''; actualizarDots();
+  document.getElementById('loginPinLabel').textContent = `PIN de ${nombre}`;
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = 'flex';
+}
+
+function volverAlSelector() {
+  loginPin = ''; loginUsuarioId = null; actualizarDots();
+  document.getElementById('loginStep1').style.display = 'flex';
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginDropdownLabel').textContent = 'Elegí un usuario';
+  document.getElementById('loginDropdownRol').textContent = '';
+  const btn = document.getElementById('loginContinueBtn');
+  btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none';
+}
+
+function loginCancelar() { volverAlSelector(); }
 
 function loginNum(n) {
   if (loginPin.length >= 4) return;
