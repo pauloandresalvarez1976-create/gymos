@@ -1266,11 +1266,45 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
         <div class="config-section">
           <div class="config-sec-title">Sistema</div>
           <div class="config-row"><span class="config-key">Versión</span><span class="config-val">GymOS v1.0.0</span></div>
+          <div class="config-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <span class="config-key">Contraseña de reset de fábrica</span>
+            <div style="display:flex;gap:8px;width:100%">
+              <input id="cfgAdminPassword" type="password" placeholder="Contraseña actual o nueva" style="flex:1;background:#0d0404;border:1px solid #ef444430;border-radius:10px;padding:9px 14px;color:#fff;font-size:13px;outline:none">
+              <button onclick="guardarPasswordReset()" style="background:#ef444415;border:1px solid #ef444440;color:#ef4444;border-radius:10px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Cambiar</button>
+            </div>
+          </div>
+        </div>
+        <div class="config-section" style="border-color:#ef444430;background:linear-gradient(135deg,#1f0808 0%,#0f0404 100%)">
+          <div class="config-sec-title" style="color:#ef4444">Reset de fábrica</div>
+          <div style="font-size:12px;color:#ffffff50;margin-bottom:16px;line-height:1.6">Borra todos los socios, pagos, ingresos, clases y configuración. Deja la app lista para un nuevo gimnasio. <strong style="color:#ef4444">Esta acción no se puede deshacer.</strong></div>
+          <button onclick="mostrarModalReset()" style="background:#ef444415;border:1px solid #ef444440;color:#ef4444;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#ef444430'" onmouseout="this.style.background='#ef444415'">
+            <i class="ti ti-trash"></i> Resetear aplicación
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- RENOVACIONES -->
+    <!-- MODAL RESET DE FÁBRICA -->
+    <div id="modalReset" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:2000;align-items:center;justify-content:center">
+      <div style="background:linear-gradient(135deg,#1f0808 0%,#0f0404 100%);border:1px solid #ef444440;border-radius:20px;padding:28px;width:380px;max-width:94vw">
+        <div style="font-size:18px;font-weight:800;color:#ef4444;margin-bottom:8px;display:flex;align-items:center;gap:10px"><i class="ti ti-alert-triangle"></i> Reset de fábrica</div>
+        <div style="font-size:13px;color:#ffffff60;margin-bottom:20px;line-height:1.6">Se borrarán <strong style="color:#fff">todos los datos</strong> del gimnasio. Escribí <strong style="color:#ef4444">RESETEAR</strong> y tu contraseña para confirmar.</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <div style="font-size:10px;color:#ffffff40;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Escribí RESETEAR</div>
+            <input id="resetConfirmText" type="text" placeholder="RESETEAR" style="width:100%;background:#0d0404;border:1px solid #ef444430;border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;box-sizing:border-box;outline:none">
+          </div>
+          <div>
+            <div style="font-size:10px;color:#ffffff40;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Contraseña de reset</div>
+            <input id="resetPassword" type="password" placeholder="Tu contraseña" style="width:100%;background:#0d0404;border:1px solid #ef444430;border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;box-sizing:border-box;outline:none">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:22px">
+          <button onclick="cerrarModalReset()" style="flex:1;background:#ffffff10;border:1px solid #ffffff20;color:#fff;border-radius:10px;padding:11px;font-size:13px;cursor:pointer">Cancelar</button>
+          <button onclick="ejecutarReset()" style="flex:1;background:#ef4444;border:none;color:#fff;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Resetear todo</button>
+        </div>
+      </div>
+    </div>
     <div class="screen" id="screen-renovaciones">
       <div style="padding:20px;max-width:700px">
         <div style="font-size:18px;font-weight:800;margin-bottom:4px">Solicitudes de renovación</div>
@@ -1927,6 +1961,54 @@ async function cargarSocios(q = '') {
       </div>`;
     }).join('');
   } catch(e) { console.error(e); }
+}
+
+async function guardarPasswordReset() {
+  const pass = document.getElementById('cfgAdminPassword').value.trim();
+  if (!pass) { toast('Ingresá una contraseña', 'bad'); return; }
+  if (pass.length < 6) { toast('La contraseña debe tener al menos 6 caracteres', 'bad'); return; }
+  try {
+    const res = await fetch(`${API}/api/config`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ admin_password: pass })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      toast('✅ Contraseña de reset actualizada', 'ok');
+      document.getElementById('cfgAdminPassword').value = '';
+    } else { toast(d.error || 'Error al guardar', 'bad'); }
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
+}
+
+function mostrarModalReset() {
+  document.getElementById('resetConfirmText').value = '';
+  document.getElementById('resetPassword').value = '';
+  document.getElementById('modalReset').style.display = 'flex';
+}
+
+function cerrarModalReset() {
+  document.getElementById('modalReset').style.display = 'none';
+}
+
+async function ejecutarReset() {
+  const texto = document.getElementById('resetConfirmText').value.trim();
+  const pass  = document.getElementById('resetPassword').value.trim();
+  if (texto !== 'RESETEAR') { toast('Escribí RESETEAR para confirmar', 'bad'); return; }
+  if (!pass) { toast('Ingresá tu contraseña', 'bad'); return; }
+  try {
+    const res = await fetch(`${API}/api/reset-fabrica`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ confirmacion: texto, password: pass })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      cerrarModalReset();
+      toast('✅ Reset completado — recargando...', 'ok');
+      setTimeout(() => { localStorage.clear(); window.location.reload(); }, 2000);
+    } else { toast(d.error || 'Error al resetear', 'bad'); }
+  } catch(e) { toast('No se pudo conectar', 'bad'); }
 }
 
 function buscarSocios() {

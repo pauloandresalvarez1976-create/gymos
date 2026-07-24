@@ -264,6 +264,15 @@ def migrate_db():
         except Exception as e:
             print(f"⚠️ No se pudo crear admin: {e}")
 
+        # Contraseña de reset por defecto si no existe
+        try:
+            result = conn.execute(text("SELECT id FROM config WHERE clave='admin_password'")).fetchone()
+            if not result:
+                conn.execute(text("INSERT INTO config (clave, valor) VALUES ('admin_password', 'gymos2024')"))
+                conn.commit()
+        except Exception as e:
+            print(f"⚠️ No se pudo crear admin_password: {e}")
+
 migrate_db()
 
 def init_config():
@@ -1806,6 +1815,63 @@ def get_inscriptos(clase_id):
                            'fecha_reserva': r.fecha_reserva.strftime('%d/%m %H:%M')})
     session.close()
     return jsonify(result)
+
+# ── RESET DE FÁBRICA ─────────────────────────────────────
+@app.route('/api/reset-fabrica', methods=['POST'])
+def reset_fabrica():
+    data         = request.json or {}
+    confirmacion = data.get('confirmacion', '')
+    password     = data.get('password', '')
+    if confirmacion != 'RESETEAR':
+        return jsonify({'ok': False, 'error': 'Confirmación incorrecta'}), 400
+    # Verificar contraseña del admin
+    session = Session()
+    cfg     = {c.clave: c.valor for c in session.query(Config).all()}
+    admin_pass = cfg.get('admin_password', 'gymos2024')
+    if password != admin_pass:
+        session.close()
+        return jsonify({'ok': False, 'error': 'Contraseña incorrecta'}), 403
+    try:
+        # Borrar fotos de Supabase Storage
+        for bucket in [FOTOS_SOCIOS_BUCKET, FOTOS_BUCKET]:
+            try:
+                list_url = f"{SUPABASE_URL}/storage/v1/object/list/{bucket}"
+                headers  = {'Authorization': f'Bearer {SUPABASE_SECRET}', 'Content-Type': 'application/json'}
+                resp = requests.post(list_url, headers=headers, json={'limit': 1000, 'offset': 0, 'prefix': ''}, timeout=15)
+                if resp.status_code == 200:
+                    archivos = [f['name'] for f in resp.json() if 'name' in f]
+                    if archivos:
+                        del_url = f"{SUPABASE_URL}/storage/v1/object/{bucket}"
+                        requests.delete(del_url, headers=headers, json={'prefixes': archivos}, timeout=15)
+            except Exception as e:
+                print(f'Reset storage {bucket}: {e}')
+        # Borrar datos de todas las tablas
+        session.execute(text('DELETE FROM reservas_clases'))
+        session.execute(text('DELETE FROM solicitudes_renovacion'))
+        session.execute(text('DELETE FROM fichas_medicas'))
+        session.execute(text('DELETE FROM progreso'))
+        session.execute(text('DELETE FROM ingresos'))
+        session.execute(text('DELETE FROM pagos'))
+        session.execute(text('DELETE FROM clases'))
+        session.execute(text('DELETE FROM socios'))
+        # Resetear config (mantener estructura, limpiar valores del gym)
+        claves_a_limpiar = ['gym_nombre','gym_telefono','gym_email','gym_direccion',
+                            'gym_logo','smtp_host','smtp_port','smtp_user','smtp_pass',
+                            'transferencia_banco','transferencia_cbu','transferencia_alias',
+                            'transferencia_titular']
+        for clave in claves_a_limpiar:
+            session.execute(text(f"UPDATE config SET valor='' WHERE clave='{clave}'"))
+        # Mantener solo el usuario admin con PIN reseteado
+        session.execute(text("DELETE FROM usuarios WHERE rol != 'administrador'"))
+        session.execute(text("UPDATE usuarios SET nombre='Administrador', pin='0000' WHERE rol='administrador'"))
+        session.commit()
+        session.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        session.rollback()
+        session.close()
+        print(f'Reset error: {e}')
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── VENCIMIENTOS ─────────────────────────────────────────
 @app.route('/api/vencimientos', methods=['GET'])
