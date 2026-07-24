@@ -1119,7 +1119,7 @@ function renderApp() {
   else if (!dias || dias < 0) { estadoLabel = '❌ Vencida'; estadoClass = 'vencido'; diasClass = 'bad'; }
   else if (dias <= 7) { estadoLabel = '⚠️ Por vencer'; estadoClass = 'vencido'; diasClass = 'warn'; }
   else { estadoLabel = '✅ Al día'; estadoClass = 'al-dia'; diasClass = 'ok'; }
-  const foto = s.foto ? `/fotos/${s.foto}` : null;
+  const foto = s.foto ? s.foto : null;
 
   const objetivo = s.objetivo || '';
   const plan = PLANES_ALIMENTARIOS[objetivo];
