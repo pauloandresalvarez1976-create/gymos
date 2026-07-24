@@ -1930,9 +1930,10 @@ async function cargarSocios(q = '') {
       const hoy = new Date();
       const venc = s.fecha_venc ? new Date(s.fecha_venc) : null;
       const diasRestantes = venc ? Math.ceil((venc - hoy) / (1000*60*60*24)) : null;
-      const estadoClass = s.estado === 'al_dia' ? (diasRestantes !== null && diasRestantes <= 7 ? 'warn' : 'ok') : 'bad';
-      const estadoLabel = estadoClass === 'ok' ? 'Al día' : estadoClass === 'warn' ? 'Por vencer' : 'Vencido';
-      const estadoIcon = estadoClass === 'ok' ? 'ti-circle-check' : estadoClass === 'warn' ? 'ti-alert-triangle' : 'ti-circle-x';
+      const suspendido = s.activo === 0;
+      const estadoClass = suspendido ? 'bad' : s.estado === 'al_dia' ? (diasRestantes !== null && diasRestantes <= 7 ? 'warn' : 'ok') : 'bad';
+      const estadoLabel = suspendido ? 'Suspendido' : estadoClass === 'ok' ? 'Al día' : estadoClass === 'warn' ? 'Por vencer' : 'Vencido';
+      const estadoIcon  = suspendido ? 'ti-ban' : estadoClass === 'ok' ? 'ti-circle-check' : estadoClass === 'warn' ? 'ti-alert-triangle' : 'ti-circle-x';
       const fotoSrc = s.foto ? s.foto : null;
       const avatar = fotoSrc
         ? `<img class="si-avatar" src="${fotoSrc}" onerror="this.style.display='none'">`

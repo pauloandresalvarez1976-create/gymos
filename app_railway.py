@@ -447,7 +447,7 @@ def serve_qr(path):
 def get_socios():
     session = Session()
     q      = request.args.get('q', '')
-    socios = session.query(Socio).filter(Socio.activo == 1)
+    socios = session.query(Socio)
     if q: socios = socios.filter(Socio.nombre.ilike(f'%{q}%'))
     result = [socio_to_dict(s) for s in socios.all()]
     session.close(); return jsonify(result)
