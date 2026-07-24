@@ -2437,6 +2437,7 @@ async function guardarPerfil() {
     plan: document.getElementById('mpPlan').value,
     fecha_venc: document.getElementById('mpFechaVenc').value || null,
     foto_base64: document.getElementById('mpFotoBase64').value || null,
+    activo: document.getElementById('mpActivoLabel').textContent === 'Activo' ? 1 : 0,
   };
 
   try {
