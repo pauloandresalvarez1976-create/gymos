@@ -374,7 +374,7 @@ def get_socio_pwa(sid):
     """Datos completos del socio para la PWA."""
     session = Session()
     s = session.query(Socio).filter_by(id=sid).first()
-    if not s or not s.activo:
+    if not s:
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     pagos = session.query(Pago).filter_by(socio_id=sid).order_by(Pago.fecha.desc()).limit(5).all()
     cfg = {c.clave: c.valor for c in session.query(Config).all()}

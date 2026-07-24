@@ -1441,6 +1441,15 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
               <span id="mpIaLabel" style="color:#444">Desactivado</span>
             </label>
           </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Estado cuenta</span>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <span id="mpActivoLabel" style="font-size:11px;font-weight:700">Activo</span>
+              <div id="mpActivoSwitch" onclick="toggleActivoSocio()" style="width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;transition:background 0.2s;background:#22c55e">
+                <div id="mpActivoDot" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;right:3px;transition:all 0.2s;box-shadow:0 1px 4px #0004"></div>
+              </div>
+            </label>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
             <span>App del socio</span>
             <div style="display:flex;align-items:center;gap:8px">
@@ -2065,6 +2074,16 @@ async function abrirPerfil(id) {
     const iaSwitch = document.getElementById('mpIaSwitch');
     iaSwitch.checked = s.ia_habilitada === 1;
     document.getElementById('mpIaLabel').textContent = s.ia_habilitada ? 'Activado' : 'Desactivado';
+    // Switch activo/suspendido
+    const activoSwitch = document.getElementById('mpActivoSwitch');
+    const activoDot    = document.getElementById('mpActivoDot');
+    const activoLabel  = document.getElementById('mpActivoLabel');
+    const activo = s.activo === 1 || s.activo === undefined;
+    activoSwitch.style.background = activo ? '#22c55e' : '#ef4444';
+    activoDot.style.right  = activo ? '3px' : 'auto';
+    activoDot.style.left   = activo ? 'auto' : '3px';
+    activoLabel.textContent = activo ? 'Activo' : 'Suspendido';
+    activoLabel.style.color = activo ? '#22c55e' : '#ef4444';
     document.getElementById('mpPwaLink').href = `https://gymos-o3yw.onrender.com/socio/${s.id}`;
     document.getElementById('mpFechaVenc').value = s.fecha_venc || '';
     document.getElementById('mpId').textContent = '#' + String(s.id).padStart(4, '0');
@@ -2307,6 +2326,31 @@ async function toggleIaSocio() {
   try {
     await fetch(`${API}/api/socios/${socioEditandoId}/ia/toggle`, { method: 'POST' });
   } catch(e) {}
+}
+
+async function toggleActivoSocio() {
+  const label  = document.getElementById('mpActivoLabel');
+  const sw     = document.getElementById('mpActivoSwitch');
+  const dot    = document.getElementById('mpActivoDot');
+  const estaActivo = label.textContent === 'Activo';
+  const nuevoEstado = estaActivo ? 0 : 1;
+  // Actualizar UI inmediatamente
+  sw.style.background    = nuevoEstado ? '#22c55e' : '#ef4444';
+  dot.style.right        = nuevoEstado ? '3px' : 'auto';
+  dot.style.left         = nuevoEstado ? 'auto' : '3px';
+  label.textContent      = nuevoEstado ? 'Activo' : 'Suspendido';
+  label.style.color      = nuevoEstado ? '#22c55e' : '#ef4444';
+  try {
+    const res = await fetch(`${API}/api/socios/${socioEditandoId}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ activo: nuevoEstado })
+    });
+    if (res.ok) {
+      toast(nuevoEstado ? '✅ Socio activado' : '⛔ Socio suspendido', nuevoEstado ? 'ok' : 'bad');
+      cargarSocios();
+    }
+  } catch(e) { toast('Error al cambiar estado', 'bad'); }
 }
 
 async function guardarObjetivo() {

@@ -866,6 +866,19 @@ async function init() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     socioData = data.socio;
+    // Verificar si el socio está suspendido
+    if (socioData.activo === 0) {
+      document.getElementById('app').innerHTML = `
+        <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#0a0a0f">
+          <div style="font-size:56px;margin-bottom:20px">⛔</div>
+          <div style="font-size:22px;font-weight:800;color:#ef4444;margin-bottom:10px">Cuenta suspendida</div>
+          <div style="font-size:14px;color:#ffffff50;line-height:1.6;max-width:280px">Tu membresía está suspendida. Contactá al gimnasio para regularizar tu situación.</div>
+          <div style="margin-top:32px;background:#1a0808;border:1px solid #ef444430;border-radius:16px;padding:20px 24px;font-size:13px;color:#ffffff60;max-width:280px">
+            Para reactivar tu cuenta, acercate al gimnasio o comunicate con el encargado.
+          </div>
+        </div>`;
+      return;
+    }
     renderApp();
   } catch(e) {
     document.getElementById('app').innerHTML = `<div class="error-msg">❌ No se pudo cargar tu membresía.<br><small>${e.message}</small></div>`;
