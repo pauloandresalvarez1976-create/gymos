@@ -489,6 +489,7 @@ def actualizar_socio(sid):
     data = request.json
     for campo in ['nombre','dni','telefono','email','plan']:
         if campo in data: setattr(s, campo, data[campo])
+    if 'activo' in data: s.activo = int(data['activo'])
     if data.get('fecha_venc'):
         s.fecha_venc = date.fromisoformat(data['fecha_venc'])
     foto_b64 = data.get('foto_base64')
