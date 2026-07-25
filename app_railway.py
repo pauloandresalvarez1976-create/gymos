@@ -13,6 +13,7 @@ SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
 SUPABASE_SECRET = os.environ.get('SUPABASE_SECRET', '')
 FOTOS_BUCKET = 'fotos-progreso'
 FOTOS_SOCIOS_BUCKET = 'fotos-socios'
+LICENCIA_SECRET = os.environ.get('LICENCIA_SECRET', '')
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
@@ -2205,6 +2206,65 @@ def enviar_resumenes_semanales():
 import threading
 threading.Thread(target=enviar_emails_cumpleanos, daemon=True).start()
 threading.Thread(target=enviar_resumenes_semanales, daemon=True).start()
+
+
+# ── LICENCIA ─────────────────────────────────────────────
+def verificar_clave_licencia(clave):
+    """Verifica la clave de licencia. Devuelve dict con resultado."""
+    import hmac as _hmac, hashlib, json as _json
+    try:
+        partes = clave.rsplit('.', 1)
+        if len(partes) != 2:
+            return {'ok': False, 'error': 'Clave invalida'}
+        payload_b64, firma_recibida = partes
+        payload_str = base64.b64decode(payload_b64).decode('utf-8')
+        payload = _json.loads(payload_str)
+        # Verificar firma HMAC
+        firma_esperada = _hmac.new(
+            LICENCIA_SECRET.encode(), payload_str.encode(), hashlib.sha256
+        ).hexdigest()[:16]
+        if not _hmac.compare_digest(firma_esperada, firma_recibida):
+            return {'ok': False, 'error': 'Firma invalida'}
+        # Verificar vencimiento
+        from datetime import date as _date
+        vence = _date.fromisoformat(payload['vence'])
+        hoy   = _date.today()
+        if hoy > vence:
+            dias_vencida = (hoy - vence).days
+            return {'ok': False, 'error': f'Licencia vencida hace {dias_vencida} dias', 'vencida': True, 'payload': payload}
+        dias_restantes = (vence - hoy).days
+        return {'ok': True, 'payload': payload, 'dias_restantes': dias_restantes, 'vence': str(vence)}
+    except Exception as e:
+        return {'ok': False, 'error': f'Error al verificar: {e}'}
+
+@app.route('/api/licencia/verificar', methods=['GET'])
+def verificar_licencia():
+    session = Session()
+    cfg = {c.clave: c.valor for c in session.query(Config).all()}
+    session.close()
+    clave = cfg.get('licencia_key', '')
+    if not clave:
+        return jsonify({'ok': False, 'error': 'Sin licencia', 'sin_licencia': True})
+    return jsonify(verificar_clave_licencia(clave))
+
+@app.route('/api/licencia/activar', methods=['POST'])
+def activar_licencia():
+    data  = request.json or {}
+    clave = data.get('clave', '').strip()
+    if not clave:
+        return jsonify({'ok': False, 'error': 'Clave vacia'})
+    resultado = verificar_clave_licencia(clave)
+    if not resultado['ok']:
+        return jsonify(resultado)
+    # Guardar en config
+    session = Session()
+    existente = session.query(Config).filter_by(clave='licencia_key').first()
+    if existente:
+        existente.valor = clave
+    else:
+        session.add(Config(clave='licencia_key', valor=clave))
+    session.commit(); session.close()
+    return jsonify(resultado)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

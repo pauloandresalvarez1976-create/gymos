@@ -1289,6 +1289,17 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           <div class="config-sec-title">Sistema</div>
           <div class="config-row"><span class="config-key">Versión</span><span class="config-val">GymOS v1.0.0</span></div>
           <div class="config-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <span class="config-key">Licencia activa</span>
+            <div style="font-size:12px;color:#ffffff40" id="licenciaEstadoConfig">Verificando...</div>
+          </div>
+          <div class="config-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <span class="config-key">Activar nueva licencia</span>
+            <div style="display:flex;gap:8px;width:100%">
+              <input id="cfgLicenciaKey" type="text" placeholder="Clave de licencia" style="flex:1;background:#050810;border:1px solid #3b82f625;border-radius:10px;padding:9px 14px;color:#fff;font-size:12px;outline:none;font-family:monospace">
+              <button onclick="activarLicenciaConfig()" style="background:#1a3a5e;border:1px solid #3b82f640;color:#3b82f6;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Activar</button>
+            </div>
+          </div>
+          <div class="config-row" style="flex-direction:column;align-items:flex-start;gap:8px">
             <span class="config-key">Contraseña de reset de fábrica</span>
             <div style="display:flex;gap:8px;width:100%">
               <input id="cfgAdminPassword" type="password" placeholder="Contraseña actual o nueva" style="flex:1;background:#0d0404;border:1px solid #ef444430;border-radius:10px;padding:9px 14px;color:#fff;font-size:13px;outline:none">
@@ -1306,7 +1317,21 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       </div>
     </div>
 
-    <!-- MODAL RESET DE FÁBRICA -->
+    <!-- PANTALLA LICENCIA BLOQUEADA -->
+<div id="licenciaOverlay" style="display:none;position:fixed;inset:0;background:#0a0a0f;z-index:999998;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
+  <div style="font-size:64px;margin-bottom:20px" id="licenciaIcon">🔒</div>
+  <div style="font-size:24px;font-weight:800;color:#ef4444;margin-bottom:10px" id="licenciaTitulo">Licencia vencida</div>
+  <div style="font-size:14px;color:#ffffff50;line-height:1.7;max-width:320px;margin-bottom:32px" id="licenciaMensaje">Tu licencia de GymOS ha vencido. Contactá al administrador del sistema para renovarla.</div>
+  <!-- Campo para activar nueva licencia -->
+  <div style="background:#0d1520;border:1px solid #3b82f620;border-radius:16px;padding:24px;width:100%;max-width:380px">
+    <div style="font-size:11px;color:#ffffff40;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Activar nueva licencia</div>
+    <input id="licenciaKeyInput" type="text" placeholder="Ingresá la clave de licencia" style="width:100%;background:#050810;border:1px solid #3b82f625;border-radius:10px;padding:11px 14px;color:#fff;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:10px">
+    <button onclick="activarLicencia()" style="width:100%;background:#1a3a5e;border:1px solid #3b82f640;color:#3b82f6;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer">Activar</button>
+    <div id="licenciaActivarMsg" style="font-size:12px;color:#ef4444;margin-top:8px;display:none"></div>
+  </div>
+</div>
+
+
     <div id="modalReset" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:2000;align-items:center;justify-content:center">
       <div style="background:linear-gradient(135deg,#1f0808 0%,#0f0404 100%);border:1px solid #ef444440;border-radius:20px;padding:28px;width:380px;max-width:94vw">
         <div style="font-size:18px;font-weight:800;color:#ef4444;margin-bottom:8px;display:flex;align-items:center;gap:10px"><i class="ti ti-alert-triangle"></i> Reset de fábrica</div>
@@ -1522,8 +1547,143 @@ function tick() {
 }
 tick(); setInterval(tick, 1000);
 
+// ── LICENCIA ──────────────────────────────────────────
+const LICENCIA_CACHE_KEY  = 'gymos_licencia_cache';
+const LICENCIA_CACHE_HORAS = 24; // horas de gracia sin internet
+
+async function verificarLicenciaAlInicio() {
+  try {
+    const res  = await fetch(`${API}/api/licencia/verificar`);
+    const data = await res.json();
+    if (data.ok) {
+      // Guardar cache local con timestamp
+      localStorage.setItem(LICENCIA_CACHE_KEY, JSON.stringify({
+        ok: true, vence: data.vence, plan: data.payload?.plan,
+        gym: data.payload?.gym, ts: Date.now()
+      }));
+      return true;
+    } else {
+      mostrarBloqueoLicencia(data);
+      return false;
+    }
+  } catch(e) {
+    // Sin internet — usar cache local
+    return verificarCacheLocal();
+  }
+}
+
+function verificarCacheLocal() {
+  try {
+    const raw = localStorage.getItem(LICENCIA_CACHE_KEY);
+    if (!raw) { mostrarBloqueoLicencia({ error: 'Sin licencia activada', sin_licencia: true }); return false; }
+    const cache = JSON.parse(raw);
+    if (!cache.ok) { mostrarBloqueoLicencia({ error: 'Licencia invalida' }); return false; }
+    // Verificar que el cache no tenga más de LICENCIA_CACHE_HORAS horas
+    const horasTranscurridas = (Date.now() - cache.ts) / (1000 * 60 * 60);
+    if (horasTranscurridas > LICENCIA_CACHE_HORAS) {
+      mostrarBloqueoLicencia({ error: `Sin conexion por mas de ${LICENCIA_CACHE_HORAS}hs. Conectate a internet para verificar la licencia.` });
+      return false;
+    }
+    // Verificar que no haya vencido
+    const hoy = new Date().toISOString().split('T')[0];
+    if (cache.vence && hoy > cache.vence) {
+      mostrarBloqueoLicencia({ error: 'Licencia vencida', vencida: true });
+      return false;
+    }
+    return true;
+  } catch(e) {
+    mostrarBloqueoLicencia({ error: 'Error al verificar licencia' });
+    return false;
+  }
+}
+
+function mostrarBloqueoLicencia(data) {
+  const overlay = document.getElementById('licenciaOverlay');
+  const titulo  = document.getElementById('licenciaTitulo');
+  const mensaje = document.getElementById('licenciaMensaje');
+  const icon    = document.getElementById('licenciaIcon');
+  if (data.sin_licencia) {
+    icon.textContent  = '🔑';
+    titulo.textContent = 'Sin licencia';
+    mensaje.textContent = 'GymOS no tiene una licencia activa. Ingresa tu clave de licencia para comenzar.';
+    titulo.style.color = '#f59e0b';
+  } else if (data.vencida) {
+    icon.textContent  = '⏰';
+    titulo.textContent = 'Licencia vencida';
+    mensaje.textContent = 'Tu licencia de GymOS ha vencido. Contacta al administrador del sistema para renovarla.';
+    titulo.style.color = '#ef4444';
+  } else {
+    icon.textContent  = '🔒';
+    titulo.textContent = 'Acceso bloqueado';
+    mensaje.textContent = data.error || 'No se pudo verificar la licencia.';
+    titulo.style.color = '#ef4444';
+  }
+  overlay.style.display = 'flex';
+}
+
+async function activarLicencia() {
+  const clave = document.getElementById('licenciaKeyInput').value.trim();
+  const msg   = document.getElementById('licenciaActivarMsg');
+  if (!clave) { msg.textContent = 'Ingresa la clave'; msg.style.display = 'block'; return; }
+  try {
+    const res  = await fetch(`${API}/api/licencia/activar`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ clave })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      localStorage.setItem(LICENCIA_CACHE_KEY, JSON.stringify({
+        ok: true, vence: data.vence, plan: data.payload?.plan,
+        gym: data.payload?.gym, ts: Date.now()
+      }));
+      document.getElementById('licenciaOverlay').style.display = 'none';
+      toast('Licencia activada correctamente', 'ok');
+    } else {
+      msg.textContent = data.error || 'Clave invalida';
+      msg.style.display = 'block';
+    }
+  } catch(e) { msg.textContent = 'Error de conexion'; msg.style.display = 'block'; }
+}
+
+async function activarLicenciaConfig() {
+  const clave = document.getElementById('cfgLicenciaKey').value.trim();
+  if (!clave) { toast('Ingresa la clave', 'bad'); return; }
+  try {
+    const res  = await fetch(`${API}/api/licencia/activar`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ clave })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      localStorage.setItem(LICENCIA_CACHE_KEY, JSON.stringify({
+        ok: true, vence: data.vence, plan: data.payload?.plan,
+        gym: data.payload?.gym, ts: Date.now()
+      }));
+      document.getElementById('cfgLicenciaKey').value = '';
+      document.getElementById('licenciaEstadoConfig').textContent =
+        data.payload?.plan + ' — Vence: ' + data.vence + ' (' + data.dias_restantes + ' dias)';
+      document.getElementById('licenciaEstadoConfig').style.color = '#22c55e';
+      toast('Licencia activada', 'ok');
+    } else {
+      toast(data.error || 'Clave invalida', 'bad');
+    }
+  } catch(e) { toast('Error de conexion', 'bad'); }
+}
+
 // ── INIT ──
 cargarConfig();
+verificarLicenciaAlInicio().then(function(valida) {
+  if (valida) {
+    // Mostrar estado en config si está abierto
+    fetch(`${API}/api/licencia/verificar`).then(r => r.json()).then(data => {
+      const el = document.getElementById('licenciaEstadoConfig');
+      if (el && data.ok) {
+        el.textContent = (data.payload?.plan || '') + ' — Vence: ' + data.vence + ' (' + data.dias_restantes + ' dias)';
+        el.style.color = '#22c55e';
+      }
+    }).catch(() => {});
+  }
+});
 
 // ── LOGIN / ROLES ──
 let usuarioActual = null;
