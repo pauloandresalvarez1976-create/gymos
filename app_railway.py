@@ -2266,6 +2266,22 @@ def activar_licencia():
     session.commit(); session.close()
     return jsonify(resultado)
 
+# ─── VERSIÓN DE LA APP ────────────────────────────────────────────────────────
+# Render expone RENDER_GIT_COMMIT con el hash del commit del último deploy.
+# Si no existe (local), usamos el timestamp de inicio del proceso como fallback.
+import time as _time
+_APP_START_TS = str(int(_time.time()))
+
+def _get_version():
+    commit = os.environ.get('RENDER_GIT_COMMIT', '')
+    if commit:
+        return commit[:8]          # primeros 8 chars del hash son suficientes
+    return _APP_START_TS           # fallback local: timestamp de arranque
+
+@app.route('/api/version', methods=['GET'])
+def get_version():
+    return jsonify({'version': _get_version()})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=False)

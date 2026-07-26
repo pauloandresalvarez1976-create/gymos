@@ -42,6 +42,24 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'S
 .logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 2px; }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 .gym-badge { font-size: 11px; color: var(--accent); background: var(--accent-bg); border: 0.5px solid var(--accent-bd); border-radius: 12px; padding: 3px 12px; }
+/* Campanita de actualización */
+.update-bell { position: relative; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg2); border: 0.5px solid var(--border); color: var(--text3); transition: color .2s, background .2s; }
+.update-bell:hover { background: var(--bg3); color: var(--accent); }
+.update-bell .bell-dot { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; background: #FF4444; border-radius: 50%; border: 1.5px solid var(--bg1); display: none; animation: bellPulse 1.8s ease-in-out infinite; }
+.update-bell .bell-dot.show { display: block; }
+@keyframes bellPulse { 0%,100%{box-shadow:0 0 0 0 #FF444460} 50%{box-shadow:0 0 0 5px transparent} }
+/* Modal de actualización */
+.update-modal-overlay { position: fixed; inset: 0; background: #00000070; z-index: 9999; display: none; align-items: center; justify-content: center; }
+.update-modal-overlay.show { display: flex; }
+.update-modal { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 28px 24px 22px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 20px 60px #00000080; }
+.update-modal-icon { font-size: 40px; margin-bottom: 12px; }
+.update-modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.update-modal-desc { font-size: 13px; color: var(--text3); line-height: 1.5; margin-bottom: 22px; }
+.update-modal-btns { display: flex; gap: 10px; justify-content: center; }
+.update-modal-btns button { padding: 9px 22px; border-radius: 9px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+.update-modal-btns .btn-update { background: var(--accent); color: #fff; }
+.update-modal-btns .btn-later { background: var(--bg2); border: 0.5px solid var(--border); color: var(--text3); }
+.update-modal-btns button:hover { opacity: .85; }
 .clock { font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; }
 
 /* BODY */
@@ -571,6 +589,11 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
   <div class="topbar-right">
     <img id="topbarLogo" src="" alt="" class="topbar-logo" style="display:none">
     <div class="gym-badge" id="gymNombre">Mi Gimnasio</div>
+    <!-- Campanita de actualización -->
+    <div class="update-bell" id="updateBell" onclick="mostrarModalUpdate()" title="Actualizaciones" style="display:none">
+      <i class="ti ti-bell" style="font-size:15px"></i>
+      <div class="bell-dot" id="bellDot"></div>
+    </div>
     <button onclick="cerrarSesion()" style="background:var(--bg2);border:0.5px solid var(--border);color:var(--text3);cursor:pointer;font-size:11px;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px" title="Cerrar sesión"><i class="ti ti-logout"></i> <span id="headerUsuario" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></button>
     <div class="clock" id="clock">--:--:--</div>
   </div>
@@ -3489,6 +3512,80 @@ function renderDesercion(socios) {
     };
   });
 }
+</script>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL DE ACTUALIZACIÓN
+════════════════════════════════════════════════════ -->
+<div class="update-modal-overlay" id="updateModalOverlay">
+  <div class="update-modal">
+    <div class="update-modal-icon">🔔</div>
+    <div class="update-modal-title">Nueva versión disponible</div>
+    <div class="update-modal-desc">Hay una actualización de GymOS lista para instalar. Podés actualizar ahora o continuar y hacerlo después.</div>
+    <div class="update-modal-btns">
+      <button class="btn-later" onclick="cerrarModalUpdate()">Ahora no</button>
+      <button class="btn-update" onclick="actualizarAhora()">Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── SISTEMA DE ACTUALIZACIONES (ADMIN) ──────────────────────────────────────
+(function() {
+  const VERSION_KEY = 'gymos_admin_version';
+  const CHECK_INTERVAL = 5 * 60 * 1000; // cada 5 minutos
+
+  async function checkVersion() {
+    try {
+      const res = await fetch('/api/version?_=' + Date.now());
+      if (!res.ok) return;
+      const { version } = await res.json();
+      const saved = localStorage.getItem(VERSION_KEY);
+      if (!saved) {
+        // Primera vez: guardar versión actual, no mostrar nada
+        localStorage.setItem(VERSION_KEY, version);
+        return;
+      }
+      if (version !== saved) {
+        // Hay nueva versión — mostrar campanita
+        mostrarCampanita();
+      }
+    } catch(e) { /* sin conexión, ignorar */ }
+  }
+
+  window.mostrarCampanita = function() {
+    const bell = document.getElementById('updateBell');
+    const dot  = document.getElementById('bellDot');
+    if (bell) { bell.style.display = 'flex'; }
+    if (dot)  { dot.classList.add('show'); }
+  };
+
+  window.mostrarModalUpdate = function() {
+    document.getElementById('updateModalOverlay').classList.add('show');
+  };
+
+  window.cerrarModalUpdate = function() {
+    document.getElementById('updateModalOverlay').classList.remove('show');
+  };
+
+  window.actualizarAhora = function() {
+    // Borrar versión guardada para que al recargar se guarde la nueva
+    localStorage.removeItem(VERSION_KEY);
+    // Forzar recarga sin cache
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+        location.reload(true);
+      });
+    } else {
+      location.reload(true);
+    }
+  };
+
+  // Arrancar al cargar la página
+  checkVersion();
+  setInterval(checkVersion, CHECK_INTERVAL);
+})();
 </script>
 </body>
 </html>
