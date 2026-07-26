@@ -316,21 +316,17 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .rep-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .rep-kpi { border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; border: 1px solid transparent; transition: all 0.2s; }
 .rep-kpi:hover { transform: translateY(-2px); }
-.rep-kpi::after { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 0 0 60px; opacity: 0.15; }
-.rep-kpi.accent { background: linear-gradient(135deg, var(--accent-bg) 0%, var(--bg2) 100%); border-color: var(--accent-bd); box-shadow: 0 0 0 1px var(--accent-bg); }
-.rep-kpi.accent::after { background: var(--accent); }
-.rep-kpi.accent:hover { box-shadow: 0 8px 24px var(--accent-bg); border-color: var(--accent); }
-.rep-kpi.green { background: linear-gradient(135deg, #22c55e18 0%, var(--bg2) 100%); border-color: #22c55e25; box-shadow: 0 0 0 1px #22c55e08; }
+.rep-kpi::after { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 0 0 60px; opacity: 0.08; }
+.rep-kpi.green { background: linear-gradient(135deg, #0a1f0f 0%, #050f07 100%); border-color: #22c55e25; box-shadow: 0 0 0 1px #22c55e08; }
 .rep-kpi.green::after { background: #22c55e; }
 .rep-kpi.green:hover { box-shadow: 0 8px 24px #22c55e15; border-color: #22c55e40; }
-.rep-kpi.red { background: linear-gradient(135deg, #ef444418 0%, var(--bg2) 100%); border-color: #ef444425; box-shadow: 0 0 0 1px #ef444408; }
+.rep-kpi.red { background: linear-gradient(135deg, #1f0a0a 0%, #0f0505 100%); border-color: #ef444425; box-shadow: 0 0 0 1px #ef444408; }
 .rep-kpi.red::after { background: #ef4444; }
 .rep-kpi.red:hover { box-shadow: 0 8px 24px #ef444415; border-color: #ef444440; }
-.rep-kpi.blue { background: linear-gradient(135deg, #3b82f618 0%, var(--bg2) 100%); border-color: #3b82f625; box-shadow: 0 0 0 1px #3b82f608; }
+.rep-kpi.blue { background: linear-gradient(135deg, #0a1020 0%, #050810 100%); border-color: #3b82f625; box-shadow: 0 0 0 1px #3b82f608; }
 .rep-kpi.blue::after { background: #3b82f6; }
 .rep-kpi.blue:hover { box-shadow: 0 8px 24px #3b82f615; border-color: #3b82f640; }
 .rep-kpi-icon { font-size: 22px; }
-.rep-kpi.accent .rep-kpi-icon { color: var(--accent); }
 .rep-kpi.green .rep-kpi-icon { color: #22c55e; }
 .rep-kpi.red   .rep-kpi-icon { color: #ef4444; }
 .rep-kpi.blue  .rep-kpi-icon { color: #3b82f6; }
@@ -627,9 +623,6 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       <!-- Lista desplegable -->
       <div id="loginDropdownList" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:linear-gradient(135deg,#0d1520,#070b14);border:1px solid #3b82f630;border-radius:14px;overflow:hidden;z-index:10;box-shadow:0 8px 32px #00000060" id="loginDropdownList"></div>
     </div>
-    <button onclick="irAlPin()" id="loginContinueBtn" style="width:100%;background:linear-gradient(135deg,#1a3a5e,#0d1a2e);border:1px solid #3b82f640;color:#3b82f6;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;opacity:0.4;pointer-events:none" id="loginContinueBtn">
-      Continuar →
-    </button>
     <div id="loginCerrarSesionBtn" style="display:none">
       <button onclick="cerrarSesionDesdeLogin()" style="background:transparent;border:0.5px solid #333;color:#555;border-radius:10px;padding:8px 20px;font-size:12px;cursor:pointer"><i class="ti ti-logout"></i> Cerrar sesión</button>
     </div>
@@ -986,7 +979,7 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 
         <!-- KPIs socios -->
         <div class="rep-kpi-grid">
-          <div class="rep-kpi accent">
+          <div class="rep-kpi">
             <i class="ti ti-users rep-kpi-icon"></i>
             <div class="rep-kpi-val" id="rTotal">-</div>
             <div class="rep-kpi-lbl">Socios activos</div>
@@ -1768,8 +1761,8 @@ function seleccionarUsuario(id, nombre, rol) {
   document.getElementById('loginDropdownArrow').style.transform = 'rotate(0deg)';
   document.getElementById('loginDropdownLabel').textContent = nombre;
   document.getElementById('loginDropdownRol').textContent = rol;
-  const btn = document.getElementById('loginContinueBtn');
-  btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+  // Ir directo al PIN sin necesidad de tocar Continuar
+  irAlPin();
 }
 
 function irAlPin() {
@@ -1788,8 +1781,6 @@ function volverAlSelector() {
   document.getElementById('loginStep2').style.display = 'none';
   document.getElementById('loginDropdownLabel').textContent = 'Elegí un usuario';
   document.getElementById('loginDropdownRol').textContent = '';
-  const btn = document.getElementById('loginContinueBtn');
-  btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none';
 }
 
 function loginCancelar() { volverAlSelector(); }
@@ -3537,7 +3528,7 @@ function renderDesercion(socios) {
 // ─── SISTEMA DE ACTUALIZACIONES (ADMIN) ──────────────────────────────────────
 (function() {
   const VERSION_KEY = 'gymos_admin_version';
-  const CHECK_INTERVAL = 5 * 60 * 1000; // cada 5 minutos
+  const CHECK_INTERVAL = 2 * 60 * 1000; // cada 2 minutos
 
   async function checkVersion() {
     try {
