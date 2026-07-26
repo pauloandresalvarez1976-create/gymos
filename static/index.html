@@ -1755,8 +1755,6 @@ async function mostrarLogin() {
   // Reset dropdown
   document.getElementById('loginDropdownLabel').textContent = 'Elegí un usuario';
   document.getElementById('loginDropdownRol').textContent = '';
-  const btn = document.getElementById('loginContinueBtn');
-  btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none';
   try {
     const res = await fetch(`${API}/api/usuarios`);
     const users = await res.json();
