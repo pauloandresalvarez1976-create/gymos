@@ -60,6 +60,34 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'S
 .update-modal-btns .btn-update { background: var(--accent); color: #fff; }
 .update-modal-btns .btn-later { background: var(--bg2); border: 0.5px solid var(--border); color: var(--text3); }
 .update-modal-btns button:hover { opacity: .85; }
+/* ── ONBOARDING ─────────────────────────────────────────────────────── */
+.onb-overlay { position: fixed; inset: 0; background: #00000085; z-index: 9990; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+.onb-overlay.hidden { display: none; }
+.onb-card { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 20px; padding: 28px 24px 24px; max-width: 400px; width: 100%; box-shadow: 0 24px 64px #00000090; }
+.onb-header { text-align: center; margin-bottom: 24px; }
+.onb-emoji { font-size: 40px; line-height: 1; margin-bottom: 10px; }
+.onb-title { font-size: 18px; font-weight: 800; color: var(--text1); margin-bottom: 6px; }
+.onb-sub { font-size: 13px; color: var(--text3); line-height: 1.5; }
+.onb-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.onb-step { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: var(--bg2); border: 0.5px solid var(--border); cursor: pointer; transition: all 0.15s; }
+.onb-step:hover { border-color: var(--accent); background: var(--accent-bg); }
+.onb-step.done { opacity: 0.5; }
+.onb-step.done .onb-step-num { background: #22c55e20; border-color: #22c55e40; color: #22c55e; }
+.onb-step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-bg); border: 1px solid var(--accent-bd); color: var(--accent); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.onb-step.done .onb-step-num::before { content: '✓'; }
+.onb-step-num span { display: block; }
+.onb-step.done .onb-step-num span { display: none; }
+.onb-step-info { flex: 1; }
+.onb-step-title { font-size: 13px; font-weight: 700; color: var(--text1); }
+.onb-step-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.onb-step-arrow { color: var(--text3); font-size: 14px; flex-shrink: 0; }
+.onb-progress { height: 4px; background: var(--bg3); border-radius: 4px; margin-bottom: 18px; overflow: hidden; }
+.onb-progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.4s ease; }
+.onb-footer { display: flex; justify-content: space-between; align-items: center; }
+.onb-btn-cerrar { background: transparent; border: 0.5px solid var(--border2); color: var(--text3); border-radius: 9px; padding: 8px 16px; font-size: 12px; cursor: pointer; }
+.onb-btn-cerrar:hover { color: var(--text2); border-color: var(--border3); }
+.onb-completado { font-size: 12px; color: #22c55e; font-weight: 600; display: none; }
+.onb-completado.show { display: block; }
 .clock { font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; }
 
 /* BODY */
@@ -1835,6 +1863,8 @@ async function verificarPin() {
       aplicarPermisos(data.usuario.permisos);
       // Ir a ingreso por defecto
       showScreen('ingreso');
+      // Mostrar onboarding si es la primera vez
+      setTimeout(onbMostrar, 400);
       // Cargar badge de renovaciones pendientes
       fetch(`${API}/api/renovaciones`).then(r=>r.json()).then(rows=>{
         const p = rows.filter(r=>r.estado==='pendiente').length;
@@ -3510,6 +3540,66 @@ function renderDesercion(socios) {
 </script>
 
 <!-- ═══════════════════════════════════════════════════
+     ONBOARDING — primera vez
+════════════════════════════════════════════════════ -->
+<div class="onb-overlay hidden" id="onbOverlay">
+  <div class="onb-card">
+    <div class="onb-header">
+      <div class="onb-emoji">🏋️</div>
+      <div class="onb-title">¡Bienvenido a GymOS!</div>
+      <div class="onb-sub">Completá estos pasos para dejar tu gimnasio listo en minutos.</div>
+    </div>
+    <div class="onb-progress"><div class="onb-progress-bar" id="onbBar" style="width:0%"></div></div>
+    <div class="onb-steps" id="onbSteps">
+      <div class="onb-step" id="onb-step-0" onclick="onbIr('config',0)">
+        <div class="onb-step-num"><span>1</span></div>
+        <div class="onb-step-info">
+          <div class="onb-step-title">Configurá tu gimnasio</div>
+          <div class="onb-step-desc">Nombre, teléfono, logo y datos de contacto</div>
+        </div>
+        <i class="ti ti-chevron-right onb-step-arrow"></i>
+      </div>
+      <div class="onb-step" id="onb-step-1" onclick="onbIr('config',1)">
+        <div class="onb-step-num"><span>2</span></div>
+        <div class="onb-step-info">
+          <div class="onb-step-title">Creá un usuario del sistema</div>
+          <div class="onb-step-desc">Recepcionista, entrenador o administrador</div>
+        </div>
+        <i class="ti ti-chevron-right onb-step-arrow"></i>
+      </div>
+      <div class="onb-step" id="onb-step-2" onclick="onbIr('nuevo',2)">
+        <div class="onb-step-num"><span>3</span></div>
+        <div class="onb-step-info">
+          <div class="onb-step-title">Agregá tu primer socio</div>
+          <div class="onb-step-desc">Nombre, plan y fecha de vencimiento</div>
+        </div>
+        <i class="ti ti-chevron-right onb-step-arrow"></i>
+      </div>
+      <div class="onb-step" id="onb-step-3" onclick="onbIr('cuotas',3)">
+        <div class="onb-step-num"><span>4</span></div>
+        <div class="onb-step-info">
+          <div class="onb-step-title">Registrá el primer pago</div>
+          <div class="onb-step-desc">Cobro de cuota mensual o plan personalizado</div>
+        </div>
+        <i class="ti ti-chevron-right onb-step-arrow"></i>
+      </div>
+      <div class="onb-step" id="onb-step-4" onclick="onbIr('ingreso',4)">
+        <div class="onb-step-num"><span>5</span></div>
+        <div class="onb-step-info">
+          <div class="onb-step-title">Probá el acceso por QR</div>
+          <div class="onb-step-desc">Escaneá el QR del socio para registrar el ingreso</div>
+        </div>
+        <i class="ti ti-chevron-right onb-step-arrow"></i>
+      </div>
+    </div>
+    <div class="onb-footer">
+      <button class="onb-btn-cerrar" onclick="onbCerrar()">Hacer esto después</button>
+      <div class="onb-completado" id="onbCompletado">🎉 ¡Todo listo!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL DE ACTUALIZACIÓN
 ════════════════════════════════════════════════════ -->
 <div class="update-modal-overlay" id="updateModalOverlay">
@@ -3525,6 +3615,61 @@ function renderDesercion(socios) {
 </div>
 
 <script>
+// ─── ONBOARDING ──────────────────────────────────────────────────────────────
+const ONB_KEY = 'gymos_onb_done';
+const ONB_STEPS_KEY = 'gymos_onb_steps';
+
+function onbGetDone() {
+  try { return JSON.parse(localStorage.getItem(ONB_STEPS_KEY) || '[]'); } catch { return []; }
+}
+
+function onbSaveDone(arr) {
+  localStorage.setItem(ONB_STEPS_KEY, JSON.stringify(arr));
+}
+
+function onbRender() {
+  const done = onbGetDone();
+  const total = 5;
+  done.forEach(i => {
+    const el = document.getElementById('onb-step-' + i);
+    if (el) el.classList.add('done');
+  });
+  const pct = Math.round((done.length / total) * 100);
+  document.getElementById('onbBar').style.width = pct + '%';
+  if (done.length >= total) {
+    document.getElementById('onbCompletado').classList.add('show');
+    setTimeout(() => {
+      localStorage.setItem(ONB_KEY, '1');
+      document.getElementById('onbOverlay').classList.add('hidden');
+    }, 1800);
+  }
+}
+
+function onbMostrar() {
+  if (localStorage.getItem(ONB_KEY)) return; // ya completado o cerrado
+  document.getElementById('onbOverlay').classList.remove('hidden');
+  onbRender();
+}
+
+function onbCerrar() {
+  document.getElementById('onbOverlay').classList.add('hidden');
+  // No marcar como definitivamente completo — vuelve a aparecer en el próximo login
+}
+
+function onbIr(screen, stepIdx) {
+  // Marcar paso como hecho
+  const done = onbGetDone();
+  if (!done.includes(stepIdx)) {
+    done.push(stepIdx);
+    onbSaveDone(done);
+  }
+  // Cerrar panel y navegar
+  document.getElementById('onbOverlay').classList.add('hidden');
+  showScreen(screen);
+}
+
+// Llamar onbMostrar después del login exitoso — se hookea en verificarPin
+
 // ─── SISTEMA DE ACTUALIZACIONES (ADMIN) ──────────────────────────────────────
 (function() {
   const VERSION_KEY = 'gymos_admin_version';
