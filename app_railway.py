@@ -222,6 +222,7 @@ def migrate_db():
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
         conn.commit()
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS solicitudes_renovacion (
             id SERIAL PRIMARY KEY,
             socio_id INTEGER NOT NULL,
             plan_elegido TEXT,
