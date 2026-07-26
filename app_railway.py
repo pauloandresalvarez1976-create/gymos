@@ -480,9 +480,16 @@ def serve_qr(path):
 @app.route('/api/socios', methods=['GET'])
 def get_socios():
     session = Session()
-    q      = request.args.get('q', '')
+    q      = request.args.get('q', '').strip()
     socios = session.query(Socio)
-    if q: socios = socios.filter(Socio.nombre.ilike(f'%{q}%'))
+    if q:
+        from sqlalchemy import or_
+        socios = socios.filter(
+            or_(
+                Socio.nombre.ilike(f'%{q}%'),
+                Socio.dni.ilike(f'%{q}%')
+            )
+        )
     result = [socio_to_dict(s) for s in socios.all()]
     session.close(); return jsonify(result)
 
@@ -2307,15 +2314,11 @@ _APP_START_TS = str(int(_time.time()))
 
 CHANGELOG = [
     {
-        "version": "1.0.9",
+        "version": "1.1.1",
         "fecha": "2025-07-26",
         "cambios": [
-            "fix: login roto por referencia a botón Continuar eliminado",
-            "feat: onboarding guiado para gimnasios nuevos",
-            "fix: primera tarjeta KPI visible en todos los temas",
-            "feat: login sin botón Continuar — va directo al PIN",
-            "feat: socio puede subir su foto de perfil desde la PWA",
-            "feat: campanita de actualización automática en admin y PWA",
+            "fix: búsqueda de socios ahora funciona por nombre y por DNI",
+            "fix: foto del socio no aparecía en la sección de ingreso",
         ]
     },
 ]
