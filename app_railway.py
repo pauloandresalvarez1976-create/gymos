@@ -2299,21 +2299,42 @@ def activar_licencia():
     session.commit(); session.close()
     return jsonify(resultado)
 
-# ─── VERSIÓN DE LA APP ────────────────────────────────────────────────────────
-# Render expone RENDER_GIT_COMMIT con el hash del commit del último deploy.
-# Si no existe (local), usamos el timestamp de inicio del proceso como fallback.
+# ─── VERSIÓN Y CHANGELOG ──────────────────────────────────────────────────────
+# Para agregar entradas: agregá un dict al principio de CHANGELOG (la más nueva primero).
+# Cada deploy nuevo incrementa la versión y agrega sus cambios acá.
 import time as _time
 _APP_START_TS = str(int(_time.time()))
+
+CHANGELOG = [
+    {
+        "version": "1.0.9",
+        "fecha": "2025-07-26",
+        "cambios": [
+            "fix: login roto por referencia a botón Continuar eliminado",
+            "feat: onboarding guiado para gimnasios nuevos",
+            "fix: primera tarjeta KPI visible en todos los temas",
+            "feat: login sin botón Continuar — va directo al PIN",
+            "feat: socio puede subir su foto de perfil desde la PWA",
+            "feat: campanita de actualización automática en admin y PWA",
+        ]
+    },
+]
 
 def _get_version():
     commit = os.environ.get('RENDER_GIT_COMMIT', '')
     if commit:
-        return commit[:8]          # primeros 8 chars del hash son suficientes
-    return _APP_START_TS           # fallback local: timestamp de arranque
+        return commit[:8]
+    return _APP_START_TS
 
 @app.route('/api/version', methods=['GET'])
 def get_version():
-    return jsonify({'version': _get_version()})
+    ultima = CHANGELOG[0] if CHANGELOG else {}
+    return jsonify({
+        'version': _get_version(),
+        'version_nombre': ultima.get('version', ''),
+        'fecha': ultima.get('fecha', ''),
+        'cambios': ultima.get('cambios', [])
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

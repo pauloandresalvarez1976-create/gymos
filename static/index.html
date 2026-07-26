@@ -51,10 +51,15 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'S
 /* Modal de actualización */
 .update-modal-overlay { position: fixed; inset: 0; background: #00000070; z-index: 9999; display: none; align-items: center; justify-content: center; }
 .update-modal-overlay.show { display: flex; }
-.update-modal { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 28px 24px 22px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 20px 60px #00000080; }
-.update-modal-icon { font-size: 40px; margin-bottom: 12px; }
-.update-modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-.update-modal-desc { font-size: 13px; color: var(--text3); line-height: 1.5; margin-bottom: 22px; }
+.update-modal { background: var(--bg1); border: 0.5px solid var(--border); border-radius: 16px; padding: 24px 22px 20px; max-width: 380px; width: 92%; box-shadow: 0 20px 60px #00000080; }
+.update-modal-icon { font-size: 36px; margin-bottom: 10px; text-align:center; }
+.update-modal-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; text-align:center; }
+.update-modal-version { font-size: 11px; color: var(--accent); font-weight: 600; text-align:center; margin-bottom: 14px; letter-spacing: 0.5px; }
+.update-modal-changelog { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; max-height: 180px; overflow-y: auto; }
+.update-modal-changelog-title { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.update-modal-changelog ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.update-modal-changelog ul li { font-size: 12px; color: var(--text2); line-height: 1.4; display: flex; gap: 8px; align-items: flex-start; }
+.update-modal-changelog ul li::before { content: '•'; color: var(--accent); font-size: 14px; line-height: 1; flex-shrink: 0; }
 .update-modal-btns { display: flex; gap: 10px; justify-content: center; }
 .update-modal-btns button { padding: 9px 22px; border-radius: 9px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
 .update-modal-btns .btn-update { background: var(--accent); color: #fff; }
@@ -3604,7 +3609,11 @@ function renderDesercion(socios) {
   <div class="update-modal">
     <div class="update-modal-icon">🔔</div>
     <div class="update-modal-title">Nueva versión disponible</div>
-    <div class="update-modal-desc">Hay una actualización de GymOS lista para instalar. Podés actualizar ahora o continuar y hacerlo después.</div>
+    <div class="update-modal-version" id="updateModalVersion"></div>
+    <div class="update-modal-changelog">
+      <div class="update-modal-changelog-title">¿Qué hay de nuevo?</div>
+      <ul id="updateModalChangelogList"></ul>
+    </div>
     <div class="update-modal-btns">
       <button class="btn-later" onclick="cerrarModalUpdate()">Ahora no</button>
       <button class="btn-update" onclick="actualizarAhora()">Actualizar</button>
@@ -3677,15 +3686,16 @@ function onbIr(screen, stepIdx) {
     try {
       const res = await fetch('/api/version?_=' + Date.now());
       if (!res.ok) return;
-      const { version } = await res.json();
+      const data = await res.json();
+      const { version, version_nombre, fecha, cambios } = data;
       const saved = localStorage.getItem(VERSION_KEY);
       if (!saved) {
-        // Primera vez: guardar versión actual, no mostrar nada
         localStorage.setItem(VERSION_KEY, version);
         return;
       }
       if (version !== saved) {
-        // Hay nueva versión — mostrar campanita
+        // Guardar changelog para mostrarlo en el modal
+        window._pendingChangelog = { version_nombre, fecha, cambios };
         mostrarCampanita();
       }
     } catch(e) { /* sin conexión, ignorar */ }
@@ -3699,6 +3709,33 @@ function onbIr(screen, stepIdx) {
   };
 
   window.mostrarModalUpdate = function() {
+    // Poblar el modal con el changelog
+    const cl = window._pendingChangelog || {};
+    const vEl = document.getElementById('updateModalVersion');
+    const listEl = document.getElementById('updateModalChangelogList');
+    if (vEl) {
+      vEl.textContent = cl.version_nombre
+        ? `v${cl.version_nombre}  ·  ${cl.fecha || ''}`
+        : '';
+    }
+    if (listEl) {
+      const items = cl.cambios || [];
+      if (items.length) {
+        listEl.innerHTML = items.map(c => {
+          // Separar el prefijo (feat/fix/etc) del texto para resaltarlo
+          const match = c.match(/^(feat|fix|chore|refactor|style|perf|docs):\s*/i);
+          if (match) {
+            const tag = match[1].toLowerCase();
+            const color = tag === 'feat' ? '#22c55e' : tag === 'fix' ? '#f59e0b' : 'var(--text3)';
+            const texto = c.slice(match[0].length);
+            return `<li><span style="color:${color};font-weight:700;font-size:10px;text-transform:uppercase;flex-shrink:0">${tag}</span>&nbsp;${texto}</li>`;
+          }
+          return `<li>${c}</li>`;
+        }).join('');
+      } else {
+        listEl.innerHTML = '<li>Mejoras generales de rendimiento y estabilidad</li>';
+      }
+    }
     document.getElementById('updateModalOverlay').classList.add('show');
   };
 
@@ -3707,9 +3744,7 @@ function onbIr(screen, stepIdx) {
   };
 
   window.actualizarAhora = function() {
-    // Borrar versión guardada para que al recargar se guarde la nueva
     localStorage.removeItem(VERSION_KEY);
-    // Forzar recarga sin cache
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
         regs.forEach(r => r.unregister());
@@ -3720,7 +3755,6 @@ function onbIr(screen, stepIdx) {
     }
   };
 
-  // Arrancar al cargar la página
   checkVersion();
   setInterval(checkVersion, CHECK_INTERVAL);
 })();
