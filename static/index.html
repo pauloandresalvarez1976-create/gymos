@@ -1522,15 +1522,51 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
         </div>
         <div class="form-group"><div class="form-label">Fecha de vencimiento</div><input class="form-input" id="mpFechaVenc" type="date"></div>
         <div class="form-group">
-          <div class="form-label">Objetivo / Rutina</div>
+          <div class="form-label">Objetivo</div>
           <select class="form-select" id="mpObjetivo" onchange="guardarObjetivo()">
             <option value="">— Sin asignar —</option>
             <option value="musculacion">💪 Musculación / Volumen</option>
             <option value="perdida_peso">🔥 Pérdida de peso</option>
             <option value="fitness">🏃 Fitness / Salud general</option>
             <option value="definicion">✨ Definición muscular</option>
+            <option value="crossfit">⚡ CrossFit / Funcional</option>
+            <option value="powerlifting">🏋️ Powerlifting / Fuerza</option>
+            <option value="resistencia">🚴 Resistencia / Cardio</option>
+            <option value="rehabilitacion">🩺 Rehabilitación / Movilidad</option>
           </select>
         </div>
+        <div class="form-group">
+          <div class="form-label">Nivel</div>
+          <select class="form-select" id="mpNivel">
+            <option value="principiante">🌱 Principiante</option>
+            <option value="intermedio">⚡ Intermedio</option>
+            <option value="avanzado">🔥 Avanzado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Días de entrenamiento por semana</div>
+          <select class="form-select" id="mpDiasSemana">
+            <option value="2">2 días</option>
+            <option value="3">3 días</option>
+            <option value="4">4 días</option>
+            <option value="5">5 días</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Tipo de entrenamiento</div>
+          <select class="form-select" id="mpTipoEntreno">
+            <option value="musculacion">Musculación (pesas)</option>
+            <option value="crossfit">CrossFit / Funcional</option>
+            <option value="cardio">Cardio / Aeróbico</option>
+            <option value="mixto">Mixto (pesas + cardio)</option>
+            <option value="calistenia">Calistenia / Peso corporal</option>
+            <option value="pilates">Pilates / Yoga</option>
+          </select>
+        </div>
+        <button onclick="generarRutinaIA()" id="btnGenerarRutina" style="width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px">
+          <i class="ti ti-sparkles"></i> Generar rutina y dieta con IA
+        </button>
+        <div id="rutinaIaStatus" style="font-size:11px;color:var(--text3);text-align:center;min-height:16px"></div>
         <div style="background:#1a1a1a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;font-size:11px;color:#555">
           <div style="display:flex;justify-content:space-between"><span>ID Socio</span><span id="mpId" style="color:#444">—</span></div>
           <div style="display:flex;justify-content:space-between"><span>Miembro desde</span><span id="mpDesde" style="color:#444">—</span></div>
@@ -2348,6 +2384,19 @@ async function abrirPerfil(id) {
     document.getElementById('mpEmail').value = s.email || '';
     document.getElementById('mpPlan').value = s.plan || 'Plan Mensual';
     document.getElementById('mpObjetivo').value = s.objetivo || '';
+    document.getElementById('mpNivel').value = s.nivel_entreno || 'principiante';
+    document.getElementById('mpDiasSemana').value = s.dias_semana || 3;
+    document.getElementById('mpTipoEntreno').value = s.tipo_entrenamiento || 'musculacion';
+    // Mostrar estado de rutina generada
+    const statusEl = document.getElementById('rutinaIaStatus');
+    if (s.rutina_generada_at) {
+      const fecha = new Date(s.rutina_generada_at).toLocaleDateString('es-AR');
+      statusEl.innerHTML = `✅ Rutina generada el ${fecha}`;
+      statusEl.style.color = '#22c55e';
+    } else {
+      statusEl.innerHTML = 'Sin rutina generada aún';
+      statusEl.style.color = 'var(--text3)';
+    }
     const iaSwitch = document.getElementById('mpIaSwitch');
     iaSwitch.checked = s.ia_habilitada === 1;
     document.getElementById('mpIaLabel').textContent = s.ia_habilitada ? 'Activado' : 'Desactivado';
@@ -2628,6 +2677,60 @@ async function toggleActivoSocio() {
       cargarSocios();
     }
   } catch(e) { toast('Error al cambiar estado', 'bad'); }
+}
+
+async function generarRutinaIA() {
+  if (!socioEditandoId) return;
+  const btn = document.getElementById('btnGenerarRutina');
+  const status = document.getElementById('rutinaIaStatus');
+  const objetivo = document.getElementById('mpObjetivo').value;
+  if (!objetivo) { toast('Seleccioná un objetivo primero', 'bad'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Generando con IA...';
+  status.innerHTML = '⏳ Esto puede tardar unos segundos...';
+  status.style.color = 'var(--accent)';
+
+  try {
+    const body = {
+      objetivo,
+      nivel: document.getElementById('mpNivel').value,
+      dias_semana: parseInt(document.getElementById('mpDiasSemana').value),
+      tipo_entrenamiento: document.getElementById('mpTipoEntreno').value,
+      lesiones: ''
+    };
+    // Intentar obtener lesiones de la ficha médica si ya se cargó
+    const fichaLesiones = document.getElementById('fichaLesiones');
+    if (fichaLesiones) body.lesiones = fichaLesiones.value || '';
+
+    const res = await fetch(`${API}/api/socios/${socioEditandoId}/generar_rutina`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const fecha = new Date().toLocaleDateString('es-AR');
+      status.innerHTML = `✅ Rutina generada el ${fecha} — el socio ya la puede ver en su app`;
+      status.style.color = '#22c55e';
+      toast('✅ Rutina y dieta generadas con IA', 'ok');
+      // Actualizar objetivo en el backend también
+      await fetch(`${API}/api/socios/${socioEditandoId}/objetivo`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({objetivo})
+      });
+    } else {
+      status.innerHTML = '❌ Error al generar';
+      status.style.color = '#ef4444';
+      toast('Error: ' + (data.error || 'Sin respuesta'), 'bad');
+    }
+  } catch(e) {
+    status.innerHTML = '❌ Error de conexión';
+    status.style.color = '#ef4444';
+    toast('Error de conexión', 'bad');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-sparkles"></i> Generar rutina y dieta con IA';
 }
 
 async function guardarObjetivo() {

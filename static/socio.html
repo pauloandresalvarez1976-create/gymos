@@ -761,9 +761,20 @@ const PLANES_ALIMENTARIOS = {
   }
 };
 
-const RUTINAS = {
-  musculacion: {
-    nombre: '💪 Rutina de Musculación',
+// ── Rutina IA — se carga del servidor, no hardcodeada ──
+let rutinaIAData = null;  // { rutina: {...}, dieta: {...}, generated_at: '...' }
+
+async function cargarRutinaIA() {
+  try {
+    const res = await fetch(`/api/socios/${socioId}/rutina_ia`);
+    const data = await res.json();
+    if (data.ok) {
+      rutinaIAData = data;
+      return data;
+    }
+  } catch(e) {}
+  return null;
+}
     dias: [
       { dia: 'Lunes — Pecho y Tríceps', ejercicios: [
         {n:'Press de banca plano', s:'4 × 8-10 reps'}, {n:'Press inclinado con mancuernas', s:'3 × 10-12 reps'},
@@ -864,12 +875,6 @@ const RUTINAS = {
       ]},
       { dia: 'Viernes — Full body + Cardio largo', ejercicios: [
         {n:'Circuito funcional full body', s:'4 vueltas × 12 reps'}, {n:'Cardio continuo moderado', s:'30 min'},
-        {n:'Abdominales', s:'3 × 20 reps'}, {n:'Estiramientos completos', s:'10 min'}
-      ]},
-    ]
-  }
-};
-
 // ── APP ────────────────────────────────────────────────────────────────────────
 const socioId = window.location.pathname.split('/').pop();
 // Apuntar manifest al del socio específico para que start_url sea correcto
@@ -901,6 +906,8 @@ async function init() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     socioData = data.socio;
+    // Cargar rutina IA en paralelo
+    cargarRutinaIA();
     // Verificar si el socio está suspendido
     if (socioData.activo === 0) {
       document.getElementById('app').innerHTML = `
@@ -1170,8 +1177,8 @@ function renderApp() {
   const foto = s.foto ? s.foto : null;
 
   const objetivo = s.objetivo || '';
-  const plan = PLANES_ALIMENTARIOS[objetivo];
-  const rutina = RUTINAS[objetivo];
+  const plan = rutinaIAData ? rutinaIAData.dieta : PLANES_ALIMENTARIOS[objetivo];
+  const rutina = rutinaIAData ? rutinaIAData.rutina : null;
 
   document.getElementById('app').innerHTML = `
     <!-- HEADER -->
@@ -1330,6 +1337,7 @@ function renderApp() {
         ${rutina ? `
           <div class="rutina-header">
             <div class="rutina-header-nombre">${rutina.nombre}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px">Generada por IA · ${rutinaIAData && rutinaIAData.generated_at ? new Date(rutinaIAData.generated_at).toLocaleDateString('es-AR') : ''}</div>
           </div>
           <div class="hub-grid" style="margin-bottom:18px;grid-template-columns:1fr">
             <div class="flip-card" id="flip-entrenamiento" style="aspect-ratio:unset;height:110px" onclick="toggleFlip(this,event)">
@@ -1365,11 +1373,18 @@ function renderApp() {
                     <div class="ejercicio-series-nuevo">${e.s}</div>
                   </div>
                 </div>`).join('')}
-            </div>`).join('')}` :
-          `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
-            <i class="ti ti-barbell" style="font-size:48px;display:block;margin-bottom:12px"></i>
-            <div style="font-size:15px">Tu gimnasio aún no asignó una rutina.</div>
-            <div style="font-size:13px;margin-top:6px">Consultá con tu entrenador.</div>
+            </div>`).join('')}
+          <div style="margin-top:16px;padding:14px;background:var(--bg2);border-radius:14px;text-align:center">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:10px">¿Querés cambiar tu objetivo?</div>
+            <button onclick="abrirCambiarObjetivo()" style="background:var(--bg3);border:1px solid var(--bg3);color:var(--text2);border-radius:10px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer"><i class="ti ti-refresh"></i> Cambiar objetivo</button>
+          </div>` :
+          `<div style="text-align:center;padding:40px 20px 20px">
+            <i class="ti ti-sparkles" style="font-size:48px;display:block;margin-bottom:12px;color:var(--accent)"></i>
+            <div style="font-size:15px;font-weight:700;color:var(--text1);margin-bottom:6px">Tu rutina personalizada</div>
+            <div style="font-size:13px;color:var(--text3);line-height:1.5;margin-bottom:20px">Todavía no tenés una rutina generada.<br>Pedile a tu entrenador que la configure.</div>
+            <div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:10px;padding:10px 14px">
+              <i class="ti ti-info-circle"></i> Una vez que el admin cargue tu objetivo y nivel, la IA generará tu rutina y dieta personalizadas.
+            </div>
           </div>`}
       </div>
 
@@ -3502,8 +3517,8 @@ function beepFinal() {
 
 // ── Selector de día ──
 function abrirSelectorDia() {
-  const rutina = socioData && socioData.objetivo ? RUTINAS[socioData.objetivo] : null;
-  if (!rutina) { toast('⚠️ Sin rutina asignada'); return; }
+  const rutina = rutinaIAData ? rutinaIAData.rutina : null;
+  if (!rutina) { toast('⚠️ Sin rutina generada. Consultá con tu entrenador.'); return; }
 
   const screen = document.createElement('div');
   screen.id = 'entrenSelectorScreen';
@@ -4206,6 +4221,95 @@ setTimeout(agregarBotonInstalar, 2000);
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL CAMBIAR OBJETIVO
+════════════════════════════════════════════════════ -->
+<div class="foto-perfil-overlay" id="cambiarObjetivoOverlay">
+  <div class="foto-perfil-sheet">
+    <div class="foto-perfil-sheet-title">Cambiar objetivo</div>
+    <div class="foto-perfil-sheet-sub" id="cambiarObjSubtitle">La IA generará una nueva rutina y dieta</div>
+    <div id="cambiarObjWarning" style="display:none;background:#f59e0b18;border:1px solid #f59e0b30;border-radius:12px;padding:12px;margin-bottom:14px;font-size:12px;color:#f59e0b;line-height:1.5;text-align:center"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <select id="cambiarObjSelect" style="background:var(--bg2);border:1px solid var(--bg3);color:var(--text1);border-radius:12px;padding:12px;font-size:14px">
+        <option value="musculacion">💪 Musculación / Volumen</option>
+        <option value="perdida_peso">🔥 Pérdida de peso</option>
+        <option value="fitness">🏃 Fitness / Salud general</option>
+        <option value="definicion">✨ Definición muscular</option>
+        <option value="crossfit">⚡ CrossFit / Funcional</option>
+        <option value="powerlifting">🏋️ Powerlifting / Fuerza</option>
+        <option value="resistencia">🚴 Resistencia / Cardio</option>
+        <option value="rehabilitacion">🩺 Rehabilitación / Movilidad</option>
+      </select>
+    </div>
+    <div class="foto-perfil-btns">
+      <button class="foto-perfil-btn foto-perfil-btn-save" id="cambiarObjBtnConfirmar" onclick="confirmarCambioObjetivo()">
+        <i class="ti ti-sparkles"></i> Generar nueva rutina con IA
+      </button>
+      <button class="foto-perfil-btn foto-perfil-btn-cancel" onclick="document.getElementById('cambiarObjetivoOverlay').classList.remove('show')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CAMBIAR OBJETIVO (socio desde la PWA) ────────────────────────────────────
+function abrirCambiarObjetivo() {
+  const overlay = document.getElementById('cambiarObjetivoOverlay');
+  const warning = document.getElementById('cambiarObjWarning');
+  const subtitle = document.getElementById('cambiarObjSubtitle');
+
+  // Setear el objetivo actual en el select
+  if (rutinaIAData && rutinaIAData.objetivo) {
+    document.getElementById('cambiarObjSelect').value = rutinaIAData.objetivo;
+  }
+
+  // Chequear si pasaron menos de 4 semanas desde la generación
+  if (rutinaIAData && rutinaIAData.generated_at) {
+    const generadoHace = Math.floor((Date.now() - new Date(rutinaIAData.generated_at)) / (1000 * 60 * 60 * 24));
+    const semanas = Math.floor(generadoHace / 7);
+    if (generadoHace < 28) {
+      const diasRestantes = 28 - generadoHace;
+      warning.style.display = 'block';
+      warning.innerHTML = `⚠️ Tu rutina actual tiene <strong>${semanas > 0 ? semanas + ' semana' + (semanas > 1 ? 's' : '') : generadoHace + ' días'}</strong>. Se recomiendan al menos <strong>4 semanas</strong> para ver resultados. Faltan <strong>${diasRestantes} días</strong>.<br><br>Podés cambiarla igual si querés.`;
+      subtitle.textContent = 'Se recomienda esperar 4 semanas completas';
+    } else {
+      warning.style.display = 'none';
+      subtitle.textContent = 'La IA generará una nueva rutina y dieta';
+    }
+  }
+
+  overlay.classList.add('show');
+}
+
+async function confirmarCambioObjetivo() {
+  const btn = document.getElementById('cambiarObjBtnConfirmar');
+  const nuevoObjetivo = document.getElementById('cambiarObjSelect').value;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Generando...';
+
+  try {
+    const res = await fetch(`/api/socios/${socioId}/generar_rutina`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ objetivo: nuevoObjetivo })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      rutinaIAData = { rutina: data.rutina, dieta: data.dieta, objetivo: nuevoObjetivo, generated_at: new Date().toISOString() };
+      document.getElementById('cambiarObjetivoOverlay').classList.remove('show');
+      toast('✅ Nueva rutina generada');
+      // Recargar la app para mostrar la nueva rutina
+      setTimeout(() => renderApp(socioData), 500);
+    } else {
+      toast('❌ ' + (data.error || 'Error al generar'));
+    }
+  } catch(e) {
+    toast('❌ Error de conexión');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-sparkles"></i> Generar nueva rutina con IA';
+}
+</script>
 
 <!-- ═══════════════════════════════════════════════════
      SHEET DE FOTO DE PERFIL

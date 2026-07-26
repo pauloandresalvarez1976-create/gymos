@@ -65,6 +65,10 @@ class Socio(Base):
     ultimo_cumple_anio  = Column(Integer, nullable=True)     # año del último cumple enviado
     ultimo_resumen_sem  = Column(String(8), nullable=True)   # 'YYYY-Www'
     ia_habilitada       = Column(Integer, default=0)         # 0/1
+    nivel_entreno       = Column(String(20), nullable=True)  # principiante, intermedio, avanzado
+    dias_semana         = Column(Integer, nullable=True)      # 2, 3, 4, 5
+    tipo_entrenamiento  = Column(String(50), nullable=True)  # musculacion, crossfit, etc
+    rutina_generada_at  = Column(DateTime, nullable=True)    # fecha de última generación
     created_at     = Column(DateTime, default=datetime.now)
 
 class FichaMedica(Base):
@@ -206,7 +210,18 @@ def migrate_db():
             fecha DATE,
             storage_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
-        conn.execute(text("""CREATE TABLE IF NOT EXISTS solicitudes_renovacion (
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS rutinas_ia (
+            id SERIAL PRIMARY KEY,
+            socio_id INTEGER UNIQUE NOT NULL,
+            rutina_json TEXT,
+            dieta_json TEXT,
+            objetivo TEXT,
+            nivel TEXT,
+            dias_semana INTEGER,
+            tipo_entrenamiento TEXT,
+            generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.commit()
             id SERIAL PRIMARY KEY,
             socio_id INTEGER NOT NULL,
             plan_elegido TEXT,
@@ -243,6 +258,10 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_cumple_anio INTEGER",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ultimo_resumen_sem TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS ia_habilitada INTEGER DEFAULT 0",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS nivel_entreno TEXT",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS dias_semana INTEGER",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS tipo_entrenamiento TEXT",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS rutina_generada_at TIMESTAMP",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ]
@@ -311,7 +330,11 @@ def socio_to_dict(s):
             'foto':foto_url,'activo':s.activo,'estado':estado,'dias_restantes':dias,
             'congelado':s.congelado or 0,'fecha_congelado':str(s.fecha_congelado) if s.fecha_congelado else None,
             'objetivo':s.objetivo or '',
-            'ia_habilitada': s.ia_habilitada or 0}
+            'ia_habilitada': s.ia_habilitada or 0,
+            'nivel_entreno': s.nivel_entreno or '',
+            'dias_semana': s.dias_semana or 3,
+            'tipo_entrenamiento': s.tipo_entrenamiento or '',
+            'rutina_generada_at': str(s.rutina_generada_at) if s.rutina_generada_at else None}
 
 # ── FRONTEND ─────────────────────────────────────────────
 @app.route('/ficha/<int:sid>')
@@ -2047,6 +2070,165 @@ def set_config():
         if c: c.valor = valor
         else: session.add(Config(clave=clave, valor=valor))
     session.commit(); session.close(); return jsonify({'ok': True})
+
+# ── RUTINAS Y DIETAS IA ───────────────────────────────────────────────────────
+
+@app.route('/api/socios/<int:sid>/rutina_ia', methods=['GET'])
+def get_rutina_ia(sid):
+    """Devuelve la rutina y dieta generada por IA para el socio."""
+    try:
+        row = engine.connect().execute(
+            text("SELECT rutina_json, dieta_json, objetivo, nivel, dias_semana, tipo_entrenamiento, generated_at FROM rutinas_ia WHERE socio_id=:sid"),
+            {'sid': sid}
+        ).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'Sin rutina generada'})
+        return jsonify({
+            'ok': True,
+            'rutina': json.loads(row[0]) if row[0] else None,
+            'dieta': json.loads(row[1]) if row[1] else None,
+            'objetivo': row[2],
+            'nivel': row[3],
+            'dias_semana': row[4],
+            'tipo_entrenamiento': row[5],
+            'generated_at': str(row[6]) if row[6] else None,
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/socios/<int:sid>/generar_rutina', methods=['POST'])
+def generar_rutina_ia(sid):
+    """Genera rutina y dieta personalizadas con IA y las guarda."""
+    session = Session()
+    s = session.query(Socio).filter_by(id=sid).first()
+    if not s:
+        session.close()
+        return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
+
+    data = request.json or {}
+    objetivo    = data.get('objetivo', s.objetivo or 'fitness')
+    nivel       = data.get('nivel', s.nivel_entreno or 'principiante')
+    dias_semana = int(data.get('dias_semana', s.dias_semana or 3))
+    tipo        = data.get('tipo_entrenamiento', s.tipo_entrenamiento or 'musculacion')
+    lesiones    = data.get('lesiones', '')
+
+    # Guardar los datos en el socio
+    s.objetivo           = objetivo
+    s.nivel_entreno      = nivel
+    s.dias_semana        = dias_semana
+    s.tipo_entrenamiento = tipo
+    s.rutina_generada_at = datetime.now()
+    session.commit()
+    nombre_socio = s.nombre.split()[0]
+    session.close()
+
+    anthropic_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not anthropic_key:
+        return jsonify({'ok': False, 'error': 'Sin API key de IA'}), 500
+
+    objetivo_labels = {
+        'musculacion': 'Musculación / Ganar masa muscular',
+        'perdida_peso': 'Pérdida de peso / Quemar grasa',
+        'fitness': 'Fitness / Salud general',
+        'definicion': 'Definición muscular / Tonificar',
+        'crossfit': 'CrossFit / Entrenamiento funcional de alta intensidad',
+        'powerlifting': 'Powerlifting / Fuerza máxima',
+        'resistencia': 'Resistencia / Cardio y fondo',
+        'rehabilitacion': 'Rehabilitación / Movilidad y recuperación',
+    }
+    obj_label = objetivo_labels.get(objetivo, objetivo)
+
+    prompt = f"""Sos un entrenador personal experto. Generá una rutina semanal y un plan de alimentación personalizados para {nombre_socio}.
+
+Perfil:
+- Objetivo: {obj_label}
+- Nivel: {nivel}
+- Tipo de entrenamiento preferido: {tipo}
+- Días disponibles por semana: {dias_semana}
+- Lesiones o limitaciones: {lesiones if lesiones else 'Ninguna'}
+
+Respondé ÚNICAMENTE con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown):
+{{
+  "rutina": {{
+    "nombre": "nombre descriptivo de la rutina",
+    "dias": [
+      {{
+        "dia": "nombre del día y grupo muscular",
+        "ejercicios": [
+          {{"n": "nombre del ejercicio", "s": "series × reps o duración"}}
+        ]
+      }}
+    ]
+  }},
+  "dieta": {{
+    "nombre": "nombre del plan",
+    "planes": [
+      {{
+        "titulo": "nombre de la comida",
+        "emoji": "emoji representativo",
+        "items": ["alimento 1", "alimento 2", "alimento 3"]
+      }}
+    ]
+  }}
+}}
+
+Reglas:
+- La rutina tiene exactamente {dias_semana} días
+- Cada día tiene entre 4 y 6 ejercicios
+- Los ejercicios son específicos para el objetivo y nivel indicados
+- La dieta tiene 4 planes: Desayuno, Almuerzo, Merienda, Cena
+- Todo en español rioplatense
+- El JSON debe ser parseable sin errores"""
+
+    try:
+        resp = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'x-api-key': anthropic_key,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+            },
+            json={
+                'model': 'claude-haiku-4-5',
+                'max_tokens': 2000,
+                'messages': [{'role': 'user', 'content': prompt}]
+            },
+            timeout=40
+        )
+        result = resp.json()
+        texto = result['content'][0]['text'].strip()
+
+        # Limpiar posibles backticks de markdown
+        if texto.startswith('```'):
+            texto = texto.split('```')[1]
+            if texto.startswith('json'):
+                texto = texto[4:]
+        texto = texto.strip()
+
+        parsed = json.loads(texto)
+        rutina_json = json.dumps(parsed['rutina'], ensure_ascii=False)
+        dieta_json  = json.dumps(parsed['dieta'], ensure_ascii=False)
+
+        # Guardar en base de datos
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO rutinas_ia (socio_id, rutina_json, dieta_json, objetivo, nivel, dias_semana, tipo_entrenamiento, generated_at, updated_at)
+                VALUES (:sid, :r, :d, :obj, :niv, :dias, :tipo, NOW(), NOW())
+                ON CONFLICT (socio_id) DO UPDATE SET
+                    rutina_json=:r, dieta_json=:d, objetivo=:obj, nivel=:niv,
+                    dias_semana=:dias, tipo_entrenamiento=:tipo, updated_at=NOW()
+            """), {
+                'sid': sid, 'r': rutina_json, 'd': dieta_json,
+                'obj': objetivo, 'niv': nivel, 'dias': dias_semana, 'tipo': tipo
+            })
+            conn.commit()
+
+        return jsonify({'ok': True, 'rutina': parsed['rutina'], 'dieta': parsed['dieta']})
+
+    except json.JSONDecodeError as e:
+        return jsonify({'ok': False, 'error': f'Error al parsear respuesta IA: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── ASISTENTE IA ─────────────────────────────────────────────
 @app.route('/api/socios/<int:sid>/ia/toggle', methods=['POST'])
