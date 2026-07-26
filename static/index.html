@@ -2146,7 +2146,11 @@ function mostrarSocio(s) {
     badge.innerHTML = '<i class="ti ti-alert-triangle" style="font-size:11px"></i> Cuota vencida';
     av.className = 'avatar bad';
   }
-  if (s.foto) av.innerHTML = `<img src="${s.foto}">`;
+  if (s.foto) {
+    av.innerHTML = `<img src="${s.foto}?t=${Date.now()}" onerror="this.parentElement.innerHTML='<i class=\\'ti ti-user\\'></i>'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    av.innerHTML = '<i class="ti ti-user"></i>';
+  }
   document.getElementById('dVenc').textContent = s.fecha_venc || '--';
   const dias = s.dias_restantes;
   const diasEl = document.getElementById('dDias');
@@ -3393,7 +3397,7 @@ async function buscarEnPanel(q) {
       const ok = s.estado === 'al_dia';
       const fotoSrc = s.foto ? s.foto : null;
       const avContent = fotoSrc ? `<img src="${fotoSrc}">` : `<i class="ti ti-user" style="font-size:14px"></i>`;
-      return `<div class="buscar-item" onclick="seleccionarSocioPanel(${s.id},'${s.nombre.replace(/'/g,"\\'")}','${s.plan||''}',${ok})">
+      return `<div class="buscar-item" onclick="seleccionarSocioPanel(${s.id},'${s.nombre.replace(/'/g,"\\'")}','${s.plan||''}',${ok},'${fotoSrc||''}')">
         <div class="buscar-av ${ok?'ok':'bad'}">${avContent}</div>
         <div style="flex:1">
           <div class="buscar-nombre">${s.nombre}</div>
@@ -3405,7 +3409,7 @@ async function buscarEnPanel(q) {
   } catch(e) {}
 }
 
-function seleccionarSocioPanel(id, nombre, plan, ok) {
+function seleccionarSocioPanel(id, nombre, plan, ok, foto) {
   socioReconocidoId = id;
   // Actualizar pestaña Socio
   document.getElementById('ingresoNombre').textContent = nombre;
@@ -3418,6 +3422,11 @@ function seleccionarSocioPanel(id, nombre, plan, ok) {
   } else {
     badge.className = 'badge bad'; badge.innerHTML = '<i class="ti ti-alert-triangle" style="font-size:11px"></i> Cuota vencida';
     av.className = 'avatar bad';
+  }
+  if (foto) {
+    av.innerHTML = `<img src="${foto}?t=${Date.now()}" onerror="this.parentElement.innerHTML='<i class=\\'ti ti-user\\'></i>'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    av.innerHTML = '<i class="ti ti-user"></i>';
   }
   // Actualizar pestaña Cobro
   document.getElementById('cobroNombre').textContent = nombre;
