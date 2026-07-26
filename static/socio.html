@@ -87,6 +87,25 @@
   .pwa-header::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 70% 20%, #ffffff22, transparent 60%); pointer-events:none; }
   .gym-nombre { font-size: 11px; color: #ffffffcc; margin-bottom: 14px; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; }
   .socio-avatar { width: 96px; height: 96px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.9); object-fit: cover; margin: 0 auto 14px; display: block; background: #fff2; box-shadow: 0 6px 30px #0008, 0 0 0 6px rgba(255,255,255,0.15); }
+  /* Avatar clicable para subir foto */
+  .avatar-wrap { position: relative; width: 96px; margin: 0 auto 14px; cursor: pointer; }
+  .avatar-wrap .avatar-cam-hint { position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px #0006; font-size: 14px; }
+  .avatar-wrap .socio-avatar { margin: 0; }
+  .avatar-sin-foto { width: 96px; height: 96px; border-radius: 50%; border: 3px dashed rgba(255,255,255,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(255,255,255,0.1); color: #fff; font-size: 10px; font-weight: 700; text-align: center; letter-spacing: 0.3px; cursor: pointer; }
+  .avatar-sin-foto i { font-size: 26px; opacity: .85; }
+  /* Modal foto perfil */
+  .foto-perfil-overlay { position: fixed; inset: 0; background: #000000aa; z-index: 9998; display: none; align-items: flex-end; justify-content: center; }
+  .foto-perfil-overlay.show { display: flex; }
+  .foto-perfil-sheet { background: var(--bg1); border-radius: 24px 24px 0 0; padding: 24px 20px 36px; width: 100%; max-width: 480px; }
+  .foto-perfil-sheet-title { font-size: 16px; font-weight: 800; color: var(--text1); text-align: center; margin-bottom: 6px; }
+  .foto-perfil-sheet-sub { font-size: 12px; color: var(--text3); text-align: center; margin-bottom: 20px; }
+  .foto-perfil-preview { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 18px; border: 3px solid var(--accent); }
+  .foto-perfil-btns { display: flex; flex-direction: column; gap: 10px; }
+  .foto-perfil-btn { padding: 14px; border-radius: 14px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .foto-perfil-btn-cam { background: var(--accent); color: #fff; }
+  .foto-perfil-btn-gal { background: var(--bg2); color: var(--text1); border: 1px solid var(--bg3); }
+  .foto-perfil-btn-save { background: #22c55e; color: #fff; }
+  .foto-perfil-btn-cancel { background: transparent; color: var(--text3); font-size: 13px; }
   .socio-nombre { font-size: 26px; font-weight: 800; color: white; letter-spacing: -0.5px; text-shadow: 0 2px 8px #0004; }
   .socio-plan { font-size: 12px; color: #ffffffee; margin-top: 7px; background: rgba(255,255,255,0.2); display: inline-block; padding: 4px 16px; border-radius: 20px; font-weight: 600; letter-spacing: 0.3px; border: 1px solid rgba(255,255,255,0.3); }
 
@@ -1164,7 +1183,16 @@ function renderApp() {
       </div>
       ${s.gym_logo ? `<img src="/static/logos/${s.gym_logo}" alt="logo" style="position:absolute;top:12px;right:12px;height:56px;max-width:140px;object-fit:contain;z-index:2;border-radius:6px">` : ''}
       <div class="gym-nombre">${s.gym_nombre}</div>
-      ${foto ? `<img class="socio-avatar" src="${foto}" alt="${s.nombre}">` : `<div class="socio-avatar" style="display:flex;align-items:center;justify-content:center;font-size:36px">👤</div>`}
+      <div class="avatar-wrap" onclick="abrirFotoPerfil()">
+        ${foto
+          ? `<img class="socio-avatar" src="${foto}" alt="${s.nombre}">
+             <div class="avatar-cam-hint">📷</div>`
+          : `<div class="avatar-sin-foto">
+               <i class="ti ti-camera"></i>
+               <span>Cargá<br>tu foto</span>
+             </div>`
+        }
+      </div>
       <div class="socio-nombre">${s.nombre}</div>
       <div class="socio-plan">${s.plan || 'Sin plan asignado'}</div>
     </div>
@@ -4178,6 +4206,119 @@ setTimeout(agregarBotonInstalar, 2000);
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════
+     SHEET DE FOTO DE PERFIL
+════════════════════════════════════════════════════ -->
+<div class="foto-perfil-overlay" id="fotoperfilOverlay">
+  <div class="foto-perfil-sheet">
+    <div class="foto-perfil-sheet-title">Tu foto de perfil</div>
+    <div class="foto-perfil-sheet-sub">Se verá en la app y en el panel del gimnasio</div>
+    <img id="fotoperfilPreview" class="foto-perfil-preview" src="" alt="Preview" style="display:none">
+    <div class="foto-perfil-btns">
+      <button class="foto-perfil-btn foto-perfil-btn-cam" onclick="fotoperfilUsarCamara()">
+        <i class="ti ti-camera"></i> Sacarme una foto
+      </button>
+      <button class="foto-perfil-btn foto-perfil-btn-gal" onclick="fotoperfilElegirGaleria()">
+        <i class="ti ti-photo"></i> Elegir de la galería
+      </button>
+      <button class="foto-perfil-btn foto-perfil-btn-save" id="fotoperfilBtnGuardar" style="display:none" onclick="fotoperfilGuardar()">
+        <i class="ti ti-check"></i> Guardar foto
+      </button>
+      <button class="foto-perfil-btn foto-perfil-btn-cancel" onclick="fotoperfilCerrar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+<!-- Input file oculto para galería -->
+<input type="file" id="fotoperfilInput" accept="image/*" style="display:none" onchange="fotoperfilOnFile(event)">
+<!-- Input capture para cámara -->
+<input type="file" id="fotoperfilInputCam" accept="image/*" capture="user" style="display:none" onchange="fotoperfilOnFile(event)">
+
+<script>
+// ─── FOTO DE PERFIL DEL SOCIO ─────────────────────────────────────────────
+let fotoperfilBase64 = null;
+
+function abrirFotoPerfil() {
+  fotoperfilBase64 = null;
+  document.getElementById('fotoperfilPreview').style.display = 'none';
+  document.getElementById('fotoperfilBtnGuardar').style.display = 'none';
+  document.getElementById('fotoperfilOverlay').classList.add('show');
+}
+
+function fotoperfilCerrar() {
+  document.getElementById('fotoperfilOverlay').classList.remove('show');
+  fotoperfilBase64 = null;
+}
+
+function fotoperfilUsarCamara() {
+  document.getElementById('fotoperfilInputCam').click();
+}
+
+function fotoperfilElegirGaleria() {
+  document.getElementById('fotoperfilInput').click();
+}
+
+function fotoperfilOnFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  // Limpiar el input para que se pueda volver a elegir el mismo archivo
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    // Comprimir en canvas antes de enviar
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+      else       { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      fotoperfilBase64 = canvas.toDataURL('image/jpeg', 0.75);
+      // Mostrar preview
+      const preview = document.getElementById('fotoperfilPreview');
+      preview.src = fotoperfilBase64;
+      preview.style.display = 'block';
+      document.getElementById('fotoperfilBtnGuardar').style.display = 'flex';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function fotoperfilGuardar() {
+  if (!fotoperfilBase64) return;
+  const btn = document.getElementById('fotoperfilBtnGuardar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Subiendo...';
+  try {
+    const res = await fetch('/api/socios/' + socioId + '/foto_perfil', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ foto: fotoperfilBase64 })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('✅ Foto actualizada');
+      fotoperfilCerrar();
+      // Actualizar el avatar en el header sin recargar toda la página
+      const wraps = document.querySelectorAll('.avatar-wrap');
+      wraps.forEach(wrap => {
+        wrap.innerHTML = `<img class="socio-avatar" src="${data.foto_url}?t=${Date.now()}" alt="foto">
+                          <div class="avatar-cam-hint">📷</div>`;
+        wrap.onclick = abrirFotoPerfil;
+      });
+    } else {
+      toast('❌ Error al subir la foto');
+    }
+  } catch(e) {
+    toast('❌ Error de conexión');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-check"></i> Guardar foto';
+}
+</script>
 
 <!-- ═══════════════════════════════════════════════════
      MODAL DE ACTUALIZACIÓN (PWA SOCIO)

@@ -393,6 +393,39 @@ def get_socio_pwa(sid):
     session.close()
     return jsonify({'ok': True, 'socio': result})
 
+@app.route('/api/socios/<int:sid>/foto_perfil', methods=['POST'])
+def subir_foto_perfil_socio(sid):
+    """El socio sube su propia foto de perfil desde la PWA."""
+    data = request.json or {}
+    foto_b64 = data.get('foto', '')
+    if not foto_b64:
+        return jsonify({'ok': False, 'error': 'Sin foto'}), 400
+    session = Session()
+    try:
+        s = session.query(Socio).filter_by(id=sid).first()
+        if not s:
+            session.close()
+            return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
+        # Borrar foto anterior de Supabase si existe
+        if s.foto:
+            try:
+                del_url = f"{SUPABASE_URL}/storage/v1/object/{FOTOS_SOCIOS_BUCKET}/{s.foto}"
+                requests.delete(del_url, headers={'Authorization': f'Bearer {SUPABASE_SECRET}'}, timeout=10)
+            except Exception:
+                pass
+        # Subir nueva foto (misma función que usa el admin)
+        nombre = subir_foto_socio(foto_b64)
+        s.foto = nombre
+        session.commit()
+        # Devolver la URL pública para que la PWA la muestre de inmediato
+        foto_url = f"{SUPABASE_URL}/storage/v1/object/public/{FOTOS_SOCIOS_BUCKET}/{nombre}"
+        session.close()
+        return jsonify({'ok': True, 'foto_url': foto_url})
+    except Exception as e:
+        session.close()
+        print(f"Error subiendo foto perfil socio {sid}: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/api/socios/<int:sid>/objetivo', methods=['POST'])
 def set_objetivo(sid):
     data = request.json
