@@ -1302,7 +1302,15 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           <p style="font-size:11px;color:var(--text3);margin-top:10px">Estos datos se muestran al socio cuando solicita renovar desde la app.</p>
         </div>
         <div class="config-section">
-          <div class="config-sec-title">Apariencia</div>
+          <div class="config-sec-title">🏋️ Tipos de entrenamiento del gimnasio</div>
+          <p style="font-size:11px;color:var(--text3);margin-bottom:12px">Configurá las actividades que ofrece tu gimnasio. Estas opciones aparecerán al asignar rutinas a los socios.</p>
+          <div id="tiposEntrenamientoList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="nuevoTipoEmoji" placeholder="💪" style="width:52px;padding:6px 8px;font-size:16px;text-align:center">
+            <input class="form-input" id="nuevoTipoNombre" placeholder="Nombre de la actividad..." style="flex:1;padding:6px 10px;font-size:12px">
+            <button class="btn-primary" onclick="agregarTipoEntrenamiento()" style="padding:6px 14px;font-size:12px"><i class="ti ti-plus"></i> Agregar</button>
+          </div>
+        </div>
           <div class="config-row">
             <span class="config-key">Tema de color</span>
             <div style="display:flex;gap:8px;align-items:center">
@@ -1522,46 +1530,13 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
         </div>
         <div class="form-group"><div class="form-label">Fecha de vencimiento</div><input class="form-input" id="mpFechaVenc" type="date"></div>
         <div class="form-group">
-          <div class="form-label">Objetivo</div>
-          <select class="form-select" id="mpObjetivo" onchange="guardarObjetivo()">
-            <option value="">— Sin asignar —</option>
-            <option value="musculacion">💪 Musculación / Volumen</option>
-            <option value="perdida_peso">🔥 Pérdida de peso</option>
-            <option value="fitness">🏃 Fitness / Salud general</option>
-            <option value="definicion">✨ Definición muscular</option>
-            <option value="crossfit">⚡ CrossFit / Funcional</option>
-            <option value="powerlifting">🏋️ Powerlifting / Fuerza</option>
-            <option value="resistencia">🚴 Resistencia / Cardio</option>
-            <option value="rehabilitacion">🩺 Rehabilitación / Movilidad</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <div class="form-label">Nivel</div>
-          <select class="form-select" id="mpNivel">
-            <option value="principiante">🌱 Principiante</option>
-            <option value="intermedio">⚡ Intermedio</option>
-            <option value="avanzado">🔥 Avanzado</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <div class="form-label">Días de entrenamiento por semana</div>
-          <select class="form-select" id="mpDiasSemana">
-            <option value="2">2 días</option>
-            <option value="3">3 días</option>
-            <option value="4">4 días</option>
-            <option value="5">5 días</option>
-          </select>
+          <div class="form-label">Objetivos <span style="color:var(--text3);font-size:10px">(hasta 3)</span></div>
+          <div id="mpObjetivosBox" style="display:flex;flex-direction:column;gap:6px;background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:10px"></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px" id="mpObjetivosHint"></div>
         </div>
         <div class="form-group">
           <div class="form-label">Tipo de entrenamiento</div>
-          <select class="form-select" id="mpTipoEntreno">
-            <option value="musculacion">Musculación (pesas)</option>
-            <option value="crossfit">CrossFit / Funcional</option>
-            <option value="cardio">Cardio / Aeróbico</option>
-            <option value="mixto">Mixto (pesas + cardio)</option>
-            <option value="calistenia">Calistenia / Peso corporal</option>
-            <option value="pilates">Pilates / Yoga</option>
-          </select>
+          <div id="mpTiposBox" style="display:flex;flex-direction:column;gap:6px;background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:10px"></div>
         </div>
         <button onclick="generarRutinaIA()" id="btnGenerarRutina" style="width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px">
           <i class="ti ti-sparkles"></i> Generar rutina y dieta con IA
@@ -2056,7 +2031,7 @@ function showScreen(name) {
   if (name === 'cuotas') cargarCuotas();
   if (name === 'reportes') cargarReportes();
   if (name === 'agenda') cargarAgenda();
-  if (name === 'config') { cargarConfig(); cargarUsuariosConfig(); }
+  if (name === 'config') { cargarConfig(); cargarUsuariosConfig(); cargarTiposConfig(); }
   if (name === 'vencimientos') cargarVencimientos();
   if (name === 'desercion') cargarDesercion();
   if (name === 'renovaciones') cargarRenovaciones();
@@ -2383,10 +2358,13 @@ async function abrirPerfil(id) {
     document.getElementById('mpTel').value = s.telefono || '';
     document.getElementById('mpEmail').value = s.email || '';
     document.getElementById('mpPlan').value = s.plan || 'Plan Mensual';
-    document.getElementById('mpObjetivo').value = s.objetivo || '';
+    // Cargar checkboxes de objetivos
+    const objetivosGuardados = JSON.parse(s.objetivos_json || '[]');
+    renderObjetivosCheckboxes(objetivosGuardados);
+    // Cargar tipos de entrenamiento dinámicos
+    await cargarTiposEntreno(s.tipo_entrenamiento || '');
     document.getElementById('mpNivel').value = s.nivel_entreno || 'principiante';
     document.getElementById('mpDiasSemana').value = s.dias_semana || 3;
-    document.getElementById('mpTipoEntreno').value = s.tipo_entrenamiento || 'musculacion';
     // Mostrar estado de rutina generada
     const statusEl = document.getElementById('rutinaIaStatus');
     if (s.rutina_generada_at) {
@@ -2679,12 +2657,128 @@ async function toggleActivoSocio() {
   } catch(e) { toast('Error al cambiar estado', 'bad'); }
 }
 
+// ─── TIPOS DE ENTRENAMIENTO ───────────────────────────────────────────────────
+let tiposEntrenamientoCache = [];
+
+async function cargarTiposConfig() {
+  try {
+    const res = await fetch(`${API}/api/tipos_entrenamiento`);
+    tiposEntrenamientoCache = await res.json();
+    renderTiposConfig();
+  } catch(e) {}
+}
+
+function renderTiposConfig() {
+  const list = document.getElementById('tiposEntrenamientoList');
+  if (!list) return;
+  if (!tiposEntrenamientoCache.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin actividades cargadas. Agregá la primera.</div>';
+    return;
+  }
+  list.innerHTML = tiposEntrenamientoCache.map(t => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:8px 12px">
+      <span style="font-size:18px">${t.emoji}</span>
+      <span style="flex:1;font-size:13px;color:var(--text1)">${t.nombre}</span>
+      <button onclick="eliminarTipoEntrenamiento(${t.id})" style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:14px"><i class="ti ti-trash"></i></button>
+    </div>`).join('');
+}
+
+async function agregarTipoEntrenamiento() {
+  const nombre = document.getElementById('nuevoTipoNombre').value.trim();
+  const emoji  = document.getElementById('nuevoTipoEmoji').value.trim() || '🏋️';
+  if (!nombre) { toast('Escribí el nombre de la actividad', 'bad'); return; }
+  try {
+    const res = await fetch(`${API}/api/tipos_entrenamiento`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, emoji})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('nuevoTipoNombre').value = '';
+      document.getElementById('nuevoTipoEmoji').value = '';
+      await cargarTiposConfig();
+      toast('✅ Actividad agregada');
+    }
+  } catch(e) { toast('Error al agregar', 'bad'); }
+}
+
+async function eliminarTipoEntrenamiento(id) {
+  if (!confirm('¿Eliminar esta actividad?')) return;
+  await fetch(`${API}/api/tipos_entrenamiento/${id}`, {method: 'DELETE'});
+  await cargarTiposConfig();
+  toast('Actividad eliminada');
+}
+
+async function cargarTiposEntreno(seleccionado) {
+  const box = document.getElementById('mpTiposBox');
+  if (!box) return;
+  try {
+    const res = await fetch(`${API}/api/tipos_entrenamiento`);
+    tiposEntrenamientoCache = await res.json();
+  } catch(e) {}
+  if (!tiposEntrenamientoCache.length) {
+    box.innerHTML = '<div style="font-size:11px;color:var(--text3)">Sin actividades configuradas. Agregá en Configuración.</div>';
+    return;
+  }
+  box.innerHTML = tiposEntrenamientoCache.map(t => `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text1)">
+      <input type="radio" name="mpTipoEntreno" value="${t.nombre}" ${seleccionado === t.nombre ? 'checked' : ''} style="accent-color:var(--accent)">
+      <span>${t.emoji} ${t.nombre}</span>
+    </label>`).join('');
+}
+
+// ─── OBJETIVOS MÚLTIPLES ──────────────────────────────────────────────────────
+const OBJETIVOS_BASE = [
+  {v:'musculacion',   label:'💪 Musculación / Volumen'},
+  {v:'perdida_peso',  label:'🔥 Pérdida de peso'},
+  {v:'fitness',       label:'🏃 Fitness / Salud general'},
+  {v:'definicion',    label:'✨ Definición muscular'},
+  {v:'resistencia',   label:'🚴 Resistencia / Cardio'},
+  {v:'rehabilitacion',label:'🩺 Rehabilitación / Movilidad'},
+];
+
+function renderObjetivosCheckboxes(seleccionados) {
+  const box = document.getElementById('mpObjetivosBox');
+  if (!box) return;
+  box.innerHTML = OBJETIVOS_BASE.map(o => `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text1)">
+      <input type="checkbox" class="mpObjetivoCheck" value="${o.v}" ${seleccionados.includes(o.v) ? 'checked' : ''} onchange="onObjetivoChange()" style="accent-color:var(--accent);width:15px;height:15px">
+      <span>${o.label}</span>
+    </label>`).join('');
+  onObjetivoChange();
+}
+
+function onObjetivoChange() {
+  const checks = document.querySelectorAll('.mpObjetivoCheck:checked');
+  const hint = document.getElementById('mpObjetivosHint');
+  if (checks.length >= 3) {
+    // Deshabilitar los no seleccionados
+    document.querySelectorAll('.mpObjetivoCheck:not(:checked)').forEach(c => c.disabled = true);
+    if (hint) { hint.textContent = 'Máximo 3 objetivos seleccionados'; hint.style.color = '#f59e0b'; }
+  } else {
+    document.querySelectorAll('.mpObjetivoCheck').forEach(c => c.disabled = false);
+    if (hint) { hint.textContent = checks.length ? `${checks.length} objetivo${checks.length>1?'s':''} seleccionado${checks.length>1?'s':''}` : ''; hint.style.color = 'var(--text3)'; }
+  }
+}
+
+function getObjetivosSeleccionados() {
+  return [...document.querySelectorAll('.mpObjetivoCheck:checked')].map(c => c.value);
+}
+
+function getTipoEntrenoSeleccionado() {
+  const radio = document.querySelector('input[name="mpTipoEntreno"]:checked');
+  return radio ? radio.value : '';
+}
+
+// ─── GENERAR RUTINA IA ────────────────────────────────────────────────────────
 async function generarRutinaIA() {
   if (!socioEditandoId) return;
   const btn = document.getElementById('btnGenerarRutina');
   const status = document.getElementById('rutinaIaStatus');
-  const objetivo = document.getElementById('mpObjetivo').value;
-  if (!objetivo) { toast('Seleccioná un objetivo primero', 'bad'); return; }
+  const objetivos = getObjetivosSeleccionados();
+  if (!objetivos.length) { toast('Seleccioná al menos un objetivo', 'bad'); return; }
+  const tipo = getTipoEntrenoSeleccionado();
+  if (!tipo) { toast('Seleccioná el tipo de entrenamiento', 'bad'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> Generando con IA...';
@@ -2693,19 +2787,14 @@ async function generarRutinaIA() {
 
   try {
     const body = {
-      objetivo,
+      objetivos,
       nivel: document.getElementById('mpNivel').value,
       dias_semana: parseInt(document.getElementById('mpDiasSemana').value),
-      tipo_entrenamiento: document.getElementById('mpTipoEntreno').value,
-      lesiones: ''
+      tipo_entrenamiento: tipo,
+      lesiones: document.getElementById('fichaLesiones') ? document.getElementById('fichaLesiones').value : ''
     };
-    // Intentar obtener lesiones de la ficha médica si ya se cargó
-    const fichaLesiones = document.getElementById('fichaLesiones');
-    if (fichaLesiones) body.lesiones = fichaLesiones.value || '';
-
     const res = await fetch(`${API}/api/socios/${socioEditandoId}/generar_rutina`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
     });
     const data = await res.json();
@@ -2713,12 +2802,7 @@ async function generarRutinaIA() {
       const fecha = new Date().toLocaleDateString('es-AR');
       status.innerHTML = `✅ Rutina generada el ${fecha} — el socio ya la puede ver en su app`;
       status.style.color = '#22c55e';
-      toast('✅ Rutina y dieta generadas con IA', 'ok');
-      // Actualizar objetivo en el backend también
-      await fetch(`${API}/api/socios/${socioEditandoId}/objetivo`, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({objetivo})
-      });
+      toast('✅ Rutina y dieta generadas con IA');
     } else {
       status.innerHTML = '❌ Error al generar';
       status.style.color = '#ef4444';

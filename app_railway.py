@@ -68,6 +68,7 @@ class Socio(Base):
     nivel_entreno       = Column(String(20), nullable=True)  # principiante, intermedio, avanzado
     dias_semana         = Column(Integer, nullable=True)      # 2, 3, 4, 5
     tipo_entrenamiento  = Column(String(50), nullable=True)  # musculacion, crossfit, etc
+    objetivos_json      = Column(Text, nullable=True)         # JSON array hasta 3 objetivos
     rutina_generada_at  = Column(DateTime, nullable=True)    # fecha de última generación
     created_at     = Column(DateTime, default=datetime.now)
 
@@ -210,6 +211,12 @@ def migrate_db():
             fecha DATE,
             storage_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS tipos_entrenamiento (
+            id SERIAL PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            emoji TEXT DEFAULT '🏋️',
+            orden INTEGER DEFAULT 0)"""))
+        conn.commit()
         conn.execute(text("""CREATE TABLE IF NOT EXISTS rutinas_ia (
             id SERIAL PRIMARY KEY,
             socio_id INTEGER UNIQUE NOT NULL,
@@ -262,6 +269,7 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS nivel_entreno TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS dias_semana INTEGER",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS tipo_entrenamiento TEXT",
+            "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivos_json TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS rutina_generada_at TIMESTAMP",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
@@ -330,7 +338,8 @@ def socio_to_dict(s):
             'fecha_venc':str(s.fecha_venc) if s.fecha_venc else None,
             'foto':foto_url,'activo':s.activo,'estado':estado,'dias_restantes':dias,
             'congelado':s.congelado or 0,'fecha_congelado':str(s.fecha_congelado) if s.fecha_congelado else None,
-            'objetivo':s.objetivo or '',
+            'objetivo': s.objetivo or '',
+            'objetivos_json': s.objetivos_json or '[]',
             'ia_habilitada': s.ia_habilitada or 0,
             'nivel_entreno': s.nivel_entreno or '',
             'dias_semana': s.dias_semana or 3,
@@ -2072,6 +2081,37 @@ def set_config():
         else: session.add(Config(clave=clave, valor=valor))
     session.commit(); session.close(); return jsonify({'ok': True})
 
+# ── TIPOS DE ENTRENAMIENTO ────────────────────────────────────────────────────
+
+@app.route('/api/tipos_entrenamiento', methods=['GET'])
+def get_tipos_entrenamiento():
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT id, nombre, emoji, orden FROM tipos_entrenamiento ORDER BY orden, id")).fetchall()
+    return jsonify([{'id': r[0], 'nombre': r[1], 'emoji': r[2], 'orden': r[3]} for r in rows])
+
+@app.route('/api/tipos_entrenamiento', methods=['POST'])
+def add_tipo_entrenamiento():
+    data = request.json or {}
+    nombre = data.get('nombre', '').strip()
+    emoji  = data.get('emoji', '🏋️').strip() or '🏋️'
+    if not nombre:
+        return jsonify({'ok': False, 'error': 'Nombre requerido'}), 400
+    with engine.connect() as conn:
+        result = conn.execute(
+            text("INSERT INTO tipos_entrenamiento (nombre, emoji) VALUES (:n, :e) RETURNING id"),
+            {'n': nombre, 'e': emoji}
+        )
+        new_id = result.fetchone()[0]
+        conn.commit()
+    return jsonify({'ok': True, 'id': new_id})
+
+@app.route('/api/tipos_entrenamiento/<int:tid>', methods=['DELETE'])
+def del_tipo_entrenamiento(tid):
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM tipos_entrenamiento WHERE id=:id"), {'id': tid})
+        conn.commit()
+    return jsonify({'ok': True})
+
 # ── RUTINAS Y DIETAS IA ───────────────────────────────────────────────────────
 
 @app.route('/api/socios/<int:sid>/rutina_ia', methods=['GET'])
@@ -2107,14 +2147,18 @@ def generar_rutina_ia(sid):
         return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
 
     data = request.json or {}
-    objetivo    = data.get('objetivo', s.objetivo or 'fitness')
+    objetivos   = data.get('objetivos', [])          # lista de hasta 3
+    if not objetivos:
+        objetivos = [s.objetivo or 'fitness']
+    objetivos   = objetivos[:3]                       # máximo 3
+    objetivo_str = ', '.join(objetivos)               # para guardar en s.objetivo (compat)
     nivel       = data.get('nivel', s.nivel_entreno or 'principiante')
     dias_semana = int(data.get('dias_semana', s.dias_semana or 3))
     tipo        = data.get('tipo_entrenamiento', s.tipo_entrenamiento or 'musculacion')
     lesiones    = data.get('lesiones', '')
 
-    # Guardar los datos en el socio
-    s.objetivo           = objetivo
+    s.objetivo           = objetivo_str
+    s.objetivos_json     = json.dumps(objetivos, ensure_ascii=False)
     s.nivel_entreno      = nivel
     s.dias_semana        = dias_semana
     s.tipo_entrenamiento = tipo
@@ -2127,7 +2171,7 @@ def generar_rutina_ia(sid):
     if not anthropic_key:
         return jsonify({'ok': False, 'error': 'Sin API key de IA'}), 500
 
-    objetivo_labels = {
+    objetivos_labels = {
         'musculacion': 'Musculación / Ganar masa muscular',
         'perdida_peso': 'Pérdida de peso / Quemar grasa',
         'fitness': 'Fitness / Salud general',
@@ -2137,16 +2181,19 @@ def generar_rutina_ia(sid):
         'resistencia': 'Resistencia / Cardio y fondo',
         'rehabilitacion': 'Rehabilitación / Movilidad y recuperación',
     }
-    obj_label = objetivo_labels.get(objetivo, objetivo)
+    obj_labels = [objetivos_labels.get(o, o) for o in objetivos]
+    obj_texto = ' + '.join(obj_labels) if len(obj_labels) > 1 else obj_labels[0]
 
     prompt = f"""Sos un entrenador personal experto. Generá una rutina semanal y un plan de alimentación personalizados para {nombre_socio}.
 
 Perfil:
-- Objetivo: {obj_label}
+- Objetivos combinados: {obj_texto}
 - Nivel: {nivel}
-- Tipo de entrenamiento preferido: {tipo}
+- Tipo de entrenamiento: {tipo}
 - Días disponibles por semana: {dias_semana}
 - Lesiones o limitaciones: {lesiones if lesiones else 'Ninguna'}
+
+IMPORTANTE: La rutina debe combinar inteligentemente TODOS los objetivos indicados. Si hay objetivos aparentemente contradictorios (ej: perder peso + ganar músculo), aplicá recomposición corporal.
 
 Respondé ÚNICAMENTE con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown):
 {{
@@ -2220,7 +2267,7 @@ Reglas:
                     dias_semana=:dias, tipo_entrenamiento=:tipo, updated_at=NOW()
             """), {
                 'sid': sid, 'r': rutina_json, 'd': dieta_json,
-                'obj': objetivo, 'niv': nivel, 'dias': dias_semana, 'tipo': tipo
+                'obj': objetivo_str, 'niv': nivel, 'dias': dias_semana, 'tipo': tipo
             })
             conn.commit()
 
