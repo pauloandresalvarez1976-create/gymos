@@ -2362,7 +2362,7 @@ async function abrirPerfil(id) {
     const objetivosGuardados = JSON.parse(s.objetivos_json || '[]');
     renderObjetivosCheckboxes(objetivosGuardados);
     // Cargar tipos de entrenamiento dinámicos
-    await cargarTiposEntreno(s.tipo_entrenamiento || '');
+    try { await cargarTiposEntreno(s.tipo_entrenamiento || ''); } catch(e) {}
     document.getElementById('mpNivel').value = s.nivel_entreno || 'principiante';
     document.getElementById('mpDiasSemana').value = s.dias_semana || 3;
     // Mostrar estado de rutina generada
@@ -2714,8 +2714,11 @@ async function cargarTiposEntreno(seleccionado) {
   if (!box) return;
   try {
     const res = await fetch(`${API}/api/tipos_entrenamiento`);
+    if (!res.ok) throw new Error('no ok');
     tiposEntrenamientoCache = await res.json();
-  } catch(e) {}
+  } catch(e) {
+    tiposEntrenamientoCache = [];
+  }
   if (!tiposEntrenamientoCache.length) {
     box.innerHTML = '<div style="font-size:11px;color:var(--text3)">Sin actividades configuradas. Agregá en Configuración.</div>';
     return;

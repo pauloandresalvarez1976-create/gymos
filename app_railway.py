@@ -2544,11 +2544,14 @@ _APP_START_TS = str(int(_time.time()))
 
 CHANGELOG = [
     {
-        "version": "1.1.1",
-        "fecha": "2025-07-26",
+        "version": "1.3.1",
+        "fecha": "2025-07-27",
         "cambios": [
-            "fix: búsqueda de socios ahora funciona por nombre y por DNI",
-            "fix: foto del socio no aparecía en la sección de ingreso",
+            "fix: perfil del socio no abría por error en tipos de entrenamiento",
+            "fix: error en vencimientos KeyError dias",
+            "fix: error en deserción activo=true",
+            "feat: tipos de entrenamiento configurables por gimnasio",
+            "feat: hasta 3 objetivos por socio con rutina IA combinada",
         ]
     },
 ]
