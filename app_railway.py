@@ -1409,7 +1409,7 @@ def get_desercion():
     dias = int(request.args.get('dias', 14))
     session = Session()
     socios = session.execute(text(
-        "SELECT id, nombre, telefono, objetivo, email FROM socios WHERE activo=true ORDER BY nombre"
+        "SELECT id, nombre, telefono, objetivo, email FROM socios WHERE activo=1 ORDER BY nombre"
     )).fetchall()
 
     resultado = []
@@ -1996,7 +1996,7 @@ def get_vencimientos():
                 'dias_restantes': dias,
                 'estado': 'vencido' if dias < 0 else 'por_vencer'
             })
-    result.sort(key=lambda x: x.get('dias_restantes', 0))
+    result.sort(key=lambda x: x['dias'])
     session.close()
     return jsonify({'socios': result, 'dias_alerta': dias_alerta})
 
