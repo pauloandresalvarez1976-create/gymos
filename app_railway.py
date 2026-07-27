@@ -1996,7 +1996,7 @@ def get_vencimientos():
                 'dias_restantes': dias,
                 'estado': 'vencido' if dias < 0 else 'por_vencer'
             })
-    result.sort(key=lambda x: x['dias'])
+    result.sort(key=lambda x: x.get('dias_restantes', 0))
     session.close()
     return jsonify({'socios': result, 'dias_alerta': dias_alerta})
 
