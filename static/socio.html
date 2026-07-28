@@ -806,7 +806,7 @@ async function init() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     socioData = data.socio;
-    // Esperar la rutina IA antes de renderizar
+    // Cargar rutina IA en paralelo
     await cargarRutinaIA();
     // Verificar si el socio está suspendido
     if (socioData.activo === 0) {
@@ -1211,7 +1211,7 @@ function renderApp() {
             <i class="ti ti-info-circle" style="font-size:18px;flex-shrink:0;margin-top:1px"></i>
             <span>Este plan es una <strong>guía orientativa</strong>. No reemplaza la consulta con un nutricionista. Adaptalo a tus necesidades.</span>
           </div>
-          ${plan.comidas.map(c => `
+          ${(plan.comidas || plan.planes || []).map(c => `
             <div class="comida-card">
               <div class="comida-card-header">
                 <div class="comida-emoji">${c.emoji || '🍽️'}</div>
