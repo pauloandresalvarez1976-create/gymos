@@ -1538,6 +1538,23 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           <div class="form-label">Tipo de entrenamiento</div>
           <div id="mpTiposBox" style="display:flex;flex-direction:column;gap:6px;background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:10px"></div>
         </div>
+        <div class="form-group">
+          <div class="form-label">Nivel</div>
+          <select class="form-select" id="mpNivel">
+            <option value="principiante">🌱 Principiante</option>
+            <option value="intermedio">⚡ Intermedio</option>
+            <option value="avanzado">🔥 Avanzado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Días por semana</div>
+          <select class="form-select" id="mpDiasSemana">
+            <option value="2">2 días</option>
+            <option value="3">3 días</option>
+            <option value="4">4 días</option>
+            <option value="5">5 días</option>
+          </select>
+        </div>
         <button onclick="generarRutinaIA()" id="btnGenerarRutina" style="width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px">
           <i class="ti ti-sparkles"></i> Generar rutina y dieta con IA
         </button>
