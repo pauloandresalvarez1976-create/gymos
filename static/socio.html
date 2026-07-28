@@ -806,8 +806,8 @@ async function init() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     socioData = data.socio;
-    // Cargar rutina IA en paralelo
-    cargarRutinaIA();
+    // Esperar la rutina IA antes de renderizar
+    await cargarRutinaIA();
     // Verificar si el socio está suspendido
     if (socioData.activo === 0) {
       document.getElementById('app').innerHTML = `
