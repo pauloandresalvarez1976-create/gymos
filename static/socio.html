@@ -3585,7 +3585,8 @@ function terminarAntesEntren() {
   entrenState.fase = 'fin';
   clearInterval(entrenTimer);
   renderEntrenScreen();
-  guardarEntrenamiento();
+  // Solo guardar si hizo al menos una serie
+  if (entrenState.seriesHechasTotales > 0) guardarEntrenamiento();
 }
 
 async function guardarEntrenamiento() {
@@ -3615,20 +3616,42 @@ function renderEntrenScreen() {
   if (s.fase === 'fin') {
     const durSeg = Math.floor((Date.now() - entrenStartTime) / 1000);
     const dur = formatDuracion(durSeg);
+    // Calcular series totales posibles
+    const seriesTotalesPosibles = s.ejercicios.reduce((acc, e) => acc + e.seriesTotal, 0);
+    const seriesHechas = s.seriesHechasTotales;
+    const todoCompleto = s.ejercicioIdx >= s.ejercicios.length;
+
+    let emoji, titulo, subtitulo;
+    if (seriesHechas === 0) {
+      emoji = '😐';
+      titulo = 'Sin actividad registrada';
+      subtitulo = 'No completaste ninguna serie. ¡La próxima vas a poder!';
+    } else if (todoCompleto) {
+      emoji = '🏆';
+      titulo = '¡Excelente trabajo!';
+      subtitulo = 'Completaste toda la rutina del día.';
+    } else {
+      const pct = Math.round((seriesHechas / seriesTotalesPosibles) * 100);
+      emoji = pct >= 50 ? '💪' : '👍';
+      titulo = 'Buen esfuerzo';
+      subtitulo = `Completaste el ${pct}% de la rutina. ¡Mañana más!`;
+    }
+
     screen.innerHTML =
       '<div class="entren-header">' +
         '<div style="font-size:15px;font-weight:700;color:var(--accent)">Entrenamiento finalizado</div>' +
       '</div>' +
       '<div class="entren-body" style="justify-content:center;align-items:center">' +
         '<div class="entren-resumen">' +
-          '<div class="entren-resumen-emoji">🏆</div>' +
-          '<div class="entren-resumen-titulo">¡Excelente trabajo!</div>' +
-          '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">' + s.dia_nombre + '</div>' +
-          '<div class="entren-resumen-stats">' +
-            '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + s.ejercicios.length + '</div><div class="entren-resumen-label">Ejercicios</div></div>' +
-            '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + s.seriesHechasTotales + '</div><div class="entren-resumen-label">Series</div></div>' +
-            '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + dur + '</div><div class="entren-resumen-label">Duración</div></div>' +
-          '</div>' +
+          '<div class="entren-resumen-emoji">' + emoji + '</div>' +
+          '<div class="entren-resumen-titulo">' + titulo + '</div>' +
+          '<div style="font-size:13px;color:var(--text3);margin-bottom:16px">' + subtitulo + '</div>' +
+          (seriesHechas > 0 ?
+            '<div class="entren-resumen-stats">' +
+              '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + s.ejercicios.filter(e => e.seriesHechas > 0).length + '</div><div class="entren-resumen-label">Ejercicios</div></div>' +
+              '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + seriesHechas + '</div><div class="entren-resumen-label">Series</div></div>' +
+              '<div class="entren-resumen-stat"><div class="entren-resumen-val">' + dur + '</div><div class="entren-resumen-label">Duración</div></div>' +
+            '</div>' : '') +
           '<button onclick="cerrarEntrenScreen()" style="background:var(--accent);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:700;width:100%;cursor:pointer">Cerrar</button>' +
         '</div>' +
       '</div>';
