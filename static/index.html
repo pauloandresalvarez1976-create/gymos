@@ -3385,7 +3385,7 @@ async function cargarVencimientos() {
         <span class="venc-tel">${tel || '—'}</span>
         <span class="venc-dias ${clsDias}">${txtDias}</span>
         ${s.email
-            ? `<button class="btn-scan-qr" onclick="enviarEmailVencimiento(${s.id}, '${s.nombre.split(' ')[0]}', '${s.email}')"><i class="ti ti-mail"></i> Enviar aviso</button>`
+            ? `<button class="btn-scan-qr" onclick="enviarEmailVencimiento(${s.id}, '${s.nombre.split(' ')[0]}', '${s.email}')"><i class="ti ti-bell-ringing"></i> Enviar aviso</button>`
             : `<span style="font-size:11px;color:#444">Sin email</span>`}
       </div>`;
     }).join('');

@@ -2082,9 +2082,61 @@ if ('serviceWorker' in navigator) {
             }
           });
         });
+        // Intentar suscribir a push después de registrar el SW
+        setTimeout(() => suscribirPush(reg), 3000);
       })
       .catch(function(err) { console.log('SW error:', err); });
   });
+}
+
+// ── Push Notifications ────────────────────────────────────────────────────────
+async function suscribirPush(reg) {
+  if (!('PushManager' in window)) return;
+  if (!socioId) return;
+  try {
+    // Obtener la VAPID public key del servidor
+    const keyRes = await fetch('/api/vapid-public-key');
+    const { publicKey } = await keyRes.json();
+    if (!publicKey) return;
+
+    // Convertir la key a Uint8Array
+    const keyBytes = urlBase64ToUint8Array(publicKey);
+
+    // Verificar si ya está suscripto
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      // Pedir permiso y suscribir
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: keyBytes
+      });
+    }
+
+    // Guardar suscripción en el servidor
+    const subJson = sub.toJSON();
+    await fetch('/api/push/suscribir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        socio_id: socioId,
+        endpoint: subJson.endpoint,
+        p256dh:   subJson.keys.p256dh,
+        auth:     subJson.keys.auth
+      })
+    });
+    console.log('Push suscripto OK');
+  } catch(e) {
+    console.log('Push no disponible:', e.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
 // ── Captura evento instalación ───────────────────────────

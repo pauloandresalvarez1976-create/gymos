@@ -1,74 +1,98 @@
-// GymOS Service Worker v1.0
-const CACHE_NAME = 'gymos-pwa-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/static/icons/icon-192.png',
-  '/static/icons/icon-512.png',
-];
+// ── GymOS Service Worker con Push Notifications ──────────────────────────────
+const CACHE_NAME = 'gymos-v3';
+const ASSETS = ['/socio/', '/static/css/', '/static/icons/'];
 
-// ── Instalación ──────────────────────────────────────────
-self.addEventListener('install', function(e) {
+// ── Instalación ───────────────────────────────────────────────────────────────
+self.addEventListener('install', e => {
   self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(STATIC_ASSETS).catch(function() {});
-    })
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
 
-// ── Activación ───────────────────────────────────────────
-self.addEventListener('activate', function(e) {
-  e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(function(k) { return k !== CACHE_NAME; })
-            .map(function(k) { return caches.delete(k); })
-      );
-    }).then(function() {
-      return self.clients.claim();
-    })
-  );
-});
-
-// ── Fetch: network first, cache fallback ─────────────────
-self.addEventListener('fetch', function(e) {
-  // Solo cachear GETs, no APIs
+// ── Fetch: cache-first para assets estáticos ──────────────────────────────────
+self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('/api/')) return;
-
+  const url = new URL(e.request.url);
+  // No cachear las APIs
+  if (url.pathname.startsWith('/api/')) return;
   e.respondWith(
-    fetch(e.request)
-      .then(function(response) {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(e.request, clone);
-          });
-        }
-        return response;
-      })
-      .catch(function() {
-        return caches.match(e.request);
-      })
+    caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
 
-// ── Background Sync (para guardar pasos offline) ─────────
-self.addEventListener('sync', function(e) {
-  if (e.tag === 'sync-pasos') {
-    e.waitUntil(sincronizarPasosPendientes());
-  }
+// ── Push: recibir notificación del servidor ───────────────────────────────────
+self.addEventListener('push', e => {
+  if (!e.data) return;
+  let data = {};
+  try { data = e.data.json(); } catch { data = { title: 'GymOS', body: e.data.text() }; }
+
+  const title   = data.title || 'GymOS';
+  const options = {
+    body:    data.body  || '',
+    icon:    data.icon  || '/static/icons/icon-192.png',
+    badge:   '/static/icons/icon-72.png',
+    vibrate: [200, 100, 200],
+    data:    { url: data.url || '/' },
+    actions: [
+      { action: 'abrir', title: 'Ver ahora' },
+      { action: 'cerrar', title: 'Cerrar' }
+    ]
+  };
+
+  e.waitUntil(self.registration.showNotification(title, options));
 });
 
-async function sincronizarPasosPendientes() {
-  // Si hay datos pendientes de pasos guardados offline, los envía
-  const cache = await caches.open(CACHE_NAME);
-  // Implementación futura: enviar pasos guardados en IDB cuando vuelve la conexión
-}
+// ── NotificationClick: abrir la app al tocar ─────────────────────────────────
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  if (e.action === 'cerrar') return;
 
-// ── Mensajes desde la página ─────────────────────────────
-self.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  const url = e.notification.data && e.notification.data.url ? e.notification.data.url : '/';
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // Si ya hay una ventana abierta, enfocarla
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin)) {
+          client.focus();
+          client.navigate(url);
+          return;
+        }
+      }
+      // Si no, abrir una nueva
+      return clients.openWindow(url);
+    })
+  );
+});
+
+// ── PushSubscriptionChange: renovar suscripción automáticamente ───────────────
+self.addEventListener('pushsubscriptionchange', e => {
+  e.waitUntil(
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: e.oldSubscription ? e.oldSubscription.options.applicationServerKey : null
+    }).then(sub => {
+      return fetch('/api/push/suscribir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          socio_id: null, // se recupera del contexto
+          endpoint: sub.endpoint,
+          p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))),
+          auth:   btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))))
+        })
+      });
+    })
+  );
+});
+
+// ── Mensaje desde el cliente ──────────────────────────────────────────────────
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
