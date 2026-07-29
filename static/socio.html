@@ -162,11 +162,16 @@
   .dieta-header::after { content:''; position:absolute; top:-30%; right:-10%; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle,#ffffff20,transparent 70%); pointer-events:none; }
   .dieta-header-nombre { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.4px; }
   .dieta-header-obj { font-size: 13px; color: #ffffffcc; margin-top: 5px; line-height: 1.4; }
-  .comida-card { background: var(--bg1); border-radius: 16px; border: 1px solid var(--bg3); margin-bottom: 12px; overflow: hidden; }
-  .comida-card-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; }
+  .comida-card { background: var(--bg1); border-radius: 16px; border: 1px solid var(--bg3); margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s; }
+  .comida-card.abierta { border-color: var(--accent-bd); }
+  .comida-card-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none; }
+  .comida-card-header:active { opacity: 0.8; }
+  .comida-card-chevron { margin-left: auto; color: var(--text3); font-size: 16px; transition: transform 0.25s; flex-shrink: 0; }
+  .comida-card.abierta .comida-card-chevron { transform: rotate(180deg); color: var(--accent); }
   .comida-emoji { font-size: 26px; line-height: 1; flex-shrink: 0; }
-  .comida-titulo-nuevo { font-size: 16px; font-weight: 700; color: var(--text1); }
-  .comida-items-wrap { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 0; }
+  .comida-titulo-nuevo { font-size: 15px; font-weight: 700; color: var(--text1); }
+  .comida-items-wrap { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 0; display: none; }
+  .comida-card.abierta .comida-items-wrap { display: flex; }
   .comida-item-nuevo { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--bg3); }
   .comida-item-nuevo:last-child { border-bottom: none; }
   .comida-item-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
@@ -1211,11 +1216,12 @@ function renderApp() {
             <i class="ti ti-info-circle" style="font-size:18px;flex-shrink:0;margin-top:1px"></i>
             <span>Este plan es una <strong>guía orientativa</strong>. No reemplaza la consulta con un nutricionista. Adaptalo a tus necesidades.</span>
           </div>
-          ${(plan.comidas || plan.planes || []).map(c => `
-            <div class="comida-card">
+          ${(plan.comidas || plan.planes || []).map((c, idx) => `
+            <div class="comida-card${idx === 0 ? ' abierta' : ''}" id="comida-card-${idx}" onclick="toggleComidaCard(${idx})">
               <div class="comida-card-header">
                 <div class="comida-emoji">${c.emoji || '🍽️'}</div>
                 <div class="comida-titulo-nuevo">${c.titulo.replace(/^[\p{Emoji}\s]+/u,'').trim()}</div>
+                <i class="ti ti-chevron-down comida-card-chevron"></i>
               </div>
               <div class="comida-items-wrap">
                 ${c.items.map(i => `
@@ -4175,6 +4181,13 @@ setTimeout(agregarBotonInstalar, 2000);
 </div>
 
 <script>
+// ─── ACORDEÓN DE COMIDAS ──────────────────────────────────────────────────────
+function toggleComidaCard(idx) {
+  const card = document.getElementById('comida-card-' + idx);
+  if (!card) return;
+  card.classList.toggle('abierta');
+}
+
 // ─── CAMBIAR OBJETIVO (socio desde la PWA) ────────────────────────────────────
 function abrirCambiarObjetivo() {
   const overlay = document.getElementById('cambiarObjetivoOverlay');
