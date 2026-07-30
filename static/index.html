@@ -2492,11 +2492,12 @@ async function procesarQR(qrData) {
 }
 
 async function enviarEmailVencimiento(id, nombre, email) {
-  if (!confirm(`¿Enviar aviso de vencimiento a ${nombre} (${email})?`)) return;
+  const canal = email ? 'push + email' : 'notificación push';
+  if (!confirm(`¿Enviar aviso de vencimiento a ${nombre} por ${canal}?`)) return;
   try {
     const res = await fetch(`${API}/api/socios/${id}/email_vencimiento`, { method: 'POST' });
     const data = await res.json();
-    if (data.ok) toast(`✅ Email enviado a ${email}`, 'ok');
+    if (data.ok) toast(`✅ ${data.mensaje || 'Aviso enviado'}`, 'ok');
     else toast(data.error || 'Error al enviar', 'bad');
   } catch(e) { toast('No se pudo conectar', 'bad'); }
 }
@@ -3377,16 +3378,14 @@ async function cargarVencimientos() {
       const dias = s.dias_restantes;
       const clsDias = dias < 0 ? 'vencido' : dias <= 3 ? 'urgente' : 'ok';
       const txtDias = dias < 0 ? `Venció hace ${Math.abs(dias)}d` : dias === 0 ? 'Vence HOY' : `${dias} días`;
-      const foto = s.foto ? `<img src="${s.foto}">` : '<i class="ti ti-user" style="font-size:12px;color:#555"></i>';
+      const foto = s.foto ? `<img src="${s.foto}?t=${Date.now()}" onerror="this.parentElement.innerHTML='<i class=\\'ti ti-user\\' style=\\'font-size:12px;color:#555\\'></i>'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : '<i class="ti ti-user" style="font-size:12px;color:#555"></i>';
       const tel = s.telefono || '';
       return `<div class="venc-row">
         <div class="venc-nombre"><div class="venc-av">${foto}</div>${s.nombre}</div>
         <span class="venc-plan">${s.plan || '—'}</span>
         <span class="venc-tel">${tel || '—'}</span>
         <span class="venc-dias ${clsDias}">${txtDias}</span>
-        ${s.email
-            ? `<button class="btn-scan-qr" onclick="enviarEmailVencimiento(${s.id}, '${s.nombre.split(' ')[0]}', '${s.email}')"><i class="ti ti-bell-ringing"></i> Enviar aviso</button>`
-            : `<span style="font-size:11px;color:#444">Sin email</span>`}
+        <button class="btn-scan-qr" onclick="enviarEmailVencimiento(${s.id}, '${s.nombre.split(' ')[0]}', '${s.email || ''}')"><i class="ti ti-bell-ringing"></i> Enviar aviso</button>
       </div>`;
     }).join('');
   } catch(e) { console.error('Vencimientos:', e); }
