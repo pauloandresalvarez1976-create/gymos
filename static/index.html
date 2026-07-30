@@ -2074,17 +2074,24 @@ async function cargarRenovaciones() {
       cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:40px;display:block;margin-bottom:12px"></i>Sin solicitudes aún</div>';
       return;
     }
-    cont.innerHTML = rows.map(r => `
-      <div style="background:var(--bg1);border:0.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start">
-        ${r.imagen_url ? `<img src="${r.imagen_url}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;flex-shrink:0;cursor:pointer" onclick="window.open('${r.imagen_url}','_blank')">` : `<div style="width:80px;height:80px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);font-size:28px"><i class="ti ti-photo-off"></i></div>`}
+    cont.innerHTML = rows.map(r => {
+      const estadoBadge = r.estado === 'pendiente'
+        ? '<span style="background:#FF450020;color:#FF4500;border:1px solid #FF450040;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px">⏳ Pendiente</span>'
+        : '<span style="background:#00FF8820;color:#00FF88;border:1px solid #00FF8840;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px">✅ Pagado</span>';
+
+      const imgHtml = r.imagen_url
+        ? `<img src="${r.imagen_url}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;flex-shrink:0;cursor:pointer;border:1px solid var(--border)" onclick="window.open('${r.imagen_url}','_blank')" onerror="this.outerHTML='<div style=\\'width:80px;height:80px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);font-size:28px\\'><i class=\\'ti ti-photo-off\\'></i></div>'">`
+        : `<div style="width:80px;height:80px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3);font-size:13px;text-align:center;padding:4px">Sin comprobante</div>`;
+      return `
+      <div style="background:var(--bg1);border:0.5px solid ${r.estado==='pendiente'?'#FF450040':'#00FF8830'};border-radius:14px;padding:16px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start">
+        ${imgHtml}
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
             <div style="font-size:15px;font-weight:700">${r.nombre}</div>
-            <div style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;${r.estado==='pendiente'?'background:#FF450020;color:#FF4500;border:1px solid #FF450040':'background:#00FF8820;color:#00FF88;border:1px solid #00FF8840'}">${r.estado==='pendiente'?'⏳ Pendiente':'✅ Aprobado'}</div>
+            ${estadoBadge}
           </div>
-          <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px">${r.plan || '—'} · ${r.monto || ''}</div>
+          <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px">${r.plan || '—'} · $${parseInt(r.monto||0).toLocaleString('es-AR')}</div>
           <div style="font-size:11px;color:var(--text3)">${r.fecha}</div>
-          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
           <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
             ${r.estado === 'pendiente' ? `
               <button onclick="aprobarRenovacion(${r.id}, ${r.socio_id})" style="background:#00FF8820;color:#00FF88;border:1px solid #00FF8840;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-check"></i> Aprobar y registrar pago</button>
@@ -2094,7 +2101,8 @@ async function cargarRenovaciones() {
             `}
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) { cont.innerHTML = '<div style="color:var(--red);padding:20px">Error al cargar</div>'; }
 }
 
