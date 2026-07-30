@@ -4,11 +4,6 @@ from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, T
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import date, datetime
 import os, base64, json, io, smtplib, requests
-try:
-    from pywebpush import webpush, WebPushException
-    WEBPUSH_OK = True
-except ImportError:
-    WEBPUSH_OK = False
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import qrcode
@@ -216,15 +211,6 @@ def migrate_db():
             fecha DATE,
             storage_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
-        conn.execute(text("""CREATE TABLE IF NOT EXISTS push_subscriptions (
-            id SERIAL PRIMARY KEY,
-            socio_id INTEGER NOT NULL,
-            endpoint TEXT NOT NULL,
-            p256dh TEXT,
-            auth TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(socio_id, endpoint))"""))
-        conn.commit()
         conn.execute(text("""CREATE TABLE IF NOT EXISTS tipos_entrenamiento (
             id SERIAL PRIMARY KEY,
             nombre TEXT NOT NULL,
@@ -1742,6 +1728,7 @@ def listar_renovaciones():
                    sr.imagen_path, sr.estado, sr.created_at
             FROM solicitudes_renovacion sr
             JOIN socios s ON s.id = sr.socio_id
+            WHERE sr.estado != 'eliminado'
             ORDER BY sr.created_at DESC LIMIT 50
         """)).fetchall()
         SUPABASE_URL = 'https://ntvrpmebrnbjrqizqamy.supabase.co'
@@ -1801,19 +1788,9 @@ def email_vencimiento(sid):
       </div>
     </div>"""
     try:
-        push_enviados = enviar_push(
-            sid,
-            f'⚠️ {gym_nombre} — {txt_dias}',
-            f'Hola {socio.nombre.split()[0]}, tu membresía {txt_dias.lower()}. Renovála para seguir entrenando.',
-            '/socio/' + str(sid)
-        )
-        if socio.email:
-            enviar_email(socio.email, f'Tu membresía en {gym_nombre} — {txt_dias}', html, session)
+        enviar_email(socio.email, f'Tu membresía en {gym_nombre} — {txt_dias}', html, session)
         session.close()
-        canales = []
-        if push_enviados > 0: canales.append('push')
-        if socio.email: canales.append('email')
-        return jsonify({'ok': True, 'mensaje': f'Aviso enviado por {" y ".join(canales) if canales else "ningún canal"}'})
+        return jsonify({'ok': True, 'mensaje': f'Aviso enviado a {socio.email}'})
     except Exception as e:
         session.close()
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -2104,96 +2081,6 @@ def set_config():
         if c: c.valor = valor
         else: session.add(Config(clave=clave, valor=valor))
     session.commit(); session.close(); return jsonify({'ok': True})
-
-# ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
-
-VAPID_PUBLIC_KEY  = os.environ.get('VAPID_PUBLIC_KEY', '')
-VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
-VAPID_CLAIMS      = {"sub": "mailto:gymos@gymos.app"}
-
-def enviar_push(socio_id, titulo, cuerpo, url='/'):
-    """Manda push notification a todas las suscripciones del socio."""
-    if not WEBPUSH_OK or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
-        return 0
-    try:
-        with engine.connect() as conn:
-            rows = conn.execute(
-                text("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE socio_id=:sid"),
-                {'sid': socio_id}
-            ).fetchall()
-    except Exception:
-        return 0
-    enviados = 0
-    payload = json.dumps({
-        'title': titulo,
-        'body': cuerpo,
-        'url': url,
-        'icon': '/static/icons/icon-192.png'
-    })
-    for row in rows:
-        sub_info = {
-            'endpoint': row[0],
-            'keys': {'p256dh': row[1], 'auth': row[2]}
-        }
-        try:
-            webpush(
-                subscription_info=sub_info,
-                data=payload,
-                vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims=VAPID_CLAIMS
-            )
-            enviados += 1
-        except WebPushException as e:
-            # Suscripción expirada — eliminarla
-            if '410' in str(e) or '404' in str(e):
-                try:
-                    with engine.connect() as conn:
-                        conn.execute(text("DELETE FROM push_subscriptions WHERE endpoint=:ep"), {'ep': row[0]})
-                        conn.commit()
-                except Exception:
-                    pass
-        except Exception:
-            pass
-    return enviados
-
-@app.route('/api/vapid-public-key', methods=['GET'])
-def get_vapid_public_key():
-    return jsonify({'publicKey': VAPID_PUBLIC_KEY})
-
-@app.route('/api/push/suscribir', methods=['POST'])
-def push_suscribir():
-    data = request.json or {}
-    socio_id  = data.get('socio_id')
-    endpoint  = data.get('endpoint', '')
-    p256dh    = data.get('p256dh', '')
-    auth      = data.get('auth', '')
-    if not socio_id or not endpoint:
-        return jsonify({'ok': False}), 400
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO push_subscriptions (socio_id, endpoint, p256dh, auth)
-                VALUES (:sid, :ep, :p, :a)
-                ON CONFLICT (socio_id, endpoint) DO UPDATE SET p256dh=:p, auth=:a
-            """), {'sid': socio_id, 'ep': endpoint, 'p': p256dh, 'a': auth})
-            conn.commit()
-        return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-@app.route('/api/push/desuscribir', methods=['POST'])
-def push_desuscribir():
-    data = request.json or {}
-    socio_id = data.get('socio_id')
-    endpoint = data.get('endpoint', '')
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("DELETE FROM push_subscriptions WHERE socio_id=:sid AND endpoint=:ep"),
-                        {'sid': socio_id, 'ep': endpoint})
-            conn.commit()
-        return jsonify({'ok': True})
-    except Exception as e:
-        return jsonify({'ok': False}), 500
 
 # ── TIPOS DE ENTRENAMIENTO ────────────────────────────────────────────────────
 
