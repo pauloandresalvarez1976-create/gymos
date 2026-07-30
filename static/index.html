@@ -2093,16 +2093,16 @@ async function cargarRenovaciones() {
   } catch(e) { cont.innerHTML = '<div style="color:var(--red);padding:20px">Error al cargar</div>'; }
 }
 
+let renovacionPendienteId = null; // guarda el rid hasta que se confirme el pago
+
 async function aprobarRenovacion(rid, socioId) {
-  // Marcar como aprobado
-  await fetch(`${API}/api/renovaciones/${rid}/estado`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado:'aprobado'}) });
-  // Abrir modal de pago para ese socio
+  // Abrir modal de pago — marcar aprobado solo cuando se confirme
+  renovacionPendienteId = rid;
   const res = await fetch(`${API}/api/socios/${socioId}`);
   if (res.ok) {
     const s = await res.json();
     abrirPago(s.id, s.nombre, s.plan);
   }
-  cargarRenovaciones();
 }
 
 async function rechazarRenovacion(rid) {
@@ -3083,12 +3083,7 @@ function abrirPago(id, nombre, plan) {
   socioParaPago = id;
   document.getElementById('pagoNombre').value = nombre;
   // precio por defecto según plan
-  const precios = {
-    'Plan Mensual': preciosConfig?.mensual || 0,
-    'Plan Trimestral': preciosConfig?.trimestral || 0,
-    'Plan Anual': preciosConfig?.anual || 0,
-    'Inscripción': preciosConfig?.inscripcion || 0
-  };
+  const precios = {'Plan Mensual': 18000, 'Plan Trimestral': 50000, 'Plan Anual': 180000};
   document.getElementById('pagoMonto').value = precios[plan] || '';
   document.getElementById('modalPago').style.display = 'flex';
 }
@@ -3096,6 +3091,7 @@ function abrirPago(id, nombre, plan) {
 function cerrarModalPago() {
   document.getElementById('modalPago').style.display = 'none';
   socioParaPago = null;
+  renovacionPendienteId = null;
 }
 
 async function confirmarPago() {
@@ -3103,8 +3099,20 @@ async function confirmarPago() {
   const body = { socio_id: socioParaPago, monto: parseInt(document.getElementById('pagoMonto').value), metodo: document.getElementById('pagoMetodo').value };
   try {
     const res = await fetch(`${API}/api/pagos`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    if (res.ok) { toast('Pago registrado y cuota renovada', 'ok'); cerrarModalPago(); cargarCuotas(); }
-    else toast('Error al registrar pago', 'bad');
+    if (res.ok) {
+      toast('Pago registrado y cuota renovada', 'ok');
+      cerrarModalPago();
+      cargarCuotas();
+      // Si viene de una renovación, marcarla como aprobada ahora
+      if (renovacionPendienteId) {
+        await fetch(`${API}/api/renovaciones/${renovacionPendienteId}/estado`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({estado: 'aprobado'})
+        });
+        renovacionPendienteId = null;
+        cargarRenovaciones();
+      }
+    } else toast('Error al registrar pago', 'bad');
   } catch(e) { toast('No se pudo conectar', 'bad'); }
 }
 
