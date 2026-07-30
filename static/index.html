@@ -2100,7 +2100,7 @@ async function aprobarRenovacion(rid, socioId) {
   const res = await fetch(`${API}/api/socios/${socioId}`);
   if (res.ok) {
     const s = await res.json();
-    abrirModalPago(s);
+    abrirPago(s.id, s.nombre, s.plan);
   }
   cargarRenovaciones();
 }
