@@ -42,18 +42,7 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'S
 .logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 2px; }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 .gym-badge { font-size: 11px; color: var(--accent); background: var(--accent-bg); border: 0.5px solid var(--accent-bd); border-radius: 12px; padding: 3px 12px; }
-/* Modal PIN admin */
-.pin-admin-overlay { position:fixed;inset:0;background:#00000080;z-index:9999;display:none;align-items:center;justify-content:center; }
-.pin-admin-overlay.show { display:flex; }
-.pin-admin-modal { background:var(--bg1);border:0.5px solid var(--border);border-radius:16px;padding:28px 24px 22px;max-width:320px;width:90%;text-align:center;box-shadow:0 20px 60px #00000080; }
-.pin-admin-modal .pam-icon { font-size:36px;margin-bottom:10px; }
-.pin-admin-modal .pam-title { font-size:16px;font-weight:800;color:var(--text1);margin-bottom:6px; }
-.pin-admin-modal .pam-desc { font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:16px; }
-.pin-admin-modal input { width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:18px;color:var(--text1);text-align:center;letter-spacing:6px;margin-bottom:14px;box-sizing:border-box; }
-.pin-admin-btns { display:flex;gap:10px;justify-content:center; }
-.pin-admin-btns button { padding:9px 22px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer; }
-.pin-admin-btns .btn-confirmar { background:var(--accent);color:#fff; }
-.pin-admin-btns .btn-cancelar { background:var(--bg2);border:0.5px solid var(--border);color:var(--text3); }
+/* Campanita de actualización */
 .update-bell { position: relative; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg2); border: 0.5px solid var(--border); color: var(--text3); transition: color .2s, background .2s; }
 .update-bell:hover { background: var(--bg3); color: var(--accent); }
 .update-bell .bell-dot { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; background: #FF4444; border-radius: 50%; border: 1.5px solid var(--bg1); display: none; animation: bellPulse 1.8s ease-in-out infinite; }
@@ -2101,7 +2090,7 @@ async function cargarRenovaciones() {
             <div style="font-size:15px;font-weight:700">${r.nombre}</div>
             ${estadoBadge}
           </div>
-          <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px">${r.plan || '—'} · $${parseInt(r.monto||0).toLocaleString('es-AR')}</div>
+          <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px">${r.plan || '—'} · $${parseInt((r.monto||'0').toString().replace(/[^0-9]/g,'')||0).toLocaleString('es-AR')}</div>
           <div style="font-size:11px;color:var(--text3)">${r.fecha}</div>
           <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
             ${r.estado === 'pendiente' ? `
@@ -2455,15 +2444,11 @@ async function cargarPagosPerfil(id) {
     }
     const metodoLabel = { efectivo: 'Efectivo', transferencia: 'Transferencia', 'tarjeta/QR': 'Tarjeta/QR' };
     lista.innerHTML = pagos.map(p => `
-      <div class="mp-pago-row" style="${p.anulado ? 'opacity:0.5' : ''}">
+      <div class="mp-pago-row">
         <span class="mp-pago-fecha">${p.fecha}</span>
         <span class="mp-pago-plan">${p.plan || '—'}</span>
         <span class="mp-pago-metodo">${metodoLabel[p.metodo] || p.metodo}</span>
-        <span class="mp-pago-monto" style="${p.anulado ? 'text-decoration:line-through;color:#ef4444' : ''}">$${parseInt(p.monto).toLocaleString('es-AR')}</span>
-        ${p.anulado
-          ? '<span style="font-size:10px;color:#ef4444;font-weight:700;background:#ef444415;border:1px solid #ef444430;border-radius:6px;padding:2px 8px">ANULADO</span>'
-          : `<button onclick="solicitarAnularPago(${p.id})" style="background:transparent;border:0.5px solid #ef444430;color:#ef4444;border-radius:7px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:600"><i class="ti ti-ban"></i> Anular</button>`
-        }
+        <span class="mp-pago-monto">$${parseInt(p.monto).toLocaleString('es-AR')}</span>
       </div>`).join('');
   } catch(e) {
     lista.innerHTML = '<div class="mp-pagos-empty">Error al cargar pagos</div>';
@@ -3814,23 +3799,6 @@ function renderDesercion(socios) {
 </script>
 
 <!-- ═══════════════════════════════════════════════════
-     MODAL PIN ADMINISTRADOR
-════════════════════════════════════════════════════ -->
-<div class="pin-admin-overlay" id="pinAdminOverlay">
-  <div class="pin-admin-modal">
-    <div class="pam-icon">🔐</div>
-    <div class="pam-title">Se requiere PIN del administrador</div>
-    <div class="pam-desc">Esta acción solo puede realizarla el administrador. Ingresá su PIN para continuar o pedíselo al encargado.</div>
-    <input type="password" id="pinAdminInput" placeholder="••••" maxlength="10"
-      onkeydown="if(event.key==='Enter') ejecutarAnulacionPago(this.value)">
-    <div class="pin-admin-btns">
-      <button class="btn-cancelar" onclick="cerrarPinAdmin()">Cancelar</button>
-      <button class="btn-confirmar" onclick="ejecutarAnulacionPago(document.getElementById('pinAdminInput').value)">Confirmar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════
      ONBOARDING — primera vez
 ════════════════════════════════════════════════════ -->
 <div class="onb-overlay hidden" id="onbOverlay">
@@ -3964,53 +3932,6 @@ function onbIr(screen, stepIdx) {
 }
 
 // Llamar onbMostrar después del login exitoso — se hookea en verificarPin
-
-// ─── ANULAR PAGO ──────────────────────────────────────────────────────────────
-let pagoAAnularId = null;
-
-function solicitarAnularPago(pagoId) {
-  pagoAAnularId = pagoId;
-  // Si es administrador, anular directamente sin pedir PIN
-  if (usuarioActual && usuarioActual.rol === 'administrador') {
-    if (!confirm('¿Anular este pago? El registro quedará marcado como ANULADO.')) return;
-    ejecutarAnulacionPago('');  // sin PIN — es el admin
-    return;
-  }
-  // Si no es admin, pedir PIN del administrador
-  document.getElementById('pinAdminInput').value = '';
-  document.getElementById('pinAdminOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('pinAdminInput').focus(), 100);
-}
-
-async function ejecutarAnulacionPago(pin) {
-  try {
-    const res = await fetch(`${API}/api/pagos/${pagoAAnularId}/anular`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ pin: pin || (usuarioActual?.pin || ''), es_admin: usuarioActual?.rol === 'administrador' })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      toast('✅ Pago anulado correctamente', 'ok');
-      cerrarPinAdmin();
-      // Recargar historial
-      if (socioEditandoId) cargarPagosPerfil(socioEditandoId);
-    } else {
-      toast('❌ ' + (data.error || 'PIN incorrecto'), 'bad');
-      document.getElementById('pinAdminInput').value = '';
-      document.getElementById('pinAdminInput').focus();
-    }
-  } catch(e) {
-    toast('Error de conexión', 'bad');
-  }
-  pagoAAnularId = null;
-}
-
-function cerrarPinAdmin() {
-  document.getElementById('pinAdminOverlay').classList.remove('show');
-  document.getElementById('pinAdminInput').value = '';
-  pagoAAnularId = null;
-}
 
 // ─── SISTEMA DE ACTUALIZACIONES (ADMIN) ──────────────────────────────────────
 (function() {
