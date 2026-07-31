@@ -271,6 +271,8 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS tipo_entrenamiento TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivos_json TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS rutina_generada_at TIMESTAMP",
+            "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS anulado INTEGER DEFAULT 0",
+            "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS anulado_motivo TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ]
@@ -636,8 +638,31 @@ def registrar_pago():
 def get_pagos_socio(socio_id):
     session = Session()
     pagos  = session.query(Pago).filter_by(socio_id=socio_id).order_by(Pago.fecha.desc()).all()
-    result = [{'id':p.id,'monto':p.monto,'fecha':str(p.fecha),'metodo':p.metodo,'plan':p.plan} for p in pagos]
+    result = [{'id':p.id,'monto':p.monto,'fecha':str(p.fecha),'metodo':p.metodo,'plan':p.plan,
+               'anulado': getattr(p,'anulado',0) or 0} for p in pagos]
     session.close(); return jsonify(result)
+
+@app.route('/api/pagos/<int:pago_id>/anular', methods=['POST'])
+def anular_pago(pago_id):
+    data = request.json or {}
+    pin  = str(data.get('pin', ''))
+    es_admin = data.get('es_admin', False)
+    session = Session()
+    try:
+        if not es_admin:
+            # Verificar PIN del administrador
+            admin = session.query(Usuario).filter_by(rol='administrador', activo=1).first()
+            if not admin or admin.pin != pin:
+                session.close()
+                return jsonify({'ok': False, 'error': 'PIN de administrador incorrecto'}), 403
+        # Marcar como anulado
+        session.execute(text("UPDATE pagos SET anulado=1 WHERE id=:id"), {'id': pago_id})
+        session.commit()
+        session.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        session.close()
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── CONGELAMIENTO ───────────────────────────────────────
 @app.route('/api/socios/<int:sid>/congelar', methods=['POST'])
