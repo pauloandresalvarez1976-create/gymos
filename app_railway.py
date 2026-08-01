@@ -271,6 +271,7 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS tipo_entrenamiento TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivos_json TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS rutina_generada_at TIMESTAMP",
+            "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS anulado INTEGER DEFAULT 0",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ]
@@ -639,6 +640,26 @@ def get_pagos_socio(socio_id):
     result = [{'id':p.id,'monto':p.monto,'fecha':str(p.fecha),'metodo':p.metodo,'plan':p.plan,
                'anulado': getattr(p,'anulado',0) or 0} for p in pagos]
     session.close(); return jsonify(result)
+
+@app.route('/api/pagos/<int:pago_id>/anular', methods=['POST'])
+def anular_pago(pago_id):
+    data     = request.json or {}
+    pin      = str(data.get('pin', ''))
+    es_admin = data.get('es_admin', False)
+    session  = Session()
+    try:
+        if not es_admin:
+            admin = session.query(Usuario).filter_by(rol='administrador', activo=1).first()
+            if not admin or admin.pin != pin:
+                session.close()
+                return jsonify({'ok': False, 'error': 'PIN de administrador incorrecto'}), 403
+        session.execute(text("UPDATE pagos SET anulado=1 WHERE id=:id"), {'id': pago_id})
+        session.commit()
+        session.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        session.close()
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── CONGELAMIENTO ───────────────────────────────────────
 @app.route('/api/socios/<int:sid>/congelar', methods=['POST'])
@@ -2549,11 +2570,7 @@ CHANGELOG = [
         "version": "1.3.1",
         "fecha": "2025-07-27",
         "cambios": [
-            "fix: perfil del socio no abría por error en tipos de entrenamiento",
-            "fix: error en vencimientos KeyError dias",
-            "fix: error en deserción activo=true",
-            "feat: tipos de entrenamiento configurables por gimnasio",
-            "feat: hasta 3 objetivos por socio con rutina IA combinada",
+            "fix: endpoint anular_pago faltaba en el backend + migración columna anulado",
         ]
     },
 ]
