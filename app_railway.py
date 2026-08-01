@@ -130,7 +130,6 @@ class Pago(Base):
     fecha      = Column(Date, default=date.today)
     metodo     = Column(String(50))
     plan       = Column(String(50))
-    anulado    = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
 
 class Ingreso(Base):
@@ -413,7 +412,7 @@ def get_socio_pwa(sid):
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     pagos = session.query(Pago).filter_by(socio_id=sid).order_by(Pago.fecha.desc()).limit(5).all()
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
-    pagos_list = [{'monto': p.monto, 'fecha': str(p.fecha), 'metodo': p.metodo, 'plan': p.plan} for p in pagos]
+    pagos_list = [{'monto': p.monto, 'fecha': str(p.fecha), 'metodo': p.metodo, 'plan': p.plan, 'anulado': p.anulado or 0} for p in pagos]
     ficha_row = session.execute(text("SELECT altura FROM fichas_medicas WHERE socio_id=:sid LIMIT 1"), {'sid': sid}).fetchone()
     altura = ficha_row[0] if ficha_row and ficha_row[0] else ''
     result = socio_to_dict(s)
@@ -638,33 +637,8 @@ def get_pagos_socio(socio_id):
     session = Session()
     pagos  = session.query(Pago).filter_by(socio_id=socio_id).order_by(Pago.fecha.desc()).all()
     result = [{'id':p.id,'monto':p.monto,'fecha':str(p.fecha),'metodo':p.metodo,'plan':p.plan,
-               'anulado': p.anulado or 0} for p in pagos]
+               'anulado': getattr(p,'anulado',0) or 0} for p in pagos]
     session.close(); return jsonify(result)
-
-@app.route('/api/pagos/<int:pago_id>/anular', methods=['POST'])
-def anular_pago(pago_id):
-    data     = request.json or {}
-    pin      = str(data.get('pin', ''))
-    es_admin = data.get('es_admin', False)
-    session  = Session()
-    try:
-        if not es_admin:
-            admin = session.query(Usuario).filter_by(rol='administrador', activo=1).first()
-            if not admin or admin.pin != pin:
-                session.close()
-                return jsonify({'ok': False, 'error': 'PIN de administrador incorrecto'}), 403
-        pago = session.query(Pago).filter_by(id=pago_id).first()
-        if not pago:
-            session.close()
-            return jsonify({'ok': False, 'error': 'Pago no encontrado'}), 404
-        pago.anulado = 1
-        session.commit()
-        session.close()
-        return jsonify({'ok': True})
-    except Exception as e:
-        session.close()
-        print(f"Error anulando pago {pago_id}: {e}")
-        return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── CONGELAMIENTO ───────────────────────────────────────
 @app.route('/api/socios/<int:sid>/congelar', methods=['POST'])

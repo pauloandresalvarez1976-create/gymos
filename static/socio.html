@@ -1168,12 +1168,12 @@ function renderApp() {
           </div>
           <div class="section-body" id="body-pagos">
             ${s.pagos && s.pagos.length ? s.pagos.map(p => `
-              <div class="pago-row">
+              <div class="pago-row" style="${p.anulado ? 'opacity:0.6' : ''}">
                 <div>
                   <div class="pago-info">${p.plan || 'Pago'} · ${p.metodo === 'transferencia' ? 'Transferencia / Mercado Pago' : p.metodo === 'tarjeta/QR' ? 'Tarjeta/QR' : 'Efectivo'}${p.anulado ? ' · <span style="color:#ef4444;font-weight:700">ANULADO</span>' : ''}</div>
                   <div class="pago-info" style="font-size:12px;color:var(--text3);margin-top:2px">${p.fecha}</div>
                 </div>
-                <div class="pago-monto">$${parseInt(p.monto).toLocaleString('es-AR')}</div>
+                <div class="pago-monto" style="${p.anulado ? 'text-decoration:line-through;color:#ef4444' : ''}">$${parseInt(p.monto).toLocaleString('es-AR')}</div>
               </div>`).join('') : '<div style="font-size:14px;color:var(--text3);padding:12px 0">Sin pagos registrados</div>'}
           </div>
         </div>
