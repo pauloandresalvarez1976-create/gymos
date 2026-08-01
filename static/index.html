@@ -639,6 +639,8 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
       <i class="ti ti-bell" style="font-size:15px"></i>
       <div class="bell-dot" id="bellDot"></div>
     </div>
+    <!-- Botón refrescar -->
+    <button onclick="refrescarAdmin()" title="Refrescar datos" style="background:var(--bg2);border:0.5px solid var(--border);color:var(--text3);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;transition:color .2s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'"><i class="ti ti-refresh"></i></button>
     <button onclick="cerrarSesion()" style="background:var(--bg2);border:0.5px solid var(--border);color:var(--text3);cursor:pointer;font-size:11px;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px" title="Cerrar sesión"><i class="ti ti-logout"></i> <span id="headerUsuario" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></button>
     <div class="clock" id="clock">--:--:--</div>
   </div>
@@ -3952,6 +3954,26 @@ function renderDesercion(socios) {
 </div>
 
 <script>
+// ─── REFRESCAR ADMIN ─────────────────────────────────────────────────────────
+function refrescarAdmin() {
+  const btn = document.querySelector('[onclick="refrescarAdmin()"] i');
+  if (btn) {
+    btn.style.transition = 'transform 0.5s';
+    btn.style.transform = 'rotate(360deg)';
+    setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 500);
+  }
+  // Recargar según la pantalla activa
+  const active = document.querySelector('.screen[style*="flex"]')?.id || '';
+  if      (active.includes('ingreso'))   { typeof cargarIngresos === 'function' && cargarIngresos(); typeof cargarVencimientos === 'function' && cargarVencimientos(); }
+  else if (active.includes('socios'))    { typeof cargarSocios === 'function' && cargarSocios(); }
+  else if (active.includes('cuotas'))    { typeof cargarCuotas === 'function' && cargarCuotas(); }
+  else if (active.includes('agenda'))    { typeof cargarAgenda === 'function' && cargarAgenda(); }
+  else if (active.includes('renov'))     { typeof cargarRenovaciones === 'function' && cargarRenovaciones(); }
+  else if (active.includes('config'))    { typeof cargarConfig === 'function' && cargarConfig(); }
+  else                                   { typeof cargarIngresos === 'function' && cargarIngresos(); }
+  toast('✅ Datos actualizados', 'ok');
+}
+
 // ─── ONBOARDING ──────────────────────────────────────────────────────────────
 const ONB_KEY = 'gymos_onb_done';
 const ONB_STEPS_KEY = 'gymos_onb_steps';
