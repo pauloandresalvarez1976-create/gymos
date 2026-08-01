@@ -130,6 +130,7 @@ class Pago(Base):
     fecha      = Column(Date, default=date.today)
     metodo     = Column(String(50))
     plan       = Column(String(50))
+    anulado    = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
 
 class Ingreso(Base):
@@ -271,7 +272,6 @@ def migrate_db():
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS tipo_entrenamiento TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS objetivos_json TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS rutina_generada_at TIMESTAMP",
-            "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS anulado INTEGER DEFAULT 0",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS encoding TEXT",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ]
@@ -638,7 +638,7 @@ def get_pagos_socio(socio_id):
     session = Session()
     pagos  = session.query(Pago).filter_by(socio_id=socio_id).order_by(Pago.fecha.desc()).all()
     result = [{'id':p.id,'monto':p.monto,'fecha':str(p.fecha),'metodo':p.metodo,'plan':p.plan,
-               'anulado': getattr(p,'anulado',0) or 0} for p in pagos]
+               'anulado': p.anulado or 0} for p in pagos]
     session.close(); return jsonify(result)
 
 @app.route('/api/pagos/<int:pago_id>/anular', methods=['POST'])
@@ -653,12 +653,17 @@ def anular_pago(pago_id):
             if not admin or admin.pin != pin:
                 session.close()
                 return jsonify({'ok': False, 'error': 'PIN de administrador incorrecto'}), 403
-        session.execute(text("UPDATE pagos SET anulado=1 WHERE id=:id"), {'id': pago_id})
+        pago = session.query(Pago).filter_by(id=pago_id).first()
+        if not pago:
+            session.close()
+            return jsonify({'ok': False, 'error': 'Pago no encontrado'}), 404
+        pago.anulado = 1
         session.commit()
         session.close()
         return jsonify({'ok': True})
     except Exception as e:
         session.close()
+        print(f"Error anulando pago {pago_id}: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── CONGELAMIENTO ───────────────────────────────────────
@@ -2570,7 +2575,11 @@ CHANGELOG = [
         "version": "1.3.1",
         "fecha": "2025-07-27",
         "cambios": [
-            "fix: endpoint anular_pago faltaba en el backend + migración columna anulado",
+            "fix: perfil del socio no abría por error en tipos de entrenamiento",
+            "fix: error en vencimientos KeyError dias",
+            "fix: error en deserción activo=true",
+            "feat: tipos de entrenamiento configurables por gimnasio",
+            "feat: hasta 3 objetivos por socio con rutina IA combinada",
         ]
     },
 ]
