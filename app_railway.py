@@ -257,6 +257,7 @@ def migrate_db():
         migraciones = [
             "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS plan TEXT",
             "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE pagos ADD COLUMN IF NOT EXISTS anulado INTEGER DEFAULT 0",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS congelado INTEGER DEFAULT 0",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS fecha_congelado DATE",
             "ALTER TABLE socios ADD COLUMN IF NOT EXISTS dias_congelados INTEGER",
@@ -412,7 +413,7 @@ def get_socio_pwa(sid):
         session.close(); return jsonify({'ok': False, 'error': 'Socio no encontrado'}), 404
     pagos = session.query(Pago).filter_by(socio_id=sid).order_by(Pago.fecha.desc()).limit(5).all()
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
-    pagos_list = [{'monto': p.monto, 'fecha': str(p.fecha), 'metodo': p.metodo, 'plan': p.plan, 'anulado': p.anulado or 0} for p in pagos]
+    pagos_list = [{'monto': p.monto, 'fecha': str(p.fecha), 'metodo': p.metodo, 'plan': p.plan, 'anulado': getattr(p,'anulado',0) or 0} for p in pagos]
     ficha_row = session.execute(text("SELECT altura FROM fichas_medicas WHERE socio_id=:sid LIMIT 1"), {'sid': sid}).fetchone()
     altura = ficha_row[0] if ficha_row and ficha_row[0] else ''
     result = socio_to_dict(s)
