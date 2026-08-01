@@ -248,6 +248,20 @@ def migrate_db():
             declaracion_fecha TIMESTAMP, declaracion_ip TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""))
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS cajas (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            usuario_nombre TEXT,
+            fondo_inicial INTEGER DEFAULT 0,
+            total_efectivo INTEGER DEFAULT 0,
+            total_transferencia INTEGER DEFAULT 0,
+            total_tarjeta INTEGER DEFAULT 0,
+            total_cobrado INTEGER DEFAULT 0,
+            dinero_contado INTEGER DEFAULT 0,
+            diferencia INTEGER DEFAULT 0,
+            estado TEXT DEFAULT 'abierta',
+            apertura_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            cierre_at TIMESTAMP)"""))
         conn.execute(text("""CREATE TABLE IF NOT EXISTS usuarios (
             id SERIAL PRIMARY KEY,
             nombre TEXT, pin TEXT, rol TEXT, permisos TEXT, activo INTEGER DEFAULT 1,
@@ -667,6 +681,100 @@ def anular_pago(pago_id):
         session.close()
         print(f"Error anulando pago {pago_id}: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+# ── CAJA (APERTURA / CIERRE) ──────────────────────────────────────────────────
+
+@app.route('/api/caja/estado', methods=['GET'])
+def caja_estado():
+    uid = request.args.get('usuario_id')
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT id, usuario_nombre, fondo_inicial, apertura_at FROM cajas WHERE usuario_id=:uid AND estado='abierta' ORDER BY apertura_at DESC LIMIT 1"
+            ), {'uid': uid}).fetchone()
+        if row:
+            return jsonify({'ok': True, 'caja': {'id': row[0], 'usuario': row[1], 'fondo': row[2], 'apertura': str(row[3])[:16]}})
+        return jsonify({'ok': False})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+@app.route('/api/caja/abrir', methods=['POST'])
+def caja_abrir():
+    data   = request.json or {}
+    uid    = data.get('usuario_id')
+    nombre = data.get('usuario_nombre', '')
+    fondo  = int(data.get('fondo_inicial', 0))
+    try:
+        with engine.connect() as conn:
+            existing = conn.execute(text(
+                "SELECT id FROM cajas WHERE usuario_id=:uid AND estado='abierta'"
+            ), {'uid': uid}).fetchone()
+            if existing:
+                return jsonify({'ok': False, 'error': 'Ya tenés una caja abierta'})
+            result = conn.execute(text(
+                "INSERT INTO cajas (usuario_id, usuario_nombre, fondo_inicial) VALUES (:uid, :nom, :fondo) RETURNING id"
+            ), {'uid': uid, 'nom': nombre, 'fondo': fondo})
+            caja_id = result.fetchone()[0]
+            conn.commit()
+        return jsonify({'ok': True, 'caja_id': caja_id})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/caja/<int:caja_id>/cerrar', methods=['POST'])
+def caja_cerrar(caja_id):
+    data = request.json or {}
+    dinero_contado = int(data.get('dinero_contado', 0))
+    try:
+        with engine.connect() as conn:
+            caja = conn.execute(text(
+                "SELECT fondo_inicial, apertura_at FROM cajas WHERE id=:id"
+            ), {'id': caja_id}).fetchone()
+            if not caja:
+                return jsonify({'ok': False, 'error': 'Caja no encontrada'})
+            fondo, apertura = int(caja[0]), caja[1]
+            totales = conn.execute(text("""
+                SELECT
+                    COALESCE(SUM(CASE WHEN metodo='efectivo' THEN monto ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN metodo='transferencia' THEN monto ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN metodo='tarjeta' THEN monto ELSE 0 END),0),
+                    COALESCE(SUM(monto),0)
+                FROM pagos WHERE (anulado IS NULL OR anulado=0) AND created_at >= :ap
+            """), {'ap': apertura}).fetchone()
+            ef, tr, ta, total = int(totales[0]), int(totales[1]), int(totales[2]), int(totales[3])
+            esperado   = fondo + ef
+            diferencia = dinero_contado - esperado
+            conn.execute(text("""
+                UPDATE cajas SET
+                    total_efectivo=:ef, total_transferencia=:tr, total_tarjeta=:ta,
+                    total_cobrado=:tot, dinero_contado=:dc, diferencia=:dif,
+                    estado='cerrada', cierre_at=NOW()
+                WHERE id=:id
+            """), {'ef':ef,'tr':tr,'ta':ta,'tot':total,'dc':dinero_contado,'dif':diferencia,'id':caja_id})
+            conn.commit()
+        return jsonify({'ok': True, 'resumen': {
+            'fondo': fondo, 'efectivo': ef, 'transferencia': tr, 'tarjeta': ta,
+            'total_cobrado': total, 'esperado': esperado,
+            'dinero_contado': dinero_contado, 'diferencia': diferencia
+        }})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/api/caja/historial', methods=['GET'])
+def caja_historial():
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text("""
+                SELECT id, usuario_nombre, fondo_inicial, total_efectivo, total_transferencia,
+                       total_tarjeta, total_cobrado, dinero_contado, diferencia,
+                       estado, apertura_at, cierre_at
+                FROM cajas ORDER BY apertura_at DESC LIMIT 30
+            """)).fetchall()
+        return jsonify([{'id':r[0],'usuario':r[1],'fondo':r[2],'efectivo':r[3],'transferencia':r[4],
+                   'tarjeta':r[5],'total':r[6],'contado':r[7],'diferencia':r[8],
+                   'estado':r[9],'apertura':str(r[10])[:16],'cierre':str(r[11])[:16] if r[11] else None}
+                  for r in rows])
+    except Exception as e:
+        return jsonify([])
 
 # ── CONGELAMIENTO ───────────────────────────────────────
 @app.route('/api/socios/<int:sid>/congelar', methods=['POST'])

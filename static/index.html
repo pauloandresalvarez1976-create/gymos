@@ -194,7 +194,31 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .btn-ver-perfil:hover { border-color: var(--accent)40; color: var(--text2); }
 
 /* Pane Cobro */
-.cobro-pane { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+/* ── MINICAJA ──────────────────────────────────────────────────────── */
+.caja-banner { display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:10px;margin-bottom:8px;font-size:12px;font-weight:600; }
+.caja-banner.cerrada { background:#ef444415;border:1px solid #ef444430;color:#ef4444; }
+.caja-banner.abierta { background:#22c55e15;border:1px solid #22c55e30;color:#22c55e; }
+.caja-banner button { border:none;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer; }
+.caja-banner.cerrada button { background:#ef4444;color:#fff; }
+.caja-banner.abierta button { background:#22c55e;color:#fff; }
+.modal-caja-overlay { position:fixed;inset:0;background:#00000085;z-index:9995;display:none;align-items:center;justify-content:center; }
+.modal-caja-overlay.show { display:flex; }
+.modal-caja { background:var(--bg1);border:0.5px solid var(--border);border-radius:18px;padding:26px 22px 20px;max-width:380px;width:92%;box-shadow:0 20px 60px #00000090; }
+.modal-caja-title { font-size:17px;font-weight:800;color:var(--text1);margin-bottom:6px;text-align:center; }
+.modal-caja-sub { font-size:12px;color:var(--text3);text-align:center;margin-bottom:18px; }
+.modal-caja-row { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border); }
+.modal-caja-row:last-child { border-bottom:none; }
+.modal-caja-lbl { font-size:13px;color:var(--text2); }
+.modal-caja-val { font-size:14px;font-weight:700;color:var(--text1); }
+.modal-caja-val.pos { color:#22c55e; }
+.modal-caja-val.neg { color:#ef4444; }
+.modal-caja-input { width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:16px;color:var(--text1);text-align:center;box-sizing:border-box;margin:12px 0; }
+.modal-caja-btns { display:flex;gap:10px;margin-top:14px; }
+.modal-caja-btns button { flex:1;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer; }
+.modal-caja-btns .btn-ok { background:var(--accent);color:#fff; }
+.modal-caja-btns .btn-cancel { background:var(--bg2);border:0.5px solid var(--border);color:var(--text3); }
+.caja-resumen-overlay { position:fixed;inset:0;background:#00000085;z-index:9996;display:none;align-items:center;justify-content:center; }
+.caja-resumen-overlay.show { display:flex; }
 .cobro-socio-info { background: var(--bg2); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
 .cobro-socio-nombre { font-size: 13px; color: #ccc; font-weight: 500; }
 .cobro-socio-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
@@ -854,6 +878,11 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           <!-- PANE COBRO -->
           <div class="sp-pane" id="pane-cobro">
             <div class="cobro-pane">
+              <!-- Banner de estado de caja -->
+              <div id="cajaBanner" class="caja-banner cerrada">
+                <span id="cajaBannerTxt">⚠️ Caja cerrada — Abrí tu turno antes de cobrar</span>
+                <button onclick="abrirModalCaja()">Abrir caja</button>
+              </div>
               <div class="cobro-socio-info">
                 <div>
                   <div class="cobro-socio-nombre" id="cobroNombre">Sin socio seleccionado</div>
@@ -1911,6 +1940,8 @@ async function verificarPin() {
       showScreen('ingreso');
       // Mostrar onboarding si es la primera vez
       setTimeout(onbMostrar, 400);
+      // Verificar estado de caja
+      setTimeout(iniciarCaja, 600);
       // Cargar badge de renovaciones pendientes
       fetch(`${API}/api/renovaciones`).then(r=>r.json()).then(rows=>{
         const p = rows.filter(r=>r.estado==='pendiente').length;
@@ -3856,6 +3887,168 @@ function renderDesercion(socios) {
       }
     };
   });
+}
+</script>
+
+<!-- MODAL APERTURA DE CAJA -->
+<div class="modal-caja-overlay" id="modalAperturaCaja">
+  <div class="modal-caja">
+    <div class="modal-caja-title">🏦 Apertura de caja</div>
+    <div class="modal-caja-sub">Ingresá el fondo inicial con el que arrancás el turno</div>
+    <input class="modal-caja-input" type="number" id="cajaFondoInput" placeholder="$0" min="0">
+    <div class="modal-caja-btns">
+      <button class="btn-cancel" onclick="cerrarModalAperturaCaja()">Cancelar</button>
+      <button class="btn-ok" onclick="confirmarAperturaCaja()"><i class="ti ti-lock-open"></i> Abrir turno</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CIERRE DE CAJA -->
+<div class="modal-caja-overlay" id="modalCierreCaja">
+  <div class="modal-caja">
+    <div class="modal-caja-title">🔒 Cierre de caja</div>
+    <div class="modal-caja-sub">Contá el dinero físico e ingresá el total</div>
+    <div id="cajaCierreInfo" style="margin-bottom:8px"></div>
+    <input class="modal-caja-input" type="number" id="cajaDineroContado" placeholder="Total contado en caja $" min="0">
+    <div class="modal-caja-btns">
+      <button class="btn-cancel" onclick="cerrarModalCierreCaja()">Cancelar</button>
+      <button class="btn-ok" style="background:#ef4444" onclick="confirmarCierreCaja()"><i class="ti ti-lock"></i> Cerrar turno</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESUMEN CIERRE -->
+<div class="caja-resumen-overlay" id="cajaResumenOverlay">
+  <div class="modal-caja" style="max-width:420px">
+    <div class="modal-caja-title">📊 Resumen del turno</div>
+    <div id="cajaResumenBody"></div>
+    <div class="modal-caja-btns" style="margin-top:16px">
+      <button class="btn-ok" onclick="cerrarResumenCaja()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── MINICAJA ─────────────────────────────────────────────────────────────────
+let cajaActualId = null;
+let cajaAbierta  = false;
+
+async function iniciarCaja() {
+  if (!usuarioActual) return;
+  try {
+    const res = await fetch(`${API}/api/caja/estado?usuario_id=${usuarioActual.id}`);
+    const data = await res.json();
+    if (data.ok && data.caja) {
+      cajaActualId = data.caja.id;
+      cajaAbierta  = true;
+      actualizarBannerCaja(true, data.caja.apertura);
+    } else {
+      cajaAbierta = false;
+      actualizarBannerCaja(false);
+    }
+  } catch(e) {}
+}
+
+function actualizarBannerCaja(abierta, apertura) {
+  const banner = document.getElementById('cajaBanner');
+  const txt    = document.getElementById('cajaBannerTxt');
+  if (!banner) return;
+  if (abierta) {
+    banner.className = 'caja-banner abierta';
+    txt.textContent  = `✅ Caja abierta desde ${apertura || ''}`;
+    banner.querySelector('button').textContent = 'Cerrar caja';
+    banner.querySelector('button').onclick = abrirModalCierreCaja;
+  } else {
+    banner.className = 'caja-banner cerrada';
+    txt.textContent  = '⚠️ Caja cerrada — Abrí tu turno antes de cobrar';
+    banner.querySelector('button').textContent = 'Abrir caja';
+    banner.querySelector('button').onclick = abrirModalCaja;
+  }
+}
+
+function abrirModalCaja() {
+  document.getElementById('cajaFondoInput').value = '';
+  document.getElementById('modalAperturaCaja').classList.add('show');
+  setTimeout(() => document.getElementById('cajaFondoInput').focus(), 100);
+}
+
+function cerrarModalAperturaCaja() {
+  document.getElementById('modalAperturaCaja').classList.remove('show');
+}
+
+async function confirmarAperturaCaja() {
+  const fondo = parseInt(document.getElementById('cajaFondoInput').value) || 0;
+  try {
+    const res = await fetch(`${API}/api/caja/abrir`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ usuario_id: usuarioActual.id, usuario_nombre: usuarioActual.nombre, fondo_inicial: fondo })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      cajaActualId = data.caja_id;
+      cajaAbierta  = true;
+      cerrarModalAperturaCaja();
+      actualizarBannerCaja(true, new Date().toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'}));
+      toast('✅ Caja abierta — Buen turno!', 'ok');
+    } else {
+      toast('❌ ' + (data.error || 'Error al abrir caja'), 'bad');
+    }
+  } catch(e) { toast('Error de conexión', 'bad'); }
+}
+
+function abrirModalCierreCaja() {
+  document.getElementById('cajaDineroContado').value = '';
+  // Mostrar info del turno
+  const info = document.getElementById('cajaCierreInfo');
+  info.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:6px">Ingresá el efectivo que tenés en caja (fondo + cobros en efectivo)</div>`;
+  document.getElementById('modalCierreCaja').classList.add('show');
+  setTimeout(() => document.getElementById('cajaDineroContado').focus(), 100);
+}
+
+function cerrarModalCierreCaja() {
+  document.getElementById('modalCierreCaja').classList.remove('show');
+}
+
+async function confirmarCierreCaja() {
+  if (!cajaActualId) { toast('No hay caja abierta', 'bad'); return; }
+  const contado = parseInt(document.getElementById('cajaDineroContado').value) || 0;
+  try {
+    const res = await fetch(`${API}/api/caja/${cajaActualId}/cerrar`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ dinero_contado: contado })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      cerrarModalCierreCaja();
+      cajaAbierta  = false;
+      cajaActualId = null;
+      actualizarBannerCaja(false);
+      mostrarResumenCierre(data.resumen);
+    } else {
+      toast('❌ ' + (data.error || 'Error al cerrar caja'), 'bad');
+    }
+  } catch(e) { toast('Error de conexión', 'bad'); }
+}
+
+function mostrarResumenCierre(r) {
+  const fmt = n => '$' + parseInt(n||0).toLocaleString('es-AR');
+  const dif = parseInt(r.diferencia||0);
+  const difClass = dif > 0 ? 'pos' : dif < 0 ? 'neg' : '';
+  const difTxt   = dif > 0 ? `+${fmt(dif)} (sobrante)` : dif < 0 ? `${fmt(dif)} (faltante)` : 'Sin diferencia';
+  document.getElementById('cajaResumenBody').innerHTML = `
+    <div class="modal-caja-row"><span class="modal-caja-lbl">Fondo inicial</span><span class="modal-caja-val">${fmt(r.fondo)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">💵 Efectivo cobrado</span><span class="modal-caja-val">${fmt(r.efectivo)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">📱 Transferencia / MP</span><span class="modal-caja-val">${fmt(r.transferencia)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">💳 Tarjeta / QR</span><span class="modal-caja-val">${fmt(r.tarjeta)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">Total cobrado</span><span class="modal-caja-val">${fmt(r.total_cobrado)}</span></div>
+    <div class="modal-caja-row" style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin:6px 0"><span class="modal-caja-lbl">Esperado en caja</span><span class="modal-caja-val">${fmt(r.esperado)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">Dinero contado</span><span class="modal-caja-val">${fmt(r.dinero_contado)}</span></div>
+    <div class="modal-caja-row" style="margin-top:4px"><span class="modal-caja-lbl" style="font-weight:700">Diferencia</span><span class="modal-caja-val ${difClass}" style="font-size:16px">${difTxt}</span></div>`;
+  document.getElementById('cajaResumenOverlay').classList.add('show');
+}
+
+function cerrarResumenCaja() {
+  document.getElementById('cajaResumenOverlay').classList.remove('show');
 }
 </script>
 
