@@ -1170,7 +1170,7 @@ function renderApp() {
             ${s.pagos && s.pagos.length ? s.pagos.map(p => `
               <div class="pago-row">
                 <div>
-                  <div class="pago-info">${p.plan || 'Pago'} · ${p.metodo || ''}</div>
+                  <div class="pago-info">${p.plan || 'Pago'} · ${p.metodo === 'transferencia' ? 'Transferencia / Mercado Pago' : p.metodo === 'tarjeta/QR' ? 'Tarjeta/QR' : 'Efectivo'}${p.anulado ? ' · <span style="color:#ef4444;font-weight:700">ANULADO</span>' : ''}</div>
                   <div class="pago-info" style="font-size:12px;color:var(--text3);margin-top:2px">${p.fecha}</div>
                 </div>
                 <div class="pago-monto">$${parseInt(p.monto).toLocaleString('es-AR')}</div>
