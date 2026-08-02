@@ -1132,6 +1132,16 @@ function renderApp() {
         <!-- MOTIVACIÓN DIARIA -->
         ${renderMotivacionHTML(s.objetivo)}
 
+        <!-- BANNER NOTIFICACIONES PUSH -->
+        <div id="pushBanner" style="display:none;margin:0 0 12px 0;background:#1a1a2e;border:1px solid var(--accent);border-radius:12px;padding:14px 16px;align-items:center;gap:12px">
+          <i class="ti ti-bell" style="color:var(--accent);font-size:20px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:#fff">Activar notificaciones</div>
+            <div style="font-size:11px;color:#ffffff70;margin-top:2px">Recibí avisos de vencimiento y novedades del gimnasio</div>
+          </div>
+          <button onclick="pedirPermisoPush()" style="background:var(--accent);border:none;color:white;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Activar</button>
+        </div>
+
         <!-- CLIMA -->
         <div id="climaWidget"></div>
 
@@ -2084,12 +2094,30 @@ if ('serviceWorker' in navigator) {
         });
         // Intentar suscribir a push después de registrar el SW
         setTimeout(() => suscribirPush(reg), 3000);
+        setTimeout(() => checkPushBanner(), 3500);
       })
       .catch(function(err) { console.log('SW error:', err); });
   });
 }
 
 // ── Push Notifications ────────────────────────────────────────────────────────
+async function pedirPermisoPush() {
+  const reg = await navigator.serviceWorker.ready;
+  await suscribirPush(reg);
+  // Ocultar banner luego de intentar
+  const banner = document.getElementById('pushBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+async function checkPushBanner() {
+  if (!('PushManager' in window) || !('Notification' in window)) return;
+  if (Notification.permission === 'granted') return; // ya activo
+  if (Notification.permission === 'denied') return;  // bloqueado
+  // Mostrar banner si todavía no pidio permiso
+  const banner = document.getElementById('pushBanner');
+  if (banner) { banner.style.display = 'flex'; }
+}
+
 async function suscribirPush(reg) {
   if (!('PushManager' in window)) return;
   if (!socioId) return;
