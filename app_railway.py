@@ -735,8 +735,8 @@ def caja_cerrar(caja_id):
             totales = conn.execute(text("""
                 SELECT
                     COALESCE(SUM(CASE WHEN metodo='efectivo' THEN monto ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN metodo='transferencia' THEN monto ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN metodo='tarjeta' THEN monto ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN metodo IN ('transferencia','mercadopago') THEN monto ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN metodo IN ('tarjeta','credito','debito','qr','tarjeta/QR') THEN monto ELSE 0 END),0),
                     COALESCE(SUM(monto),0)
                 FROM pagos WHERE (anulado IS NULL OR anulado=0) AND created_at >= :ap
             """), {'ap': apertura}).fetchone()

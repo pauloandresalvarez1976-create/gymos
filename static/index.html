@@ -231,6 +231,15 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .cobro-btn .cb-price { color: var(--accent); font-size: 13px; font-weight: 600; }
 .cobro-btn.sel .cb-label { color: #ccc; }
 .cobro-metodo { background: var(--bg1); border: 0.5px solid var(--border2); border-radius: 8px; padding: 8px 10px; color: var(--text2); font-size: 12px; outline: none; width: 100%; }
+/* Botones de método de pago */
+.metodo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.metodo-btn { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.15s; }
+.metodo-btn:hover { border-color: var(--accent)50; }
+.metodo-btn.sel { border-color: var(--accent); background: var(--accent)15; box-shadow: 0 0 10px var(--accent)20; }
+.metodo-btn i { font-size: 18px; color: var(--text3); }
+.metodo-btn.sel i { color: var(--accent); }
+.metodo-btn span { font-size: 10px; color: var(--text3); font-weight: 600; text-align: center; line-height: 1.2; }
+.metodo-btn.sel span { color: var(--accent); }
 .cobro-total { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
 .cobro-total-label { font-size: 11px; color: var(--text3); }
 .cobro-total-val { font-size: 20px; font-weight: 600; color: var(--accent); }
@@ -911,11 +920,28 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
                   <span class="cb-price" id="precioPlanInscripcion">$0</span>
                 </div>
               </div>
-              <select class="cobro-metodo" id="cobroMetodo">
-                <option value="efectivo">Efectivo</option>
-                <option value="transferencia">Transferencia</option>
-                <option value="tarjeta">Tarjeta / QR</option>
-              </select>
+              <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-bottom:2px">MÉTODO DE PAGO</div>
+              <div class="metodo-grid">
+                <div class="metodo-btn sel" onclick="selMetodo(this,'efectivo')">
+                  <i class="ti ti-cash"></i><span>Efectivo</span>
+                </div>
+                <div class="metodo-btn" onclick="selMetodo(this,'mercadopago')">
+                  <i class="ti ti-brand-mercado-pago" style="font-size:16px"></i><span>Mercado Pago</span>
+                </div>
+                <div class="metodo-btn" onclick="selMetodo(this,'transferencia')">
+                  <i class="ti ti-building-bank"></i><span>Transferencia</span>
+                </div>
+                <div class="metodo-btn" onclick="selMetodo(this,'credito')">
+                  <i class="ti ti-credit-card"></i><span>T. Crédito</span>
+                </div>
+                <div class="metodo-btn" onclick="selMetodo(this,'debito')">
+                  <i class="ti ti-credit-card-off"></i><span>T. Débito</span>
+                </div>
+                <div class="metodo-btn" onclick="selMetodo(this,'qr')">
+                  <i class="ti ti-qrcode"></i><span>QR</span>
+                </div>
+              </div>
+              <input type="hidden" id="cobroMetodo" value="efectivo">
               <div class="cobro-total">
                 <span class="cobro-total-label">Total a cobrar</span>
                 <span class="cobro-total-val" id="cobroTotal">$0</span>
@@ -1522,9 +1548,12 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
     <div class="form-group">
       <div class="form-label">Método de pago</div>
       <select class="form-select" id="pagoMetodo">
-        <option value="efectivo">Efectivo</option>
-        <option value="transferencia">Transferencia / Mercado Pago</option>
-        <option value="tarjeta">Tarjeta / QR</option>
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="mercadopago">📱 Mercado Pago</option>
+        <option value="transferencia">🔄 Transferencia bancaria</option>
+        <option value="credito">💳 Tarjeta de crédito</option>
+        <option value="debito">💳 Tarjeta de débito</option>
+        <option value="qr">📲 QR</option>
       </select>
     </div>
     <div class="modal-btns">
@@ -2487,7 +2516,16 @@ async function cargarPagosPerfil(id) {
       lista.innerHTML = '<div class="mp-pagos-empty">Sin pagos registrados</div>';
       return;
     }
-    const metodoLabel = { efectivo: 'Efectivo', transferencia: 'Transferencia / Mercado Pago', tarjeta: 'Tarjeta / QR', 'tarjeta/QR': 'Tarjeta / QR' };
+    const metodoLabel = {
+      efectivo: '💵 Efectivo',
+      mercadopago: '📱 Mercado Pago',
+      transferencia: '🔄 Transferencia',
+      credito: '💳 T. Crédito',
+      debito: '💳 T. Débito',
+      qr: '📲 QR',
+      tarjeta: '💳 Tarjeta',
+      'tarjeta/QR': '💳 Tarjeta/QR'
+    };
     lista.innerHTML = pagos.map(p => `
       <div class="mp-pago-row" style="${p.anulado ? 'opacity:0.5' : ''}">
         <span class="mp-pago-fecha">${p.fecha}</span>
@@ -3660,6 +3698,12 @@ function actualizarPrecioCobro() {
   actualizarTotal();
 }
 
+function selMetodo(el, val) {
+  document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('cobroMetodo').value = val;
+}
+
 function selCobro(el, plan) {
   document.querySelectorAll('.cobro-btn').forEach(b => b.classList.remove('sel'));
   el.classList.add('sel');
@@ -4037,13 +4081,13 @@ function mostrarResumenCierre(r) {
   const difTxt   = dif > 0 ? `+${fmt(dif)} (sobrante)` : dif < 0 ? `${fmt(dif)} (faltante)` : 'Sin diferencia';
   document.getElementById('cajaResumenBody').innerHTML = `
     <div class="modal-caja-row"><span class="modal-caja-lbl">Fondo inicial</span><span class="modal-caja-val">${fmt(r.fondo)}</span></div>
-    <div class="modal-caja-row"><span class="modal-caja-lbl">💵 Efectivo cobrado</span><span class="modal-caja-val">${fmt(r.efectivo)}</span></div>
-    <div class="modal-caja-row"><span class="modal-caja-lbl">📱 Transferencia / MP</span><span class="modal-caja-val">${fmt(r.transferencia)}</span></div>
-    <div class="modal-caja-row"><span class="modal-caja-lbl">💳 Tarjeta / QR</span><span class="modal-caja-val">${fmt(r.tarjeta)}</span></div>
-    <div class="modal-caja-row"><span class="modal-caja-lbl">Total cobrado</span><span class="modal-caja-val">${fmt(r.total_cobrado)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">💵 Efectivo</span><span class="modal-caja-val">${fmt(r.efectivo)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">📱 MP / Transferencia</span><span class="modal-caja-val">${fmt(r.transferencia)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl">💳 Tarjeta / Débito / QR</span><span class="modal-caja-val">${fmt(r.tarjeta)}</span></div>
+    <div class="modal-caja-row"><span class="modal-caja-lbl" style="font-weight:700">Total cobrado</span><span class="modal-caja-val">${fmt(r.total_cobrado)}</span></div>
     <div class="modal-caja-row" style="background:var(--bg2);border-radius:8px;padding:8px 10px;margin:6px 0"><span class="modal-caja-lbl">Esperado en caja</span><span class="modal-caja-val">${fmt(r.esperado)}</span></div>
     <div class="modal-caja-row"><span class="modal-caja-lbl">Dinero contado</span><span class="modal-caja-val">${fmt(r.dinero_contado)}</span></div>
-    <div class="modal-caja-row" style="margin-top:4px"><span class="modal-caja-lbl" style="font-weight:700">Diferencia</span><span class="modal-caja-val ${difClass}" style="font-size:16px">${difTxt}</span></div>`;
+    <div class="modal-caja-row"><span class="modal-caja-lbl" style="font-weight:700">Diferencia</span><span class="modal-caja-val ${difClass}" style="font-size:16px">${difTxt}</span></div>`;
   document.getElementById('cajaResumenOverlay').classList.add('show');
 }
 
