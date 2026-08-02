@@ -1103,15 +1103,13 @@ def enviar_comprobante():
         <p style="color:#666;font-size:11px;margin-top:20px;text-align:center">Gracias por entrenar con nosotros 💪</p>
       </div>
     </div>"""
-    email_destino = socio.email
-    session.close()
     try:
-        session2 = Session()
-        enviar_email(email_destino, f'Comprobante de pago — {gym_nombre}', html, session2)
-        session2.close()
-        return jsonify({'ok': True, 'mensaje': f'Comprobante enviado a {email_destino}'})
+        enviar_email(socio.email, f'Comprobante de pago — {gym_nombre}', html, session)
+        session.close()
+        return jsonify({'ok': True, 'mensaje': f'Comprobante enviado a {socio.email}'})
     except Exception as e:
         import traceback; traceback.print_exc()
+        session.close()
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── LOGO ─────────────────────────────────────────────────
