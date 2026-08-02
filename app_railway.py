@@ -2717,6 +2717,7 @@ def get_version():
 
 
 # ── PUSH NOTIFICATIONS ──────────────────────────────────────────────────────────────────
+@app.route('/api/vapid-public-key', methods=['GET'])
 @app.route('/api/push/vapid-public-key', methods=['GET'])
 def get_vapid_public_key():
     key = os.environ.get('VAPID_PUBLIC_KEY', '')
