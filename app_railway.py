@@ -2715,6 +2715,82 @@ def get_version():
         'cambios': ultima.get('cambios', [])
     })
 
+
+# ── PUSH NOTIFICATIONS ──────────────────────────────────────────────────────────────────
+@app.route('/api/push/vapid-public-key', methods=['GET'])
+def get_vapid_public_key():
+    key = os.environ.get('VAPID_PUBLIC_KEY', '')
+    return jsonify({'key': key})
+
+@app.route('/api/push/suscribir', methods=['POST'])
+def push_suscribir():
+    data = request.json
+    socio_id = data.get('socio_id')
+    endpoint = data.get('endpoint', '')
+    p256dh   = data.get('p256dh', '')
+    auth     = data.get('auth', '')
+    if not endpoint:
+        return jsonify({'ok': False, 'error': 'Sin endpoint'}), 400
+    session = Session()
+    try:
+        existing = session.query(Config).filter_by(clave=f'push_sub_{socio_id}').first()
+        sub_json = json.dumps({'endpoint': endpoint, 'p256dh': p256dh, 'auth': auth})
+        if existing:
+            existing.valor = sub_json
+        else:
+            session.add(Config(clave=f'push_sub_{socio_id}', valor=sub_json))
+        session.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    finally:
+        session.close()
+
+@app.route('/api/push/enviar/<int:socio_id>', methods=['POST'])
+def push_enviar(socio_id):
+    from pywebpush import webpush, WebPushException
+    data = request.json or {}
+    titulo = data.get('titulo', 'GymOS')
+    cuerpo  = data.get('cuerpo', '')
+    url     = data.get('url', '/')
+    session = Session()
+    try:
+        sub_cfg = session.query(Config).filter_by(clave=f'push_sub_{socio_id}').first()
+        if not sub_cfg:
+            return jsonify({'ok': False, 'error': 'Socio sin suscripcion push'}), 404
+        sub = json.loads(sub_cfg.valor)
+        private_key = os.environ.get('VAPID_PRIVATE_KEY', '')
+        public_key  = os.environ.get('VAPID_PUBLIC_KEY', '')
+        webpush(
+            subscription_info={'endpoint': sub['endpoint'], 'keys': {'p256dh': sub['p256dh'], 'auth': sub['auth']}},
+            data=json.dumps({'title': titulo, 'body': cuerpo, 'url': url}),
+            vapid_private_key=private_key,
+            vapid_claims={'sub': 'mailto:admin@gymos.app', 'aud': sub['endpoint'].split('/')[2] if '//' in sub['endpoint'] else sub['endpoint']}
+        )
+        return jsonify({'ok': True})
+    except WebPushException as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    finally:
+        session.close()
+
+@app.route('/api/push/test', methods=['POST'])
+def push_test():
+    """Envia push de prueba al admin (socio_id desde el body)"""
+    data = request.json or {}
+    socio_id = data.get('socio_id')
+    if not socio_id:
+        return jsonify({'ok': False, 'error': 'Falta socio_id'}), 400
+    from flask import url_for
+    import requests as req
+    resp = req.post(
+        f'http://localhost:{os.environ.get("PORT", 5001)}/api/push/enviar/{socio_id}',
+        json={'titulo': 'GymOS ✅ Test', 'cuerpo': 'Las notificaciones push funcionan correctamente.', 'url': '/'},
+        headers={'Content-Type': 'application/json'}
+    )
+    return resp.content, resp.status_code, {'Content-Type': 'application/json'}
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
