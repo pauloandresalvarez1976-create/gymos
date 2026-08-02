@@ -1770,6 +1770,7 @@ def enviar_app_socio(sid):
         session2.close()
         return jsonify({'ok': True})
     except Exception as e:
+        import traceback; traceback.print_exc()
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── RENOVACION PWA ───────────────────────────────────────
