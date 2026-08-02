@@ -926,34 +926,33 @@ def escanear_qr():
 
 # ── COMPROBANTE EMAIL ────────────────────────────────────
 def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto_nombre=None):
-    """Envía un email usando la config SMTP guardada. Opcionalmente adjunta un archivo."""
-    from email.mime.base import MIMEBase
-    from email import encoders
+    """Envia un email usando Resend API (HTTPS)."""
+    import base64 as _b64
     cfg = {c.clave: c.valor for c in session.query(Config).all()}
-    gym_email      = cfg.get('gym_email', '')
-    gym_email_pass = cfg.get('gym_email_pass', '')
-    gym_nombre     = cfg.get('gym_email_nombre') or cfg.get('gym_nombre', 'Gimnasio')
-    if not gym_email or not gym_email_pass:
-        raise Exception('Email no configurado en Ajustes')
-    msg = MIMEMultipart('mixed')
-    msg['Subject'] = asunto
-    msg['From']    = f'{gym_nombre} <{gym_email}>'
-    msg['To']      = destinatario
-    msg.attach(MIMEText(html, 'html'))
+    gym_nombre = cfg.get('gym_email_nombre') or cfg.get('gym_nombre', 'Gimnasio')
+    resend_key = os.environ.get('RESEND_API_KEY', '')
+    if not resend_key:
+        raise Exception('RESEND_API_KEY no configurada en variables de entorno')
+    from_addr = f'{gym_nombre} <onboarding@resend.dev>'
+    payload = {
+        'from': from_addr,
+        'to': [destinatario],
+        'subject': asunto,
+        'html': html,
+    }
     if adjunto_path and os.path.exists(adjunto_path):
         with open(adjunto_path, 'rb') as f:
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload(f.read())
-        encoders.encode_base64(part)
+            contenido = _b64.b64encode(f.read()).decode()
         nombre = adjunto_nombre or os.path.basename(adjunto_path)
-        part.add_header('Content-Disposition', f'attachment; filename="{nombre}"')
-        msg.attach(part)
-    with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(gym_email, gym_email_pass)
-        server.sendmail(gym_email, destinatario, msg.as_string())
+        payload['attachments'] = [{'filename': nombre, 'content': contenido}]
+    resp = requests.post(
+        'https://api.resend.com/emails',
+        headers={'Authorization': f'Bearer {resend_key}', 'Content-Type': 'application/json'},
+        json=payload,
+        timeout=15
+    )
+    if resp.status_code not in (200, 201):
+        raise Exception(f'Resend error {resp.status_code}: {resp.text}')
 
 MESES_ES = ['', 'enero','febrero','marzo','abril','mayo','junio',
             'julio','agosto','septiembre','octubre','noviembre','diciembre']
