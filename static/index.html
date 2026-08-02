@@ -3676,6 +3676,23 @@ async function cargarConfig() {
     preciosConfig.anual = parseInt(d.precio_anual) || 0;
     preciosConfig.inscripcion = parseInt(d.precio_inscripcion) || 0;
     actualizarPrecioCobro();
+    // Estado push
+    const pushEl = document.getElementById('pushEstado');
+    if (pushEl) {
+      if (!('PushManager' in window)) {
+        pushEl.textContent = '❌ No soportado en este navegador';
+        pushEl.style.color = '#ef4444';
+      } else if (Notification.permission === 'granted') {
+        pushEl.textContent = '✅ Activas';
+        pushEl.style.color = '#22c55e';
+      } else if (Notification.permission === 'denied') {
+        pushEl.textContent = '❌ Bloqueadas por el navegador';
+        pushEl.style.color = '#ef4444';
+      } else {
+        pushEl.textContent = '⚠️ Pendiente de activar';
+        pushEl.style.color = '#f59e0b';
+      }
+    }
   } catch(e) {}
 }
 

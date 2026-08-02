@@ -2104,16 +2104,14 @@ if ('serviceWorker' in navigator) {
 async function pedirPermisoPush() {
   const reg = await navigator.serviceWorker.ready;
   await suscribirPush(reg);
-  // Ocultar banner luego de intentar
   const banner = document.getElementById('pushBanner');
   if (banner) banner.style.display = 'none';
 }
 
 async function checkPushBanner() {
   if (!('PushManager' in window) || !('Notification' in window)) return;
-  if (Notification.permission === 'granted') return; // ya activo
-  if (Notification.permission === 'denied') return;  // bloqueado
-  // Mostrar banner si todavía no pidio permiso
+  if (Notification.permission === 'granted') return;
+  if (Notification.permission === 'denied') return;
   const banner = document.getElementById('pushBanner');
   if (banner) { banner.style.display = 'flex'; }
 }
