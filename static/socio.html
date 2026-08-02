@@ -2096,7 +2096,7 @@ async function suscribirPush(reg) {
   try {
     // Obtener la VAPID public key del servidor
     const keyRes = await fetch('/api/vapid-public-key');
-    const { publicKey } = await keyRes.json();
+    const { key: publicKey } = await keyRes.json();
     if (!publicKey) return;
 
     // Convertir la key a Uint8Array
