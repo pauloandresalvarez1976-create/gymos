@@ -3761,9 +3761,8 @@ async function enviarComprobante() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ socio_id: socioReconocidoId })
     });
-    const data = await res.json();
-    if (res.ok && data.ok) toast(data.mensaje || 'Comprobante enviado por mail', 'ok');
-    else toast(data.error || 'No se pudo enviar el comprobante', 'bad');
+    if (res.ok) toast('Comprobante enviado por mail', 'ok');
+    else toast('No se pudo enviar el comprobante', 'bad');
   } catch(e) { toast('Error al enviar comprobante', 'bad'); }
 }
 
