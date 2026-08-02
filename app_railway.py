@@ -948,7 +948,10 @@ def enviar_email(destinatario, asunto, html, session, adjunto_path=None, adjunto
         nombre = adjunto_nombre or os.path.basename(adjunto_path)
         part.add_header('Content-Disposition', f'attachment; filename="{nombre}"')
         msg.attach(part)
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+    with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
         server.login(gym_email, gym_email_pass)
         server.sendmail(gym_email, destinatario, msg.as_string())
 
