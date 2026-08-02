@@ -2401,7 +2401,7 @@ async function testPushAdmin() {
     const subJson = sub.toJSON();
     await fetch(`${API}/api/push/suscribir`, {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ socio_id: 'admin_test', endpoint: subJson.endpoint, p256dh: subJson.keys.p256dh, auth: subJson.keys.auth })
+      body: JSON.stringify({ socio_id: 0, endpoint: subJson.endpoint, p256dh: subJson.keys.p256dh, auth: subJson.keys.auth })
     });
     const testRes = await fetch(`${API}/api/push/test`, {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -3676,23 +3676,6 @@ async function cargarConfig() {
     preciosConfig.anual = parseInt(d.precio_anual) || 0;
     preciosConfig.inscripcion = parseInt(d.precio_inscripcion) || 0;
     actualizarPrecioCobro();
-    // Estado push
-    const pushEl = document.getElementById('pushEstado');
-    if (pushEl) {
-      if (!('PushManager' in window)) {
-        pushEl.textContent = '❌ No soportado en este navegador';
-        pushEl.style.color = '#ef4444';
-      } else if (Notification.permission === 'granted') {
-        pushEl.textContent = '✅ Activas';
-        pushEl.style.color = '#22c55e';
-      } else if (Notification.permission === 'denied') {
-        pushEl.textContent = '❌ Bloqueadas por el navegador';
-        pushEl.style.color = '#ef4444';
-      } else {
-        pushEl.textContent = '⚠️ Pendiente de activar';
-        pushEl.style.color = '#f59e0b';
-      }
-    }
   } catch(e) {}
 }
 
