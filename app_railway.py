@@ -1624,7 +1624,9 @@ def enviar_email_desercion():
     </div>
     """
     try:
-        enviar_email(email_destino, f'¡Te extrañamos en {gym_nombre}! 💪', html, None)
+        session2 = Session()
+        enviar_email(email_destino, f'¡Te extrañamos en {gym_nombre}! 💪', html, session2)
+        session2.close()
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
