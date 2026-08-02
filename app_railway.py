@@ -1108,7 +1108,6 @@ def enviar_comprobante():
         session.close()
         return jsonify({'ok': True, 'mensaje': f'Comprobante enviado a {socio.email}'})
     except Exception as e:
-        import traceback; traceback.print_exc()
         session.close()
         return jsonify({'ok': False, 'error': str(e)}), 500
 
