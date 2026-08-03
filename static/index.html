@@ -1418,7 +1418,7 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
         </div>
         <div class="config-section">
           <div class="config-sec-title">Sistema</div>
-          <div class="config-row"><span class="config-key">Versión</span><span class="config-val">GymOS v1.0.0</span></div>
+          <div class="config-row"><span class="config-key">Versión</span><span class="config-val" id="configVersionDisplay">Cargando...</span></div>
           <div class="config-row" style="flex-direction:column;align-items:flex-start;gap:8px">
             <span class="config-key">Licencia activa</span>
             <div style="font-size:12px;color:#ffffff40" id="licenciaEstadoConfig">Verificando...</div>
@@ -3671,6 +3671,13 @@ async function cargarConfig() {
     preciosConfig.anual = parseInt(d.precio_anual) || 0;
     preciosConfig.inscripcion = parseInt(d.precio_inscripcion) || 0;
     actualizarPrecioCobro();
+    // Versión
+    try {
+      const vres = await fetch(`${API}/api/version?_=` + Date.now());
+      const vdata = await vres.json();
+      const vEl = document.getElementById('configVersionDisplay');
+      if (vEl) vEl.textContent = `GymOS v${vdata.version_nombre || vdata.version}`;
+    } catch(e) {}
   } catch(e) {}
 }
 
