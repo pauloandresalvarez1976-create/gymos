@@ -1417,13 +1417,6 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
           <textarea id="cfgDeclaracion" style="width:100%;background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);resize:vertical;min-height:100px;font-family:inherit" placeholder="Ingresá el texto de la declaración jurada..."></textarea>
         </div>
         <div class="config-section">
-          <div class="config-sec-title">Notificaciones Push</div>
-          <div class="config-row"><span class="config-key">Estado</span><span class="config-val" id="pushEstado">Verificando...</span></div>
-          <div style="padding:8px 0 0">
-            <button onclick="testPushAdmin()" style="background:var(--accent);border:none;color:white;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="ti ti-bell"></i> Enviar notificación de prueba</button>
-          </div>
-        </div>
-        <div class="config-section">
           <div class="config-sec-title">Sistema</div>
           <div class="config-row"><span class="config-key">Versión</span><span class="config-val">GymOS v1.0.0</span></div>
           <div class="config-row" style="flex-direction:column;align-items:flex-start;gap:8px">
@@ -2388,29 +2381,6 @@ async function guardarPasswordReset() {
       document.getElementById('cfgAdminPassword').value = '';
     } else { toast(d.error || 'Error al guardar', 'bad'); }
   } catch(e) { toast('No se pudo conectar', 'bad'); }
-}
-
-async function testPushAdmin() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    toast('Tu navegador no soporta notificaciones push', 'bad'); return;
-  }
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (!sub) { toast('No hay suscripción push activa. Abrí la PWA del socio primero.', 'bad'); return; }
-    const subJson = sub.toJSON();
-    await fetch(`${API}/api/push/suscribir`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ socio_id: 0, endpoint: subJson.endpoint, p256dh: subJson.keys.p256dh, auth: subJson.keys.auth })
-    });
-    const testRes = await fetch(`${API}/api/push/test`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ socio_id: 'admin_test' })
-    });
-    const d = await testRes.json();
-    if (d.ok) toast('✅ Push enviada correctamente', 'ok');
-    else toast(d.error || 'Error al enviar push', 'bad');
-  } catch(e) { toast('Error: ' + e.message, 'bad'); }
 }
 
 function mostrarModalReset() {
