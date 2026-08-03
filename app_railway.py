@@ -3,9 +3,7 @@ from flask_cors import CORS
 from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import date, datetime
-import os, base64, json, io, smtplib, requests
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import os, base64, json, io, requests
 import qrcode
 
 # Supabase Storage
@@ -628,7 +626,6 @@ def eliminar_socio(sid):
 def registrar_pago():
     session = Session()
     data    = request.json
-    from dateutil.relativedelta import relativedelta
     pago = Pago(socio_id=data['socio_id'],monto=data.get('monto',0),
                 metodo=data.get('metodo','efectivo'),plan=data.get('plan',''),fecha=date.today())
     session.add(pago)
@@ -796,7 +793,6 @@ def congelar_socio(sid):
 
 @app.route('/api/socios/<int:sid>/descongelar', methods=['POST'])
 def descongelar_socio(sid):
-    from dateutil.relativedelta import relativedelta
     session = Session()
     s = session.query(Socio).filter_by(id=sid).first()
     if not s:
@@ -1774,7 +1770,6 @@ def enviar_app_socio(sid):
         session2.close()
         return jsonify({'ok': True})
     except Exception as e:
-        import traceback; traceback.print_exc()
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ── RENOVACION PWA ───────────────────────────────────────
@@ -1795,12 +1790,10 @@ def solicitar_renovacion(sid):
         if 'comprobante' in request.files:
             archivo = request.files['comprobante']
             if archivo and archivo.filename:
-                import io as _io
                 from datetime import datetime as _dt
                 nombre_archivo = f"renovacion_{sid}_{int(_dt.now().timestamp())}.jpg"
                 contenido = archivo.read()
                 try:
-                    from PIL import Image as _Img
                     img = _Img.open(_io.BytesIO(contenido))
                     img.thumbnail((1200, 1200))
                     buf = _io.BytesIO()
@@ -2510,7 +2503,6 @@ Respondé siempre en español rioplatense."""
 
 def enviar_resumenes_semanales():
     """Al arrancar los lunes, manda resumen semanal a socios con actividad la semana anterior"""
-    from datetime import timedelta
     session = Session()
     try:
         hoy = date.today()
