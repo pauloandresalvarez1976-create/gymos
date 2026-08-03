@@ -2459,7 +2459,7 @@ async function abrirPerfil(id) {
     // Foto
     const av = document.getElementById('mpAvatar');
     if (s.foto) {
-      av.innerHTML = `<img src="${s.foto}">`;
+      av.innerHTML = `<img src="${s.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     } else {
       av.innerHTML = `<i class="ti ti-user"></i>`;
     }
