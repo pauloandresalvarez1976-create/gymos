@@ -2111,7 +2111,32 @@ async function eliminarUsuario(id, nombre) {
 }
 
 // Mostrar login al iniciar
-setTimeout(mostrarLogin, 500);
+// Restaurar sesión si fue un hard reload desde el botón refrescar
+(async function restaurarSesionReload() {
+  const uid = sessionStorage.getItem('gymos_reload_uid');
+  const nombre = sessionStorage.getItem('gymos_reload_nombre');
+  sessionStorage.removeItem('gymos_reload_uid');
+  sessionStorage.removeItem('gymos_reload_rol');
+  sessionStorage.removeItem('gymos_reload_nombre');
+  if (!uid) { setTimeout(mostrarLogin, 500); return; }
+  try {
+    const res = await fetch(`${API}/api/usuarios`);
+    const users = await res.json();
+    const u = users.find(x => String(x.id) === String(uid));
+    if (u) {
+      usuarioActual = u;
+      loginUsuarioId = u.id;
+      loginRol = u.rol;
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('headerUsuario').textContent = nombre || u.nombre;
+      aplicarPermisos(u.permisos || {});
+      showScreen('ingreso');
+      setTimeout(iniciarCaja, 300);
+    } else {
+      setTimeout(mostrarLogin, 500);
+    }
+  } catch(e) { setTimeout(mostrarLogin, 500); }
+})();
 
 // ── NAVEGACIÓN ──
 function showScreen(name) {
@@ -4193,22 +4218,14 @@ function cerrarResumenCaja() {
 <script>
 // ─── REFRESCAR ADMIN ─────────────────────────────────────────────────────────
 function refrescarAdmin() {
-  const btn = document.querySelector('[onclick="refrescarAdmin()"] i');
-  if (btn) {
-    btn.style.transition = 'transform 0.5s';
-    btn.style.transform = 'rotate(360deg)';
-    setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 500);
+  // Guardar sesión antes de recargar para no salir del login
+  if (loginUsuarioId) {
+    sessionStorage.setItem('gymos_reload_uid', loginUsuarioId);
+    sessionStorage.setItem('gymos_reload_rol', loginRol || '');
+    sessionStorage.setItem('gymos_reload_nombre', document.getElementById('headerUsuario')?.textContent || '');
   }
-  // Recargar según la pantalla activa
-  const active = document.querySelector('.screen[style*="flex"]')?.id || '';
-  if      (active.includes('ingreso'))   { typeof cargarIngresos === 'function' && cargarIngresos(); typeof cargarVencimientos === 'function' && cargarVencimientos(); }
-  else if (active.includes('socios'))    { typeof cargarSocios === 'function' && cargarSocios(); }
-  else if (active.includes('cuotas'))    { typeof cargarCuotas === 'function' && cargarCuotas(); }
-  else if (active.includes('agenda'))    { typeof cargarAgenda === 'function' && cargarAgenda(); }
-  else if (active.includes('renov'))     { typeof cargarRenovaciones === 'function' && cargarRenovaciones(); }
-  else if (active.includes('config'))    { typeof cargarConfig === 'function' && cargarConfig(); }
-  else                                   { typeof cargarIngresos === 'function' && cargarIngresos(); }
-  toast('✅ Datos actualizados', 'ok');
+  // Hard reload sin caché (equivalente a Ctrl+Shift+R)
+  location.reload(true);
 }
 
 // ─── ONBOARDING ──────────────────────────────────────────────────────────────
