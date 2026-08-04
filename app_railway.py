@@ -2714,3 +2714,199 @@ def get_version():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
+# ── REPORTES ──────────────────────────────────────────────────────────────────
+def _get_periodo(request):
+    desde = request.args.get('desde')
+    hasta = request.args.get('hasta')
+    desde = date.fromisoformat(desde) if desde else date.today().replace(day=1)
+    hasta = date.fromisoformat(hasta) if hasta else date.today()
+    return desde, hasta
+
+def _xlsx_response(wb, filename):
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name=filename)
+
+def _pdf_response(pdf_bytes, filename):
+    buf = io.BytesIO(pdf_bytes)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=filename)
+
+def _estilo_xlsx(ws, headers):
+    from openpyxl.styles import Font, PatternFill, Alignment
+    header_fill = PatternFill(start_color='FF4500', end_color='FF4500', fill_type='solid')
+    header_font = Font(color='FFFFFF', bold=True)
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+
+def _pdf_tabla(titulo, headers, rows, gym_nombre='GymOS'):
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import cm
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), topMargin=1.5*cm, bottomMargin=1.5*cm,
+                            leftMargin=1.5*cm, rightMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    story = [Paragraph(f'<b>{gym_nombre}</b>', styles['Title']),
+             Paragraph(titulo, styles['Heading2']), Spacer(1, 0.3*cm)]
+    table_data = [headers] + [[str(c) if c is not None else '' for c in row] for row in rows]
+    t = Table(table_data, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#FF4500')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#FFF5F0')]),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+    ]))
+    story.append(t)
+    doc.build(story)
+    return buf.getvalue()
+
+@app.route('/api/reportes/pagos', methods=['GET'])
+def reporte_pagos():
+    from openpyxl import Workbook
+    desde, hasta = _get_periodo(request)
+    fmt = request.args.get('fmt', 'xlsx')
+    session = Session()
+    try:
+        pagos = session.query(Pago, Socio).join(Socio, Pago.socio_id == Socio.id)\
+            .filter(Pago.fecha >= desde, Pago.fecha <= hasta).order_by(Pago.fecha.desc()).all()
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_nombre = cfg.get('gym_nombre', 'GymOS')
+        headers = ['Fecha', 'Socio', 'Plan', 'Metodo', 'Monto', 'Estado']
+        rows = [[str(p.fecha), s.nombre, p.plan or '', p.metodo or '',
+                 f'${p.monto:,}', 'Anulado' if p.anulado else 'Cobrado'] for p, s in pagos]
+        if fmt == 'pdf':
+            return _pdf_response(_pdf_tabla(f'Reporte de Pagos {desde} al {hasta}', headers, rows, gym_nombre),
+                                 f'pagos_{desde}_{hasta}.pdf')
+        wb = Workbook(); ws = wb.active; ws.title = 'Pagos'
+        _estilo_xlsx(ws, headers)
+        for row in rows: ws.append(row)
+        for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = 18
+        return _xlsx_response(wb, f'pagos_{desde}_{hasta}.xlsx')
+    finally:
+        session.close()
+
+@app.route('/api/reportes/socios', methods=['GET'])
+def reporte_socios():
+    from openpyxl import Workbook
+    fmt = request.args.get('fmt', 'xlsx')
+    session = Session()
+    try:
+        socios = session.query(Socio).filter_by(activo=1).order_by(Socio.nombre).all()
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_nombre = cfg.get('gym_nombre', 'GymOS')
+        hoy = date.today()
+        headers = ['ID', 'Nombre', 'DNI', 'Telefono', 'Email', 'Plan', 'Vencimiento', 'Estado', 'Objetivo']
+        rows = []
+        for s in socios:
+            estado = 'Congelado' if s.congelado else ('Vencido' if s.fecha_venc and s.fecha_venc < hoy else 'Al dia')
+            rows.append([s.id, s.nombre, s.dni or '', s.telefono or '', s.email or '',
+                         s.plan or '', str(s.fecha_venc) if s.fecha_venc else '', estado, s.objetivo or ''])
+        if fmt == 'pdf':
+            return _pdf_response(_pdf_tabla('Reporte de Socios', headers, rows, gym_nombre), 'socios.pdf')
+        wb = Workbook(); ws = wb.active; ws.title = 'Socios'
+        _estilo_xlsx(ws, headers)
+        for row in rows: ws.append(row)
+        for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = 18
+        return _xlsx_response(wb, 'socios.xlsx')
+    finally:
+        session.close()
+
+@app.route('/api/reportes/asistencia', methods=['GET'])
+def reporte_asistencia():
+    from openpyxl import Workbook
+    desde, hasta = _get_periodo(request)
+    fmt = request.args.get('fmt', 'xlsx')
+    session = Session()
+    try:
+        ingresos = session.query(Ingreso, Socio).join(Socio, Ingreso.socio_id == Socio.id)\
+            .filter(Ingreso.fecha >= desde, Ingreso.fecha <= hasta).order_by(Ingreso.hora.desc()).all()
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_nombre = cfg.get('gym_nombre', 'GymOS')
+        headers = ['Fecha', 'Hora', 'Socio', 'Plan']
+        rows = [[str(i.fecha), i.hora.strftime('%H:%M') if i.hora else '', s.nombre, s.plan or '']
+                for i, s in ingresos]
+        if fmt == 'pdf':
+            return _pdf_response(_pdf_tabla(f'Asistencia {desde} al {hasta}', headers, rows, gym_nombre),
+                                 f'asistencia_{desde}_{hasta}.pdf')
+        wb = Workbook(); ws = wb.active; ws.title = 'Asistencia'
+        _estilo_xlsx(ws, headers)
+        for row in rows: ws.append(row)
+        for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = 20
+        return _xlsx_response(wb, f'asistencia_{desde}_{hasta}.xlsx')
+    finally:
+        session.close()
+
+@app.route('/api/reportes/caja', methods=['GET'])
+def reporte_caja():
+    from openpyxl import Workbook
+    desde, hasta = _get_periodo(request)
+    fmt = request.args.get('fmt', 'xlsx')
+    session = Session()
+    try:
+        cajas = session.query(CajaTurno).filter(
+            CajaTurno.apertura >= desde, CajaTurno.apertura <= hasta
+        ).order_by(CajaTurno.apertura.desc()).all()
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_nombre = cfg.get('gym_nombre', 'GymOS')
+        headers = ['Apertura', 'Cierre', 'Usuario', 'Fondo inicial', 'Total esperado', 'Total contado', 'Diferencia']
+        rows = []
+        for c in cajas:
+            rows.append([
+                str(c.apertura)[:16] if c.apertura else '',
+                str(c.cierre)[:16] if c.cierre else 'Abierto',
+                c.usuario_nombre or '',
+                f'${c.fondo_inicial:,}' if c.fondo_inicial else '$0',
+                f'${c.total_esperado:,}' if c.total_esperado else '',
+                f'${c.total_contado:,}' if c.total_contado else '',
+                f'${c.diferencia:,}' if c.diferencia is not None else '',
+            ])
+        if fmt == 'pdf':
+            return _pdf_response(_pdf_tabla(f'Caja {desde} al {hasta}', headers, rows, gym_nombre),
+                                 f'caja_{desde}_{hasta}.pdf')
+        wb = Workbook(); ws = wb.active; ws.title = 'Caja'
+        _estilo_xlsx(ws, headers)
+        for row in rows: ws.append(row)
+        for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = 20
+        return _xlsx_response(wb, f'caja_{desde}_{hasta}.xlsx')
+    finally:
+        session.close()
+
+@app.route('/api/reportes/clases', methods=['GET'])
+def reporte_clases():
+    from openpyxl import Workbook
+    fmt = request.args.get('fmt', 'xlsx')
+    session = Session()
+    try:
+        clases = session.query(Clase).order_by(Clase.dia, Clase.hora).all()
+        cfg = {c.clave: c.valor for c in session.query(Config).all()}
+        gym_nombre = cfg.get('gym_nombre', 'GymOS')
+        headers = ['Clase', 'Profesor', 'Dia', 'Hora', 'Cupo max', 'Inscriptos', 'Ocupacion %']
+        rows = [[c.nombre, c.profesor or '', c.dia or '', c.hora or '',
+                 c.cupo_max, c.cupo_act, f'{round(c.cupo_act/c.cupo_max*100) if c.cupo_max else 0}%']
+                for c in clases]
+        if fmt == 'pdf':
+            return _pdf_response(_pdf_tabla('Reporte de Clases', headers, rows, gym_nombre), 'clases.pdf')
+        wb = Workbook(); ws = wb.active; ws.title = 'Clases'
+        _estilo_xlsx(ws, headers)
+        for row in rows: ws.append(row)
+        for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = 18
+        return _xlsx_response(wb, 'clases.xlsx')
+    finally:
+        session.close()
+
