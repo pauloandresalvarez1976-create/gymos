@@ -634,7 +634,7 @@ body.ficha-mode #screen-ficha { position: fixed; inset: 0; z-index: 9000; backgr
 .mp-close:hover { color: var(--text2); }
 .mp-body { display: flex; flex: 1; overflow: hidden; }
 .mp-foto-col { width: 220px; flex-shrink: 0; background: var(--bg); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 24px 16px; gap: 14px; }
-.mp-avatar { width: 130px; height: 130px; border-radius: 50%; background: var(--bg2); border: 2px solid #2a2a2a; overflow: hidden; }
+.mp-avatar { width: 130px; height: 130px; min-height: 130px; border-radius: 50%; background: var(--bg2); border: 2px solid #2a2a2a; overflow: hidden; flex-shrink: 0; }
 .mp-avatar img { display: block; width: 130px; height: 130px; object-fit: cover; }
 .mp-avatar.ok { border-color: #00FF88; }
 .mp-avatar.bad { border-color: #FF3333; }
