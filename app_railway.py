@@ -499,7 +499,13 @@ def subir_foto_socio(foto_b64):
     img_bytes = base64.b64decode(foto_b64.split(',')[-1])
     # Comprimir con Pillow — máx 400x400, calidad 75
     img = _Img.open(_io.BytesIO(img_bytes)).convert('RGB')
-    img.thumbnail((400, 400), _Img.LANCZOS)
+    # Recortar al centro en cuadrado
+    w, h = img.size
+    min_dim = min(w, h)
+    left = (w - min_dim) // 2
+    top = (h - min_dim) // 2
+    img = img.crop((left, top, left + min_dim, top + min_dim))
+    img = img.resize((400, 400), _Img.LANCZOS)
     buf = _io.BytesIO()
     img.save(buf, format='JPEG', quality=75, optimize=True)
     buf.seek(0)
