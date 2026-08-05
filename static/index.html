@@ -2011,34 +2011,61 @@ document.addEventListener('keydown', function(e) {
 (function() {
   let _buf = '';
   let _timer = null;
+  let _scanning = false; // true cuando detectamos que es un escáner (llega rápido)
+  let _lastKey = 0;
+
   document.addEventListener('keydown', function(e) {
-    // Ignorar si hay un input/textarea enfocado (el cajero está escribiendo)
     const tag = document.activeElement ? document.activeElement.tagName : '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    // El escáner manda los caracteres muy rápido y termina con Enter
-    if (e.key === 'Enter') {
-      const data = _buf.trim();
-      _buf = '';
-      if (_timer) { clearTimeout(_timer); _timer = null; }
-      if (data.startsWith('GYMOS:SOCIO:')) {
-        const pantallaActiva = document.querySelector('.screen.active');
-        const enSocios = pantallaActiva && pantallaActiva.id === 'screen-socios';
-        if (enSocios) {
-          // En la pantalla Socios: abrir perfil directo por ID
+    const enInput = tag === 'INPUT' || tag === 'TEXTAREA';
+    const ahora = Date.now();
+    const rapido = (ahora - _lastKey) < 50; // escáner manda teclas en <50ms
+    _lastKey = ahora;
+
+    // Acumular buffer si no hay input enfocado, o si ya detectamos que es escáner
+    if (!enInput || _scanning) {
+      if (e.key === 'Enter') {
+        const data = _buf.trim();
+        _buf = ''; _scanning = false;
+        if (_timer) { clearTimeout(_timer); _timer = null; }
+        if (data.startsWith('GYMOS:SOCIO:')) {
           const socioId = parseInt(data.split(':')[2]);
-          if (socioId) abrirPerfil(socioId);
-        } else {
-          // En cualquier otra pantalla (ingreso, etc): registrar acceso
-          procesarQR(data);
+          // Limpiar el input de búsqueda si quedó texto ahí
+          const inp = document.getElementById('buscarPanelInput');
+          if (inp) inp.value = '';
+          // Decidir acción según tab activo
+          const tabBuscar = document.getElementById('pane-buscar');
+          const enBuscar = tabBuscar && tabBuscar.classList.contains('active');
+          if (enBuscar && socioId) {
+            // Tab BUSCAR: seleccionar socio directo
+            fetch(`${API}/api/socios/${socioId}`)
+              .then(r => r.json())
+              .then(s => { if (s && s.id) seleccionarSocioPanel(s.id, s.nombre, s.plan, s.estado === 'al_dia', s.foto || ''); })
+              .catch(() => {});
+          } else {
+            // Tab SOCIO u otro: registrar ingreso
+            procesarQR(data);
+          }
         }
+        if (enInput) e.preventDefault();
+        return;
       }
-      return;
-    }
-    if (e.key.length === 1) {
-      _buf += e.key;
-      if (_timer) clearTimeout(_timer);
-      // Si pasan 100ms sin más teclas, limpiar buffer (no era un escáner)
-      _timer = setTimeout(() => { _buf = ''; _timer = null; }, 100);
+      if (e.key.length === 1) {
+        if (rapido || _buf.length > 0) {
+          _scanning = true;
+          _buf += e.key;
+          if (enInput) e.preventDefault(); // evitar que caiga en el input
+        }
+        if (_timer) clearTimeout(_timer);
+        _timer = setTimeout(() => { _buf = ''; _scanning = false; _timer = null; }, 150);
+      }
+    } else {
+      // Input enfocado y primera tecla lenta — es escritura normal, dejar pasar
+      if (e.key.length === 1 && rapido) {
+        // Puede ser inicio de escaneo, acumular pero no bloquear todavía
+        _buf += e.key;
+        if (_timer) clearTimeout(_timer);
+        _timer = setTimeout(() => { _buf = ''; _scanning = false; _timer = null; }, 150);
+      }
     }
   });
 })();
@@ -3920,24 +3947,6 @@ async function enviarComprobante() {
 
 async function buscarEnPanel(q) {
   const results = document.getElementById('buscarResults');
-  // Si el escáner USB escribió un QR, extraer el ID y seleccionar directo
-  if (q && q.startsWith('GYMOS:SOCIO:')) {
-    const socioId = parseInt(q.split(':')[2]);
-    document.getElementById('buscarPanelInput').value = '';
-    if (socioId) {
-      try {
-        const res = await fetch(`${API}/api/socios/${socioId}`);
-        const s = await res.json();
-        if (s && s.id) {
-          const ok = s.estado === 'al_dia';
-          seleccionarSocioPanel(s.id, s.nombre, s.plan, ok, s.foto || '');
-        } else {
-          results.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Socio no encontrado</div>';
-        }
-      } catch(e) {}
-    }
-    return;
-  }
   if (!q || q.length < 2) {
     results.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Escribí para buscar</div>';
     return;
