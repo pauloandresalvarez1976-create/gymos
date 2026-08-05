@@ -1765,7 +1765,7 @@ tick(); setInterval(tick, 1000);
 
 // ── LICENCIA ──────────────────────────────────────────
 const LICENCIA_CACHE_KEY  = 'gymos_licencia_cache';
-const LICENCIA_CACHE_HORAS = 24; // horas de gracia sin internet
+const LICENCIA_CACHE_HORAS = 720; // horas de gracia sin internet (30 días)
 
 async function verificarLicenciaAlInicio() {
   try {
