@@ -2021,7 +2021,16 @@ document.addEventListener('keydown', function(e) {
       _buf = '';
       if (_timer) { clearTimeout(_timer); _timer = null; }
       if (data.startsWith('GYMOS:SOCIO:')) {
-        procesarQR(data);
+        const pantallaActiva = document.querySelector('.screen.active');
+        const enSocios = pantallaActiva && pantallaActiva.id === 'screen-socios';
+        if (enSocios) {
+          // En la pantalla Socios: abrir perfil directo por ID
+          const socioId = parseInt(data.split(':')[2]);
+          if (socioId) abrirPerfil(socioId);
+        } else {
+          // En cualquier otra pantalla (ingreso, etc): registrar acceso
+          procesarQR(data);
+        }
       }
       return;
     }
