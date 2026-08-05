@@ -3920,6 +3920,24 @@ async function enviarComprobante() {
 
 async function buscarEnPanel(q) {
   const results = document.getElementById('buscarResults');
+  // Si el escáner USB escribió un QR, extraer el ID y seleccionar directo
+  if (q && q.startsWith('GYMOS:SOCIO:')) {
+    const socioId = parseInt(q.split(':')[2]);
+    document.getElementById('buscarPanelInput').value = '';
+    if (socioId) {
+      try {
+        const res = await fetch(`${API}/api/socios/${socioId}`);
+        const s = await res.json();
+        if (s && s.id) {
+          const ok = s.estado === 'al_dia';
+          seleccionarSocioPanel(s.id, s.nombre, s.plan, ok, s.foto || '');
+        } else {
+          results.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Socio no encontrado</div>';
+        }
+      } catch(e) {}
+    }
+    return;
+  }
   if (!q || q.length < 2) {
     results.innerHTML = '<div style="font-size:12px;color:#444;padding:10px 0;text-align:center">Escribí para buscar</div>';
     return;
