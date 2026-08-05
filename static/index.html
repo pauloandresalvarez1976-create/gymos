@@ -2007,6 +2007,33 @@ document.addEventListener('keydown', function(e) {
   else if (e.key === 'Escape') loginCancelar();
 });
 
+// ── ESCÁNER USB (pistola) ──────────────────────────────────────────────────
+(function() {
+  let _buf = '';
+  let _timer = null;
+  document.addEventListener('keydown', function(e) {
+    // Ignorar si hay un input/textarea enfocado (el cajero está escribiendo)
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    // El escáner manda los caracteres muy rápido y termina con Enter
+    if (e.key === 'Enter') {
+      const data = _buf.trim();
+      _buf = '';
+      if (_timer) { clearTimeout(_timer); _timer = null; }
+      if (data.startsWith('GYMOS:SOCIO:')) {
+        procesarQR(data);
+      }
+      return;
+    }
+    if (e.key.length === 1) {
+      _buf += e.key;
+      if (_timer) clearTimeout(_timer);
+      // Si pasan 100ms sin más teclas, limpiar buffer (no era un escáner)
+      _timer = setTimeout(() => { _buf = ''; _timer = null; }, 100);
+    }
+  });
+})();
+
 function actualizarDots() {
   for (let i = 0; i < 4; i++) {
     document.getElementById(`dot${i}`)?.classList.toggle('filled', i < loginPin.length);
