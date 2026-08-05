@@ -3,6 +3,7 @@ from flask_cors import CORS
 from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 import os, base64, json, io, requests
 import qrcode
 
